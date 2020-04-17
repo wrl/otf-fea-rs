@@ -70,15 +70,15 @@ pub(crate) fn anchor_definition<Input>() -> impl Parser<FeaRsStream<Input>, Outp
         .skip(required_whitespace())
         .and(metric())
         .skip(required_whitespace())
-        .and(choice!(
-                contour_point()
+        .and(choice((
+            contour_point()
                 .skip(required_whitespace())
                 .and(glyph_name_unwrapped())
                 .map(|(point, name)| Either2::A((point, AnchorName(name)))),
 
-                glyph_name_unwrapped()
+            glyph_name_unwrapped()
                 .map(|a| Either2::B(AnchorName(a)))
-        ))
+        )))
 
         .map(|((x, y), more)| {
             match more {
@@ -112,7 +112,7 @@ pub(crate) fn anchor<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anchor
 
     literal_ignore_case("<anchor")
         .skip(required_whitespace())
-        .with(choice!(
+        .with(choice((
             literal("NULL")
                 .skip(close())
                 .map(|_| Anchor::Null),
@@ -120,12 +120,12 @@ pub(crate) fn anchor<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anchor
             metric()
                 .skip(required_whitespace())
                 .and(metric())
-                .and(choice!(
+                .and(choice((
                     close()
                         .map(|a| Either3::A(a)),
 
                     required_whitespace()
-                        .with(choice!(
+                        .with(choice((
                             contour_point()
                                 .skip(close())
                                 .map(|b| Either3::B(b)),
@@ -134,10 +134,11 @@ pub(crate) fn anchor<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anchor
                                 .skip(required_whitespace())
                                 .and(device())
                                 .skip(close())
-                                .map(|devices| Either3::C(devices))))
+                                .map(|devices| Either3::C(devices))
+                        )))
 
                         // FIXME: need device table form
-                    ))
+                    )))
 
                 .map(|((x, y), more)| {
                     match more {
@@ -158,5 +159,5 @@ pub(crate) fn anchor<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anchor
             glyph_name_unwrapped()
                 .skip(close())
                 .map(|n| Anchor::Named(AnchorName(n)))
-        ))
+        )))
 }

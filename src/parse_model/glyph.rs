@@ -152,7 +152,8 @@ pub(crate) fn glyph_ref<Input>() -> impl Parser<FeaRsStream<Input>, Output = Gly
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    choice!(
+    choice((
         glyph_cid().map(|cid| GlyphRef::CID(cid)),
-        glyph_name_unwrapped().map(|name| GlyphRef::Name(GlyphName(name))))
+        glyph_name_unwrapped().map(|name| GlyphRef::Name(GlyphName(name)))
+    ))
 }

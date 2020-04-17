@@ -39,7 +39,7 @@ pub(crate) fn value_record<Input>() -> impl Parser<FeaRsStream<Input>, Output = 
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    choice!(
+    choice((
         token(b'<').skip(optional_whitespace())
             .with(metric()).skip(required_whitespace())
             .and(metric()).skip(required_whitespace())
@@ -83,5 +83,5 @@ pub(crate) fn value_record<Input>() -> impl Parser<FeaRsStream<Input>, Output = 
 
         metric()
             .map(|m| ValueRecord::Advance(m))
-    )
+    ))
 }

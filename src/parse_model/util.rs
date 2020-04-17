@@ -80,9 +80,11 @@ pub(crate) fn optional_whitespace<Input>() -> impl Parser<Input, Output = ()>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    many(choice!(
-            space().map(|_| ()),
-            comment()))
+    many(choice((
+        space()
+            .map(|_| ()),
+        comment()
+    )))
         .expected("whitespace")
 }
 
@@ -120,9 +122,10 @@ pub(crate) fn number<Input>() -> impl Parser<FeaRsStream<Input>, Output = isize>
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()
-        .and(optional(choice!(
-                token(b'-'),
-                token(b'+'))))
+        .and(optional(choice((
+            token(b'-'),
+            token(b'+'))
+        )))
         .and(uinteger())
 
         .flat_map(|((position, sign), int)| {
@@ -145,9 +148,12 @@ pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output 
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    optional(choice!(
+    optional(
+        choice((
             token(b'-'),
-            token(b'+')))
+            token(b'+')
+        ))
+    )
         .and(uinteger())
         .and(optional(
                 token(b'.')

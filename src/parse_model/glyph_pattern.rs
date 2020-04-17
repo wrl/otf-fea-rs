@@ -66,7 +66,7 @@ pub(crate) fn glyph_pattern<Input>() -> impl Parser<FeaRsStream<Input>, Output =
 
     parser(|input| {
         let mut parse_iter = optional_whitespace()
-            .with(choice!(
+            .with(choice((
                 peek(literal_ignore_case("by"))
                     .map(|_| Next::End),
                 peek(literal_ignore_case("from"))
@@ -89,7 +89,7 @@ pub(crate) fn glyph_pattern<Input>() -> impl Parser<FeaRsStream<Input>, Output =
                             Some(_) => Next::MarkedGlyphClass(gc, vr, lookup),
                             None => Next::GlyphClass(gc, vr)
                         })
-            ))
+            )))
             .iter(input);
 
         let mut pattern = GlyphPattern::new();

@@ -41,7 +41,7 @@ pub(crate) fn device<Input>() -> impl Parser<FeaRsStream<Input>, Output = Device
 
     literal_ignore_case("<device")
         .skip(required_whitespace())
-        .with(choice!(
+        .with(choice((
             literal("NULL")
                 .skip(close())
                 .map(|_| Device::Null),
@@ -59,5 +59,5 @@ pub(crate) fn device<Input>() -> impl Parser<FeaRsStream<Input>, Output = Device
                     }), token(b','))
                 .skip(close())
                 .map(|a| Device::Adjustments(a))
-        ))
+        )))
 }

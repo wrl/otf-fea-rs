@@ -207,8 +207,9 @@ fn single_adjustment<Input>() -> impl Parser<FeaRsStream<Input>, Output = Positi
 {
     glyph_class_or_glyph()
         .skip(required_whitespace())
-        .and(choice!(
+        .and(choice((
             value_record().map(|vr| Either2::A(vr)),
+
             glyph_class_or_glyph()
                 .skip(required_whitespace())
                 .and(value_record())
@@ -216,7 +217,7 @@ fn single_adjustment<Input>() -> impl Parser<FeaRsStream<Input>, Output = Positi
                     .with(value_record())))
                 .map(|((glyph_class, vr1), vr2)|
                     Either2::B((glyph_class, (vr1, vr2))))
-            ))
+        )))
 
         .map(|(glyph_class, rest)| {
             match rest {

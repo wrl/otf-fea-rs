@@ -91,7 +91,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
         })
         .skip(required_whitespace())
         .and(glyph_pattern())
-        .and(choice!(
+        .and(choice((
             literal("by").map(|_| Some(SubKeyword::By))
                 .and(many1(
                     required_whitespace()
@@ -99,7 +99,8 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
             literal("from").map(|_| Some(SubKeyword::From))
                 .skip(required_whitespace())
                 .and(glyph_class_or_class_ref().map(|gc| vec![gc])),
-            value(()).map(|_| (None, vec![]))))
+            value(()).map(|_| (None, vec![]))
+        )))
         .flat_map(|(((position, direction), pattern), (keyword, replacement))| {
             if pattern.num_value_records > 0 {
                 crate::parse_bail!(Input, position,

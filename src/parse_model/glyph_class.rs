@@ -79,12 +79,17 @@ pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = G
 
                 let mut parse_iter = optional_whitespace()
                     .with(combine::position())
-                    .and(choice!(
-                            token(b'-')
-                                .skip(optional_whitespace())
-                                .with(glyph_ref()).map(|gr| Next::RangeSpec(gr)),
-                            glyph_ref().map(|gr| Next::Glyph(gr)),
-                            token(b']').map(|_| Next::EndClass)))
+                    .and(choice((
+                        token(b'-')
+                            .skip(optional_whitespace())
+                            .with(glyph_ref()).map(|gr| Next::RangeSpec(gr)),
+
+                        glyph_ref()
+                            .map(|gr| Next::Glyph(gr)),
+
+                        token(b']')
+                            .map(|_| Next::EndClass)
+                    )))
                     .iter(input);
 
                 for (_, next) in &mut parse_iter {
@@ -132,21 +137,23 @@ pub(crate) fn glyph_class_or_class_ref<Input>() -> impl Parser<FeaRsStream<Input
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    choice!(
+    choice((
         glyph_class().map(|gc| gc),
         class_name().map(|cn|
-            GlyphClass(vec![GlyphClassItem::ClassRef(GlyphClassName(cn.0))])))
+            GlyphClass(vec![GlyphClassItem::ClassRef(GlyphClassName(cn.0))]))
+    ))
 }
 
 pub(crate) fn glyph_class_or_glyph<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClass>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    choice!(
+    choice((
         glyph_class().map(|gc| gc),
         glyph_ref().map(|gr| GlyphClass::from_single(gr)),
         class_name().map(|cn|
-            GlyphClass(vec![GlyphClassItem::ClassRef(GlyphClassName(cn.0))])))
+            GlyphClass(vec![GlyphClassItem::ClassRef(GlyphClassName(cn.0))]))
+    ))
 }
 
 /////////////////////////
