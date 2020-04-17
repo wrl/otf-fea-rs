@@ -5,6 +5,13 @@ use combine::{
     Stream,
 
     look_ahead,
+    optional,
+
+    opaque,
+    parser::combinator::{
+        FnOpaque,
+        no_partial
+    },
 
     error::ParseError,
 
@@ -35,6 +42,7 @@ pub enum BlockStatement {
     Substitute(Substitute),
     Position(Position),
     Lookup(Lookup),
+    LookupDefinition(LookupDefinition),
 
     Subtable
 }
@@ -53,6 +61,7 @@ cvt_to_statement!(Substitute);
 cvt_to_statement!(Parameters);
 cvt_to_statement!(Position);
 cvt_to_statement!(Lookup);
+cvt_to_statement!(LookupDefinition);
 
 #[inline]
 fn keyword<Input>() -> impl Parser<FeaRsStream<Input>, Output = String>
@@ -63,31 +72,42 @@ fn keyword<Input>() -> impl Parser<FeaRsStream<Input>, Output = String>
     many1(letter()).map(|x| unsafe { String::from_utf8_unchecked(x) })
 }
 
-pub(crate) fn block_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = BlockStatement>
+pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStatement>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    look_ahead(keyword())
-        .then(|kwd| {
-            dispatch!(&*kwd;
-                "parameters" => parameters().map(|p| p.into()),
-                "position" | "pos" => position().map(|p| p.into()),
-                "substitute" | "sub"
-                    | "reversesub" | "rsub" => substitute().map(|s| s.into()),
-                "lookup" => lookup().map(|l| l.into()),
+    // opaque is necessary here because otherwise we end up with this ugly recursive type since
+    // blocks can be nested inside blocks
 
-                "subtable" => literal("subtable").map(|_| BlockStatement::Subtable),
+    opaque!(no_partial(
+        look_ahead(keyword())
+            .then(|kwd| {
+                dispatch!(&*kwd;
+                    "parameters" => parameters().map(|p| p.into()),
+                    "position" | "pos" => position().map(|p| p.into()),
+                    "substitute" | "sub"
+                        | "reversesub" | "rsub" => substitute().map(|s| s.into()),
 
-                _ => combine::position().and(keyword())
-                    .flat_map(|(position, kwd)|
-                        crate::parse_bail!(Input, position,
-                            format!("unexpected keyword \"{}\"", kwd))
-                    )
-            )
-        })
+                    "lookup" =>
+                        LookupRefOrDefinition::parse()
+                        .map(|x| match x {
+                            LookupRefOrDefinition::Definition(d) => d.into(),
+                            LookupRefOrDefinition::Reference(r) => r.into()
+                        }),
 
-        .skip(optional_whitespace())
-        .skip(token(b';').expected("semicolon"))
+                    "subtable" => literal("subtable").map(|_| BlockStatement::Subtable),
+
+                    _ => combine::position().and(keyword())
+                        .flat_map(|(position, kwd)|
+                            crate::parse_bail!(Input, position,
+                                format!("unexpected keyword \"{}\"", kwd))
+                        )
+                )
+            })
+
+            .skip(optional_whitespace())
+            .skip(token(b';').expected("semicolon"))
+    ))
 }
 
 #[derive(Debug)]
@@ -96,8 +116,27 @@ pub struct Block<Ident> {
     pub statements: Vec<BlockStatement>
 }
 
-pub(crate) fn block<Input, Ident, F, P>(ident_parser: F)
-        -> impl Parser<FeaRsStream<Input>, Output = Block<Ident>>
+#[derive(Debug)]
+pub enum BlockOrReference<Ident> {
+    Block(Block<Ident>),
+    Reference(Ident)
+}
+
+#[inline]
+pub(crate) fn block_statements<Input>()
+        -> impl Parser<FeaRsStream<Input>, Output = Vec<BlockStatement>>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    optional_whitespace()
+        .with(many(
+                optional_whitespace()
+                .with(block_statement())
+                .skip(optional_whitespace())))
+}
+
+pub(crate) fn block_or_reference<Input, Ident, F, P>(ident_parser: F)
+        -> impl Parser<FeaRsStream<Input>, Output = BlockOrReference<Ident>>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           F: Fn() -> P,
@@ -107,27 +146,70 @@ pub(crate) fn block<Input, Ident, F, P>(ident_parser: F)
     ident_parser()
         .skip(optional_whitespace())
 
-        .and(between(token(b'{').expected("'{'"), token(b'}').expected("'}'"),
-            optional_whitespace()
-                .with(many(
-                    optional_whitespace()
-                        .with(block_statement())
-                        .skip(optional_whitespace()))
-                )))
+        .and(optional(
+            between(
+                token(b'{').expected("'{'"),
+                token(b'}').expected("'}'"),
+                block_statements())
+            .skip(optional_whitespace())
+            .and(combine::position()
+                .and(ident_parser()))))
 
-        .skip(optional_whitespace())
-        .and(combine::position())
-        .and(ident_parser())
+        .flat_map(|(opening_ident, block_innards)| {
+            let res = match block_innards {
+                None => BlockOrReference::Reference(opening_ident),
+                Some((statements, (position, closing_ident))) => {
+                    if opening_ident != closing_ident {
+                        crate::parse_bail!(Input, position,
+                            format!("mismatched block identifier (opening \"{}\", closing\"{}\")",
+                            opening_ident, closing_ident));
+                    }
 
-        .flat_map(|(((ident, statements), position), closing_ident)| {
-            if ident != closing_ident {
-                crate::parse_bail!(Input, position,
-                    format!("mismatched block identifier (starting \"{}\", closing\"{}\")",
-                            ident, closing_ident));
-            }
+                    BlockOrReference::Block(Block {
+                        ident: opening_ident,
+                        statements
+                    })
+                }
+            };
 
-            Ok(Block {
-                ident,
-                statements
-            })})
+            Ok(res)
+        })
+}
+
+pub(crate) fn block<Input, Ident, F, P>(ident_parser: F)
+        -> impl Parser<FeaRsStream<Input>, Output = Block<Ident>>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+          F: Fn() -> P + Clone,
+          P: Parser<FeaRsStream<Input>, Output = Ident>,
+          Ident: PartialEq + fmt::Display
+{
+    combine::position()
+        .and(block_or_reference(ident_parser))
+        .flat_map(|(position, res)|
+            match res {
+                BlockOrReference::Block(b) => Ok(b),
+                BlockOrReference::Reference(_) =>
+                    crate::parse_bail!(Input, position,
+                        "expected block")
+            })
+}
+
+pub(crate) fn reference<Input, Ident, F, P>(ident_parser: F)
+        -> impl Parser<FeaRsStream<Input>, Output = Ident>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+          F: Fn() -> P + Clone,
+          P: Parser<FeaRsStream<Input>, Output = Ident>,
+          Ident: PartialEq + fmt::Display
+{
+    combine::position()
+        .and(block_or_reference(ident_parser))
+        .flat_map(|(position, res)|
+            match res {
+                BlockOrReference::Block(_) =>
+                    crate::parse_bail!(Input, position,
+                        "expected reference"),
+                BlockOrReference::Reference(r) => Ok(r)
+            })
 }

@@ -31,9 +31,6 @@ pub use language_system::*;
 mod lookup;
 pub use lookup::*;
 
-mod lookup_definition;
-pub use lookup_definition::*;
-
 mod metric;
 pub use metric::*;
 

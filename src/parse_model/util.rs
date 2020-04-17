@@ -66,7 +66,7 @@ pub(crate) fn literal<Input>(lit: &str) -> impl Parser<Input, Output = std::str:
 }
 
 #[inline]
-pub(crate) fn comment<Input>() -> impl Parser<FeaRsStream<Input>, Output = ()>
+pub(crate) fn comment<Input>() -> impl Parser<Input, Output = ()>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
@@ -76,7 +76,7 @@ pub(crate) fn comment<Input>() -> impl Parser<FeaRsStream<Input>, Output = ()>
 }
 
 #[inline]
-pub(crate) fn optional_whitespace<Input>() -> impl Parser<FeaRsStream<Input>, Output = ()>
+pub(crate) fn optional_whitespace<Input>() -> impl Parser<Input, Output = ()>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
