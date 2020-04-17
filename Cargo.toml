@@ -1,0 +1,13 @@
+[package]
+name = "otf-fea-rs"
+version = "0.1.0"
+authors = ["William Light <wrl@lhiaudio.com>"]
+edition = "2018"
+
+[dependencies]
+ascii = "1.0.0"
+combine = "4"
+
+[dependencies.arrayvec]
+version = "0.5"
+features = ["array-sizes-33-128"]
