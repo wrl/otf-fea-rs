@@ -18,12 +18,7 @@ use combine::{
     between,
     token,
 
-    parser::repeat::{
-        many,
-        many1
-    },
-
-    parser::byte::letter,
+    parser::repeat::many,
 
     dispatch
 };
@@ -35,6 +30,7 @@ use super::parameters::*;
 use super::substitute::*;
 use super::position::*;
 use super::lookup::*;
+use super::lookup_flag::*;
 
 #[derive(Debug)]
 pub enum BlockStatement {
@@ -43,6 +39,7 @@ pub enum BlockStatement {
     Position(Position),
     Lookup(Lookup),
     LookupDefinition(LookupDefinition),
+    LookupFlag(LookupFlag),
 
     Subtable
 }
@@ -62,15 +59,7 @@ cvt_to_statement!(Parameters);
 cvt_to_statement!(Position);
 cvt_to_statement!(Lookup);
 cvt_to_statement!(LookupDefinition);
-
-#[inline]
-fn keyword<Input>() -> impl Parser<FeaRsStream<Input>, Output = String>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
-{
-    // from_utf8_unchecked() is safe here because letter() only matches ASCII chars.
-    many1(letter()).map(|x| unsafe { String::from_utf8_unchecked(x) })
-}
+cvt_to_statement!(LookupFlag);
 
 pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStatement>
     where Input: Stream<Token = u8>,
@@ -94,6 +83,8 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
                             LookupRefOrDefinition::Definition(d) => d.into(),
                             LookupRefOrDefinition::Reference(r) => r.into()
                         }),
+
+                    "lookupflag" => lookup_flag().map(|lf| lf.into()),
 
                     "subtable" => literal("subtable").map(|_| BlockStatement::Subtable),
 

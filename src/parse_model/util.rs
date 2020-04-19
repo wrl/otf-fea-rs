@@ -32,6 +32,7 @@ use combine::parser::repeat::{
 
 use combine::parser::byte::{
     newline,
+    letter,
     space,
     digit
 };
@@ -192,4 +193,13 @@ where
     P: Parser<Input>
 {
     attempt(look_ahead(p))
+}
+
+#[inline]
+pub(crate) fn keyword<Input>() -> impl Parser<Input, Output = String>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    // from_utf8_unchecked() is safe here because letter() only matches ASCII chars.
+    many1(letter()).map(|x| unsafe { String::from_utf8_unchecked(x) })
 }
