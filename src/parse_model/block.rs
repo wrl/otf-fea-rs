@@ -31,6 +31,7 @@ use super::substitute::*;
 use super::position::*;
 use super::lookup::*;
 use super::lookup_flag::*;
+use super::mark_class::*;
 
 #[derive(Debug)]
 pub enum BlockStatement {
@@ -40,6 +41,7 @@ pub enum BlockStatement {
     Lookup(Lookup),
     LookupDefinition(LookupDefinition),
     LookupFlag(LookupFlag),
+    MarkClass(MarkClass),
 
     Subtable
 }
@@ -60,6 +62,7 @@ cvt_to_statement!(Position);
 cvt_to_statement!(Lookup);
 cvt_to_statement!(LookupDefinition);
 cvt_to_statement!(LookupFlag);
+cvt_to_statement!(MarkClass);
 
 pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStatement>
     where Input: Stream<Token = u8>,
@@ -85,6 +88,8 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
                         }),
 
                     "lookupflag" => lookup_flag().map(|lf| lf.into()),
+
+                    "markClass" => mark_class().map(|mc| mc.into()),
 
                     "subtable" => literal("subtable").map(|_| BlockStatement::Subtable),
 
