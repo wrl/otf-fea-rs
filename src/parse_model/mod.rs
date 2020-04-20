@@ -13,8 +13,8 @@ pub use contour_point::*;
 mod device;
 pub use device::*;
 
-mod feature_definition;
-pub use feature_definition::*;
+mod feature;
+pub use feature::*;
 
 mod glyph;
 pub use glyph::*;

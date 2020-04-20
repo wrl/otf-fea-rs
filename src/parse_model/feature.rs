@@ -21,7 +21,7 @@ pub(crate) fn feature_definition<Input>() -> impl Parser<FeaRsStream<Input>, Out
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("feature")
-        .with(required_whitespace())
+        .skip(required_whitespace())
 
         .with(block(tag))
 
@@ -30,4 +30,18 @@ pub(crate) fn feature_definition<Input>() -> impl Parser<FeaRsStream<Input>, Out
                 tag: block.ident,
                 statements: block.statements
             })
+}
+
+#[derive(Debug)]
+pub struct FeatureReference(pub Tag);
+
+pub(crate) fn feature_reference<Input>() -> impl Parser<FeaRsStream<Input>, Output = FeatureReference>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    literal_ignore_case("feature")
+        .skip(required_whitespace())
+        .with(tag())
+
+        .map(|tag| FeatureReference(tag))
 }

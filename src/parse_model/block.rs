@@ -33,11 +33,13 @@ use super::parameters::*;
 use super::substitute::*;
 use super::position::*;
 use super::language::*;
+use super::feature::*;
 use super::lookup::*;
 use super::script::*;
 
 #[derive(Debug)]
 pub enum BlockStatement {
+    FeatureReference(FeatureReference),
     LookupDefinition(LookupDefinition),
     LookupFlag(LookupFlag),
     Parameters(Parameters),
@@ -61,6 +63,7 @@ macro_rules! cvt_to_statement (
     }
 );
 
+cvt_to_statement!(FeatureReference);
 cvt_to_statement!(LookupDefinition);
 cvt_to_statement!(LookupFlag);
 cvt_to_statement!(Parameters);
@@ -80,6 +83,10 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
 
     opaque!(no_partial(
         choice((
+                // if we have a preceding "ignore" statement, we'll skip over it in a look_ahead()
+                // so that the statement for which it's relevant (substitute or position) can parse
+                // it directly.
+
                 look_ahead(
                     literal_ignore_case("ignore")
                         .skip(required_whitespace())
@@ -100,6 +107,7 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
                             LookupRefOrDefinition::Reference(r) => r.into()
                         }),
 
+                    "feature" => feature_reference().map(|f| f.into()),
                     "lookupflag" => lookup_flag().map(|lf| lf.into()),
                     "markClass" => mark_class().map(|mc| mc.into()),
                     "script" => script().map(|s| s.into()),
@@ -140,7 +148,7 @@ pub(crate) fn block_statements<Input>()
 {
     optional_whitespace()
         .with(many(
-                optional_whitespace()
+            optional_whitespace()
                 .with(block_statement())
                 .skip(optional_whitespace())))
 }
