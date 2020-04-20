@@ -25,6 +25,9 @@ pub use glyph_class::*;
 mod glyph_pattern;
 pub use glyph_pattern::*;
 
+mod language;
+pub use language::*;
+
 mod language_system;
 pub use language_system::*;
 
@@ -45,6 +48,9 @@ pub use parameters::*;
 
 mod position;
 pub use position::*;
+
+mod script;
+pub use script::*;
 
 mod substitute;
 pub use substitute::*;

@@ -27,22 +27,26 @@ use combine::{
 use crate::parser::FeaRsStream;
 
 use super::util::*;
+use super::lookup_flag::*;
+use super::mark_class::*;
 use super::parameters::*;
 use super::substitute::*;
 use super::position::*;
+use super::language::*;
 use super::lookup::*;
-use super::lookup_flag::*;
-use super::mark_class::*;
+use super::script::*;
 
 #[derive(Debug)]
 pub enum BlockStatement {
-    Parameters(Parameters),
-    Substitute(Substitute),
-    Position(Position),
-    Lookup(Lookup),
     LookupDefinition(LookupDefinition),
     LookupFlag(LookupFlag),
+    Parameters(Parameters),
+    Substitute(Substitute),
     MarkClass(MarkClass),
+    Language(Language),
+    Position(Position),
+    Lookup(Lookup),
+    Script(Script),
 
     Subtable
 }
@@ -57,13 +61,15 @@ macro_rules! cvt_to_statement (
     }
 );
 
-cvt_to_statement!(Substitute);
-cvt_to_statement!(Parameters);
-cvt_to_statement!(Position);
-cvt_to_statement!(Lookup);
 cvt_to_statement!(LookupDefinition);
 cvt_to_statement!(LookupFlag);
+cvt_to_statement!(Parameters);
+cvt_to_statement!(Substitute);
 cvt_to_statement!(MarkClass);
+cvt_to_statement!(Language);
+cvt_to_statement!(Position);
+cvt_to_statement!(Lookup);
+cvt_to_statement!(Script);
 
 pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStatement>
     where Input: Stream<Token = u8>,
@@ -95,8 +101,9 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
                         }),
 
                     "lookupflag" => lookup_flag().map(|lf| lf.into()),
-
                     "markClass" => mark_class().map(|mc| mc.into()),
+                    "script" => script().map(|s| s.into()),
+                    "language" => language().map(|l| l.into()),
 
                     "subtable" => literal("subtable").map(|_| BlockStatement::Subtable),
 
