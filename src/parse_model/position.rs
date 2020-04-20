@@ -16,7 +16,8 @@ use combine::{
     parser::byte::space,
 
     dispatch,
-    choice
+    choice,
+    value
 };
 
 use crate::parser::FeaRsStream;
@@ -240,28 +241,44 @@ pub(crate) fn position<Input>() -> impl Parser<FeaRsStream<Input>, Output = Posi
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    optional(literal_ignore_case("ignore")
-            .map(|_| ())
-            .skip(required_whitespace()))
-        .map(|opt| opt.is_some())
+    #[derive(Debug, Clone)]
+    enum Mode {
+        Normal,
+        Ignore,
+        Enumerate
+    };
+
+    choice((
+        literal_ignore_case("ignore")
+            .map(|_| Mode::Ignore)
+            .skip(required_whitespace()),
+
+        literal_ignore_case("enum")
+            .skip(optional(literal_ignore_case("erate")))
+            .map(|_| Mode::Enumerate)
+            .skip(required_whitespace()),
+
+        value(Mode::Normal)
+    ))
 
         .skip(literal_ignore_case("pos"))
         .skip(optional(literal_ignore_case("ition")))
         .skip(required_whitespace())
 
-        .with(look_ahead(take_until(space()))
-            .then(|typ: Vec<_>| {
-                dispatch!(&*typ;
-                    b"base" => mark_to_base(),
-                    b"cursive" => cursive(),
-                    b"ligature" => ligature(),
-                    b"mark" => mark_to_mark(),
-                    _ => glyph_pattern()
-                        .map(|_| 
-                            Position::SingleAdjustment {
-                                glyph_class: GlyphClass(vec![]),
-                                value_record: ValueRecord::Advance(Metric(0.0f64))
-                            })
-                    )
-            }))
+        .and(look_ahead(take_until(space())))
+
+        .then(|(_mode, typ): (Mode, Vec<_>)| {
+            dispatch!(&*typ;
+                b"base" => mark_to_base(),
+                b"cursive" => cursive(),
+                b"ligature" => ligature(),
+                b"mark" => mark_to_mark(),
+                _ => glyph_pattern()
+                    .map(|_|
+                        Position::SingleAdjustment {
+                            glyph_class: GlyphClass(vec![]),
+                            value_record: ValueRecord::Advance(Metric(0.0f64))
+                        })
+                )
+        })
 }

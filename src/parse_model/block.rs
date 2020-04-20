@@ -27,6 +27,7 @@ use combine::{
 use crate::parser::FeaRsStream;
 
 use super::util::*;
+use super::glyph_class::*;
 use super::lookup_flag::*;
 use super::mark_class::*;
 use super::parameters::*;
@@ -40,15 +41,16 @@ use super::script::*;
 #[derive(Debug)]
 pub enum BlockStatement {
     FeatureReference(FeatureReference),
+    Language(Language),
+    Lookup(Lookup),
     LookupDefinition(LookupDefinition),
     LookupFlag(LookupFlag),
-    Parameters(Parameters),
-    Substitute(Substitute),
     MarkClass(MarkClass),
-    Language(Language),
+    NamedGlyphClass(NamedGlyphClass),
+    Parameters(Parameters),
     Position(Position),
-    Lookup(Lookup),
     Script(Script),
+    Substitute(Substitute),
 
     Subtable
 }
@@ -64,15 +66,16 @@ macro_rules! cvt_to_statement (
 );
 
 cvt_to_statement!(FeatureReference);
+cvt_to_statement!(Language);
+cvt_to_statement!(Lookup);
 cvt_to_statement!(LookupDefinition);
 cvt_to_statement!(LookupFlag);
-cvt_to_statement!(Parameters);
-cvt_to_statement!(Substitute);
 cvt_to_statement!(MarkClass);
-cvt_to_statement!(Language);
+cvt_to_statement!(NamedGlyphClass);
+cvt_to_statement!(Parameters);
 cvt_to_statement!(Position);
-cvt_to_statement!(Lookup);
 cvt_to_statement!(Script);
+cvt_to_statement!(Substitute);
 
 pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStatement>
     where Input: Stream<Token = u8>,
@@ -89,6 +92,8 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
 
                 look_ahead(
                     literal_ignore_case("ignore")
+                        .or(literal_ignore_case("enum")
+                            .skip(optional(literal_ignore_case("erate"))))
                         .skip(required_whitespace())
                         .with(keyword())),
                 look_ahead(keyword()),
@@ -149,7 +154,14 @@ pub(crate) fn block_statements<Input>()
     optional_whitespace()
         .with(many(
             optional_whitespace()
-                .with(block_statement())
+                .with(choice((
+                    named_glyph_class()
+                        .expected("glyph class definition")
+                        .map(|gc| gc.into())
+                        .skip(optional_whitespace())
+                        .skip(token(b';').expected("semicolon")),
+                    block_statement()
+                )))
                 .skip(optional_whitespace())))
 }
 
