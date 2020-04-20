@@ -240,9 +240,15 @@ pub(crate) fn position<Input>() -> impl Parser<FeaRsStream<Input>, Output = Posi
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    literal_ignore_case("pos")
-        .and(optional(literal_ignore_case("ition")))
+    optional(literal_ignore_case("ignore")
+            .map(|_| ())
+            .skip(required_whitespace()))
+        .map(|opt| opt.is_some())
+
+        .skip(literal_ignore_case("pos"))
+        .skip(optional(literal_ignore_case("ition")))
         .skip(required_whitespace())
+
         .with(look_ahead(take_until(space()))
             .then(|typ: Vec<_>| {
                 dispatch!(&*typ;

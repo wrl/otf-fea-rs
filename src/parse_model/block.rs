@@ -20,6 +20,7 @@ use combine::{
 
     parser::repeat::many,
 
+    choice,
     dispatch
 };
 
@@ -72,7 +73,13 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
     // blocks can be nested inside blocks
 
     opaque!(no_partial(
-        look_ahead(keyword())
+        choice((
+                look_ahead(
+                    literal_ignore_case("ignore")
+                        .skip(required_whitespace())
+                        .with(keyword())),
+                look_ahead(keyword()),
+        ))
             .then(|kwd| {
                 dispatch!(&*kwd;
                     "parameters" => parameters().map(|p| p.into()),

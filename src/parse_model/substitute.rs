@@ -3,6 +3,8 @@ use combine::{
     Stream,
     error::ParseError,
 
+    attempt,
+    optional,
     value,
 
     parser::repeat::many1,
@@ -74,20 +76,31 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
     }
 
     #[derive(PartialEq, Eq)]
-    enum Direction {
+    enum Subtype {
         Forward,
-        Reverse
+        Reverse,
+        Ignore
     }
 
-    combine::position().and(many1(letter()))
-        .flat_map(|(position, kwd): (_, Vec<u8>)| {
-            let direction = match &*kwd {
-                b"substitute" | b"sub" => Direction::Forward,
-                b"reversesub" | b"rsub" => Direction::Reverse,
+    combine::position()
+        .and(attempt(
+                optional(literal_ignore_case("ignore").map(|_| ()))
+                    .map(|opt| opt.is_some())
+        ))
+        .and(many1(letter()))
+        .flat_map(|((position, ignore), kwd): (_, Vec<u8>)| {
+            let subtype = match &*kwd {
+                b"substitute" | b"sub" if ignore => Subtype::Ignore,
+                b"reversesub" | b"rsub" if ignore =>
+                    crate::parse_bail!(Input, position,
+                        "\"ignore\" is invalid with reverse substitution"),
+
+                b"substitute" | b"sub" => Subtype::Forward,
+                b"reversesub" | b"rsub" => Subtype::Reverse,
                 _ => crate::parse_bail!(Input, position, "unexpected keyword")
             };
 
-            Ok((position, direction))
+            Ok((position, subtype))
         })
         .skip(required_whitespace())
         .and(glyph_pattern())
@@ -101,7 +114,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                 .and(glyph_class_or_class_ref().map(|gc| vec![gc])),
             value(()).map(|_| (None, vec![]))
         )))
-        .flat_map(|(((position, direction), pattern), (keyword, replacement))| {
+        .flat_map(|(((position, subtype), pattern), (keyword, replacement))| {
             if pattern.num_value_records > 0 {
                 crate::parse_bail!(Input, position,
                     "Substitution statements cannot contain value records");
@@ -110,7 +123,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
             // GSUB lookup type 3
             //     "substitute a from [a.1 a.2 a.3];"
             if keyword == Some(SubKeyword::From) {
-                if direction == Direction::Reverse {
+                if subtype == Subtype::Reverse {
                     crate::parse_bail!(Input, position,
                         "Reverse chaining substitutions do not support \"from\"");
                 }
@@ -137,7 +150,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
             //     "substitute a by a.sc;"
             //     "substitute [one.fitted one.oldstyle] by one;"
             //     "substitute [a-d] by [A.sc-D.sc];"
-            if direction == Direction::Forward
+            if subtype == Subtype::Forward
                     && pattern.glyphs.len() == 1 && replacement.len() == 1
                     && pattern.num_lookups == 0 {
 
