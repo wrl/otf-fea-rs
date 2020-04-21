@@ -12,7 +12,7 @@ use combine::{
 
     parser::repeat::{
         sep_by,
-        many
+        many1
     }
 };
 
@@ -51,6 +51,18 @@ pub struct Attach {
     pub contour_points: Vec<usize>
 }
 
+#[derive(Debug)]
+pub struct LigatureCaretByPos {
+    pub glyphs: GlyphClass,
+    pub carets: Vec<usize>
+}
+
+#[derive(Debug)]
+pub struct LigatureCaretByIndex {
+    pub glyphs: GlyphClass,
+    pub carets: Vec<usize>
+}
+
 macro_rules! cvt_to_statement (
     ($iden:ident) => {
         impl From<$iden> for TableStatement {
@@ -65,10 +77,14 @@ macro_rules! cvt_to_statement (
 pub enum TableStatement {
     Attach(Attach),
     GlyphClassDef(GlyphClassDef),
+    LigatureCaretByPos(LigatureCaretByPos),
+    LigatureCaretByIndex(LigatureCaretByIndex),
 }
 
 cvt_to_statement!(Attach);
 cvt_to_statement!(GlyphClassDef);
+cvt_to_statement!(LigatureCaretByPos);
+cvt_to_statement!(LigatureCaretByIndex);
 
 #[derive(Debug)]
 pub struct Table {
@@ -119,12 +135,22 @@ fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStat
     {
         glyph_class_or_glyph()
             .skip(required_whitespace())
-            .and(many(uinteger()
+            .and(many1(uinteger()
                     .skip(optional_whitespace())))
             .map(|(glyphs, contour_points)| Attach {
                 glyphs,
                 contour_points
             }.into())
+    }
+
+    fn ligature_caret<Input>() -> impl Parser<FeaRsStream<Input>, Output = (GlyphClass, Vec<usize>)>
+        where Input: Stream<Token = u8>,
+              Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+    {
+        glyph_class_or_glyph()
+            .skip(required_whitespace())
+            .and(many1(uinteger()
+                    .skip(optional_whitespace())))
     }
 
     combine::position()
@@ -134,6 +160,16 @@ fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStat
             dispatch!(&*kwd;
                 "GlyphClassDef" => gdef_statement(),
                 "Attach" => attach_statement(),
+
+                "LigatureCaretByPos" => ligature_caret()
+                    .map(|(glyphs, carets)| LigatureCaretByPos {
+                        glyphs, carets
+                    }.into()),
+
+                "LigatureCaretByIndex" => ligature_caret()
+                    .map(|(glyphs, carets)| LigatureCaretByIndex {
+                        glyphs, carets
+                    }.into()),
 
                 _ => value(position)
                 .flat_map(|position|
