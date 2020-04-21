@@ -20,7 +20,7 @@ use combine::{
 use crate::parser::FeaRsStream;
 use super::glyph::*;
 
-#[derive(Eq)]
+#[derive(Eq, Clone)]
 pub struct Tag(pub [AsciiChar; 4]);
 
 impl fmt::Debug for Tag {

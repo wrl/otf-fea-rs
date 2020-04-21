@@ -77,7 +77,7 @@ cvt_to_statement!(Position);
 cvt_to_statement!(Script);
 cvt_to_statement!(Substitute);
 
-pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStatement>
+pub(crate) fn block_statement<Input, Ident>(_: &Ident) -> FnOpaque<FeaRsStream<Input>, BlockStatement>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
@@ -161,41 +161,48 @@ pub enum BlockOrReference<Ident, Statement> {
 }
 
 #[inline]
-pub(crate) fn block_statements<Input, Statement, F, P>(statement_parser: F)
+pub(crate) fn block_statements<Input, Statement, P>(statement_parser: P)
         -> impl Parser<FeaRsStream<Input>, Output = Vec<Statement>>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
-          F: Fn() -> P,
           P: Parser<FeaRsStream<Input>, Output = Statement>
 {
     optional_whitespace()
         .with(many(
             optional_whitespace()
-                .with(statement_parser())
+                .with(statement_parser)
                 .skip(optional_whitespace())))
 }
 
-pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>(ident_parser: IF, statement_parser: SF)
+pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>
+            (ident_parser: IF, statement_parser: SF)
         -> impl Parser<FeaRsStream<Input>, Output = BlockOrReference<Ident, Statement>>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           IF: Fn() -> IP,
           IP: Parser<FeaRsStream<Input>, Output = Ident>,
-          SF: Fn() -> SP,
+          SF: Fn(&Ident) -> SP,
           SP: Parser<FeaRsStream<Input>, Output = Statement>,
-          Ident: PartialEq + fmt::Display
+          Ident: Clone + PartialEq + fmt::Display
 {
     ident_parser()
         .skip(optional_whitespace())
 
-        .and(optional(
-            between(
-                token(b'{').expected("'{'"),
-                token(b'}').expected("'}'"),
-                block_statements(statement_parser))
-            .skip(optional_whitespace())
-            .and(combine::position()
-                .and(ident_parser()))))
+        // FIXME: there's really no reason to "thread" ident through with a clone like this. it
+        //        should be possible to have a variant of `then` which only passes an immutable
+        //        ref in and then forwards its input through.
+        .then(move |ident| {
+            combine::value(ident.clone())
+                .and(
+                    optional(
+                        between(
+                            token(b'{').expected("'{'"),
+                            token(b'}').expected("'}'"),
+                            block_statements(statement_parser(&ident)))
+                        .skip(optional_whitespace())
+                        .and(combine::position()
+                            .and(ident_parser()))))
+        })
 
         .flat_map(|(opening_ident, block_innards)| {
             let res = match block_innards {
@@ -219,15 +226,16 @@ pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>(ident_
 }
 
 #[inline]
-pub(crate) fn block<Input, Ident, IF, IP, Statement, SF, SP>(ident_parser: IF, statement_parser: SF)
+pub(crate) fn block<Input, Ident, IF, IP, Statement, SF, SP>
+            (ident_parser: IF, statement_parser: SF)
         -> impl Parser<FeaRsStream<Input>, Output = Block<Ident, Statement>>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           IF: Fn() -> IP,
           IP: Parser<FeaRsStream<Input>, Output = Ident>,
-          SF: Fn() -> SP,
+          SF: Fn(&Ident) -> SP,
           SP: Parser<FeaRsStream<Input>, Output = Statement>,
-          Ident: PartialEq + fmt::Display
+          Ident: Clone + PartialEq + fmt::Display
 {
     combine::position()
         .and(block_or_reference(ident_parser, statement_parser))

@@ -55,6 +55,9 @@ pub use script::*;
 mod substitute;
 pub use substitute::*;
 
+mod table;
+pub use table::*;
+
 mod tag;
 pub use tag::*;
 

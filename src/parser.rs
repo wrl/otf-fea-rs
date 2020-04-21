@@ -55,7 +55,9 @@ enum TopLevelStatement {
     NamedGlyphClass(NamedGlyphClass),
 
     FeatureDefinition(FeatureDefinition),
-    LookupDefinition(LookupDefinition)
+    LookupDefinition(LookupDefinition),
+
+    Table(Table)
 }
 
 fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TopLevelStatement>
@@ -65,6 +67,10 @@ fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TopL
     look_ahead(take_until(space()))
         .then(|kwd: Vec<_>| {
             dispatch!(&*kwd;
+                b"table" =>
+                    table()
+                        .map(|t| TopLevelStatement::Table(t)),
+
                 b"lookup" =>
                     lookup_definition()
                         .map(|ld| TopLevelStatement::LookupDefinition(ld)),
