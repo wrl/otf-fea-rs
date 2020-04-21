@@ -61,7 +61,7 @@ pub(crate) fn lookup_definition<Input>() -> impl Parser<FeaRsStream<Input>, Outp
     literal_ignore_case("lookup")
         .with(required_whitespace())
 
-        .with(block(lookup_block_label))
+        .with(block(lookup_block_label, block_statement))
 
         .map(|block|
             LookupDefinition {
@@ -79,7 +79,7 @@ pub(crate) fn lookup<Input>() -> impl Parser<FeaRsStream<Input>, Output = Lookup
 {
     literal_ignore_case("lookup")
         .skip(required_whitespace())
-        .with(reference(lookup_block_label))
+        .with(lookup_block_label())
         .map(|label| Lookup(label))
 }
 
@@ -95,7 +95,7 @@ impl LookupRefOrDefinition {
     {
         literal_ignore_case("lookup")
             .skip(required_whitespace())
-            .with(block_or_reference(lookup_block_label))
+            .with(block_or_reference(lookup_block_label, block_statement))
             .map(|res| {
                 match res {
                     BlockOrReference::Block(block) =>

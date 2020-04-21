@@ -23,7 +23,7 @@ pub(crate) fn feature_definition<Input>() -> impl Parser<FeaRsStream<Input>, Out
     literal_ignore_case("feature")
         .skip(required_whitespace())
 
-        .with(block(tag))
+        .with(block(tag, block_statement))
 
         .map(|block|
             FeatureDefinition {

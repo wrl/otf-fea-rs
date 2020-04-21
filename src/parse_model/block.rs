@@ -81,10 +81,11 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    // opaque is necessary here because otherwise we end up with this ugly recursive type since
-    // blocks can be nested inside blocks
-
-    opaque!(no_partial(
+    #[inline]
+    fn rule<Input>() -> impl Parser<FeaRsStream<Input>, Output = BlockStatement>
+        where Input: Stream<Token = u8>,
+              Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+    {
         choice((
                 // if we have a preceding "ignore" statement, we'll skip over it in a look_ahead()
                 // so that the statement for which it's relevant (substitute or position) can parse
@@ -130,47 +131,58 @@ pub(crate) fn block_statement<Input>() -> FnOpaque<FeaRsStream<Input>, BlockStat
 
             .skip(optional_whitespace())
             .skip(token(b';').expected("semicolon"))
+    }
+
+    // opaque is necessary here because otherwise we end up with this ugly recursive type since
+    // blocks can be nested inside blocks
+
+    opaque!(no_partial(
+        choice((
+            named_glyph_class()
+                .expected("glyph class definition")
+                .map(|gc| gc.into())
+                .skip(optional_whitespace())
+                .skip(token(b';').expected("semicolon")),
+            rule()
+        ))
     ))
 }
 
 #[derive(Debug)]
-pub struct Block<Ident> {
+pub struct Block<Ident, Statement> {
     pub ident: Ident,
-    pub statements: Vec<BlockStatement>
+    pub statements: Vec<Statement>
 }
 
 #[derive(Debug)]
-pub enum BlockOrReference<Ident> {
-    Block(Block<Ident>),
+pub enum BlockOrReference<Ident, Statement> {
+    Block(Block<Ident, Statement>),
     Reference(Ident)
 }
 
 #[inline]
-pub(crate) fn block_statements<Input>()
-        -> impl Parser<FeaRsStream<Input>, Output = Vec<BlockStatement>>
+pub(crate) fn block_statements<Input, Statement, F, P>(statement_parser: F)
+        -> impl Parser<FeaRsStream<Input>, Output = Vec<Statement>>
     where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+          F: Fn() -> P,
+          P: Parser<FeaRsStream<Input>, Output = Statement>
 {
     optional_whitespace()
         .with(many(
             optional_whitespace()
-                .with(choice((
-                    named_glyph_class()
-                        .expected("glyph class definition")
-                        .map(|gc| gc.into())
-                        .skip(optional_whitespace())
-                        .skip(token(b';').expected("semicolon")),
-                    block_statement()
-                )))
+                .with(statement_parser())
                 .skip(optional_whitespace())))
 }
 
-pub(crate) fn block_or_reference<Input, Ident, F, P>(ident_parser: F)
-        -> impl Parser<FeaRsStream<Input>, Output = BlockOrReference<Ident>>
+pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>(ident_parser: IF, statement_parser: SF)
+        -> impl Parser<FeaRsStream<Input>, Output = BlockOrReference<Ident, Statement>>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
-          F: Fn() -> P,
-          P: Parser<FeaRsStream<Input>, Output = Ident>,
+          IF: Fn() -> IP,
+          IP: Parser<FeaRsStream<Input>, Output = Ident>,
+          SF: Fn() -> SP,
+          SP: Parser<FeaRsStream<Input>, Output = Statement>,
           Ident: PartialEq + fmt::Display
 {
     ident_parser()
@@ -180,7 +192,7 @@ pub(crate) fn block_or_reference<Input, Ident, F, P>(ident_parser: F)
             between(
                 token(b'{').expected("'{'"),
                 token(b'}').expected("'}'"),
-                block_statements())
+                block_statements(statement_parser))
             .skip(optional_whitespace())
             .and(combine::position()
                 .and(ident_parser()))))
@@ -206,40 +218,24 @@ pub(crate) fn block_or_reference<Input, Ident, F, P>(ident_parser: F)
         })
 }
 
-pub(crate) fn block<Input, Ident, F, P>(ident_parser: F)
-        -> impl Parser<FeaRsStream<Input>, Output = Block<Ident>>
+#[inline]
+pub(crate) fn block<Input, Ident, IF, IP, Statement, SF, SP>(ident_parser: IF, statement_parser: SF)
+        -> impl Parser<FeaRsStream<Input>, Output = Block<Ident, Statement>>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
-          F: Fn() -> P + Clone,
-          P: Parser<FeaRsStream<Input>, Output = Ident>,
+          IF: Fn() -> IP,
+          IP: Parser<FeaRsStream<Input>, Output = Ident>,
+          SF: Fn() -> SP,
+          SP: Parser<FeaRsStream<Input>, Output = Statement>,
           Ident: PartialEq + fmt::Display
 {
     combine::position()
-        .and(block_or_reference(ident_parser))
+        .and(block_or_reference(ident_parser, statement_parser))
         .flat_map(|(position, res)|
             match res {
                 BlockOrReference::Block(b) => Ok(b),
                 BlockOrReference::Reference(_) =>
                     crate::parse_bail!(Input, position,
                         "expected block")
-            })
-}
-
-pub(crate) fn reference<Input, Ident, F, P>(ident_parser: F)
-        -> impl Parser<FeaRsStream<Input>, Output = Ident>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
-          F: Fn() -> P + Clone,
-          P: Parser<FeaRsStream<Input>, Output = Ident>,
-          Ident: PartialEq + fmt::Display
-{
-    combine::position()
-        .and(block_or_reference(ident_parser))
-        .flat_map(|(position, res)|
-            match res {
-                BlockOrReference::Block(_) =>
-                    crate::parse_bail!(Input, position,
-                        "expected reference"),
-                BlockOrReference::Reference(r) => Ok(r)
             })
 }
