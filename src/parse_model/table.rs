@@ -10,7 +10,10 @@ use combine::{
     value,
     token,
 
-    parser::repeat::sep_by
+    parser::repeat::{
+        sep_by,
+        many
+    }
 };
 
 use crate::parser::FeaRsStream;
@@ -42,6 +45,12 @@ pub struct GlyphClassDef {
     pub component: Vec<GlyphClass>
 }
 
+#[derive(Debug)]
+pub struct Attach {
+    pub glyphs: GlyphClass,
+    pub contour_points: Vec<usize>
+}
+
 macro_rules! cvt_to_statement (
     ($iden:ident) => {
         impl From<$iden> for TableStatement {
@@ -52,12 +61,14 @@ macro_rules! cvt_to_statement (
     }
 );
 
-cvt_to_statement!(GlyphClassDef);
-
 #[derive(Debug)]
 pub enum TableStatement {
-    GlyphClassDef(GlyphClassDef)
+    Attach(Attach),
+    GlyphClassDef(GlyphClassDef),
 }
+
+cvt_to_statement!(Attach);
+cvt_to_statement!(GlyphClassDef);
 
 #[derive(Debug)]
 pub struct Table {
@@ -69,36 +80,60 @@ fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStat
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
+    fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+        where Input: Stream<Token = u8>,
+              Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+    {
+        sep_by(glyph_class_or_class_ref(),
+                required_whitespace())
+            .skip(optional_whitespace())
+            .skip(token(b','))
+            .skip(optional_whitespace())
+
+            .and(sep_by(glyph_class_or_class_ref(),
+                required_whitespace()))
+            .skip(optional_whitespace())
+            .skip(token(b','))
+            .skip(optional_whitespace())
+
+            .and(sep_by(glyph_class_or_class_ref(),
+                required_whitespace()))
+            .skip(optional_whitespace())
+            .skip(token(b','))
+            .skip(optional_whitespace())
+
+            .and(sep_by(glyph_class_or_class_ref(),
+            required_whitespace()))
+
+            .map(|(((base, ligature), mark), component)| GlyphClassDef {
+                base,
+                ligature,
+                mark,
+                component
+            }.into())
+    }
+
+    fn attach_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+        where Input: Stream<Token = u8>,
+              Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+    {
+        glyph_class_or_glyph()
+            .skip(required_whitespace())
+            .and(many(uinteger()
+                    .skip(optional_whitespace())))
+            .map(|(glyphs, contour_points)| Attach {
+                glyphs,
+                contour_points
+            }.into())
+    }
+
     combine::position()
         .and(keyword())
+        .skip(required_whitespace())
         .then(|(position, kwd)| {
             dispatch!(&*kwd;
-                "GlyphClassDef" => {
-                    required_whitespace()
-                        .with(sep_by(glyph_class_or_class_ref(),
-                                required_whitespace()))
-                        .skip(optional_whitespace())
-                        .skip(token(b','))
-                        .skip(optional_whitespace())
-                        .and(sep_by(glyph_class_or_class_ref(),
-                                required_whitespace()))
-                        .skip(optional_whitespace())
-                        .skip(token(b','))
-                        .skip(optional_whitespace())
-                        .and(sep_by(glyph_class_or_class_ref(),
-                                required_whitespace()))
-                        .skip(optional_whitespace())
-                        .skip(token(b','))
-                        .skip(optional_whitespace())
-                        .and(sep_by(glyph_class_or_class_ref(),
-                                required_whitespace()))
-                        .map(|(((base, ligature), mark), component)| GlyphClassDef {
-                            base,
-                            ligature,
-                            mark,
-                            component
-                        }.into())
-                },
+                "GlyphClassDef" => gdef_statement(),
+                "Attach" => attach_statement(),
 
                 _ => value(position)
                 .flat_map(|position|
