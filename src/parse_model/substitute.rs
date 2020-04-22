@@ -84,7 +84,8 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
 
     combine::position()
         .and(attempt(
-                optional(literal_ignore_case("ignore").map(|_| ()))
+                optional(literal_ignore_case("ignore").map(|_| ())
+                    .skip(required_whitespace()))
                     .map(|opt| opt.is_some())
         ))
         .and(many1(letter()))
