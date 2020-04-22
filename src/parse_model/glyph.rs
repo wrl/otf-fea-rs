@@ -108,15 +108,6 @@ pub(crate) fn glyph_name_unwrapped<Input>() -> impl Parser<FeaRsStream<Input>, O
 #[derive(Clone)]
 pub struct GlyphCID(pub usize);
 
-fn glyph_cid<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphCID>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
-{
-    token(b'\\')
-        .with(uinteger())
-        .map(|cid| GlyphCID(cid))
-}
-
 impl fmt::Debug for GlyphCID {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "GlyphCID({})", self.0)
@@ -153,7 +144,15 @@ pub(crate) fn glyph_ref<Input>() -> impl Parser<FeaRsStream<Input>, Output = Gly
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     choice((
-        glyph_cid().map(|cid| GlyphRef::CID(cid)),
+        token(b'\\')
+            .with(choice((
+                uinteger()
+                    .map(|cid| GlyphRef::CID(GlyphCID(cid))),
+
+                glyph_name_unwrapped()
+                    .map(|name| GlyphRef::Name(GlyphName(name)))
+            ))),
+
         glyph_name_unwrapped().map(|name| GlyphRef::Name(GlyphName(name)))
     ))
 }
