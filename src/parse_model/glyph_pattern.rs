@@ -77,6 +77,7 @@ pub(crate) fn glyph_pattern<Input>() -> impl Parser<FeaRsStream<Input>, Output =
                     .map(|_| Next::End),
 
                 glyph_class_or_glyph()
+                    .skip(optional_whitespace())
                     .and(optional(token(b'\''))
                         .skip(optional_whitespace())
                         .and(optional(
