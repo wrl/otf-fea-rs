@@ -8,7 +8,8 @@ edition = "2018"
 ascii = "1.0.0"
 
 [dependencies.combine]
-path = "vendor/combine"
+git = "https://github.com/Marwes/combine.git"
+rev = "6272eeb73d74118ca9ad8fdf53dc7db91ad19fa6"
 
 [dependencies.arrayvec]
 version = "0.5"

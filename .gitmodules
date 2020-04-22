@@ -1,3 +1,0 @@
-[submodule "vendor/combine"]
-	path = vendor/combine
-	url = git@github.com:wrl/combine.git
