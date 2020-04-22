@@ -6,10 +6,7 @@ edition = "2018"
 
 [dependencies]
 ascii = "1.0.0"
-
-[dependencies.combine]
-git = "https://github.com/Marwes/combine.git"
-rev = "6272eeb73d74118ca9ad8fdf53dc7db91ad19fa6"
+combine = "4.1"
 
 [dependencies.arrayvec]
 version = "0.5"
