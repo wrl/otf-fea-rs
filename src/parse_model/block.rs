@@ -185,7 +185,7 @@ pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>
           IP: Parser<FeaRsStream<Input>, Output = Ident>,
           SF: Fn(&Ident) -> SP,
           SP: Parser<FeaRsStream<Input>, Output = Statement>,
-          Ident: Clone + PartialEq + fmt::Display
+          Ident: PartialEq + fmt::Display
 {
     ident_parser()
         .skip(optional_whitespace())
@@ -193,17 +193,15 @@ pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>
         // FIXME: there's really no reason to "thread" ident through with a clone like this. it
         //        should be possible to have a variant of `then` which only passes an immutable
         //        ref in and then forwards its input through.
-        .then(move |ident| {
-            combine::value(ident.clone())
-                .and(
-                    optional(
-                        between(
-                            token(b'{').expected("'{'"),
-                            token(b'}').expected("'}'"),
-                            block_statements(statement_parser(&ident)))
-                        .skip(optional_whitespace())
-                        .and(combine::position()
-                            .and(ident_parser()))))
+        .then_ref(move |ident| {
+            optional(
+                between(
+                    token(b'{').expected("'{'"),
+                    token(b'}').expected("'}'"),
+                    block_statements(statement_parser(ident)))
+                .skip(optional_whitespace())
+                .and(combine::position()
+                    .and(ident_parser())))
         })
 
         .flat_map(|(opening_ident, block_innards)| {
@@ -237,7 +235,7 @@ pub(crate) fn block<Input, Ident, IF, IP, Statement, SF, SP>
           IP: Parser<FeaRsStream<Input>, Output = Ident>,
           SF: Fn(&Ident) -> SP,
           SP: Parser<FeaRsStream<Input>, Output = Statement>,
-          Ident: Clone + PartialEq + fmt::Display
+          Ident: PartialEq + fmt::Display
 {
     combine::position()
         .and(block_or_reference(ident_parser, statement_parser))

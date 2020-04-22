@@ -14,7 +14,7 @@ use super::block::*;
 use super::glyph::*;
 use super::util::*;
 
-#[derive(Clone, cmp::PartialEq)]
+#[derive(cmp::PartialEq)]
 pub struct LookupBlockLabel(pub GlyphNameStorage);
 
 impl fmt::Debug for LookupBlockLabel {

@@ -22,7 +22,7 @@ use super::block::*;
 use super::glyph_class::*;
 use super::util::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum TableTag {
     GDEF
 }
