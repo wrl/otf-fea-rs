@@ -69,6 +69,7 @@ pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = G
 
     enum Next<T> {
         Glyph(T),
+        ClassRef(GlyphClassName),
         RangeSpec(T),
         EndClass
     }
@@ -84,6 +85,9 @@ pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = G
                             .skip(optional_whitespace())
                             .with(glyph_ref()).map(|gr| Next::RangeSpec(gr)),
 
+                        glyph_class_name()
+                            .map(|cn| Next::ClassRef(cn)),
+
                         glyph_ref()
                             .map(|gr| Next::Glyph(gr)),
 
@@ -94,6 +98,9 @@ pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = G
 
                 for (_, next) in &mut parse_iter {
                     match next {
+                        Next::ClassRef(class) =>
+                            glyphs.push(GlyphClassItem::ClassRef(class)),
+
                         Next::Glyph(glyph) => glyphs.push(GlyphClassItem::Single(glyph)),
 
                         Next::RangeSpec(end) => {
@@ -139,8 +146,8 @@ pub(crate) fn glyph_class_or_class_ref<Input>() -> impl Parser<FeaRsStream<Input
 {
     choice((
         glyph_class().map(|gc| gc),
-        class_name().map(|cn|
-            GlyphClass(vec![GlyphClassItem::ClassRef(GlyphClassName(cn.0))]))
+        glyph_class_name().map(|cn|
+            GlyphClass(vec![GlyphClassItem::ClassRef(cn)]))
     ))
 }
 
@@ -151,8 +158,8 @@ pub(crate) fn glyph_class_or_glyph<Input>() -> impl Parser<FeaRsStream<Input>, O
     choice((
         glyph_class().map(|gc| gc),
         glyph_ref().map(|gr| GlyphClass::from_single(gr)),
-        class_name().map(|cn|
-            GlyphClass(vec![GlyphClassItem::ClassRef(GlyphClassName(cn.0))]))
+        glyph_class_name().map(|cn|
+            GlyphClass(vec![GlyphClassItem::ClassRef(cn)]))
     ))
 }
 
@@ -173,6 +180,14 @@ impl fmt::Debug for GlyphClassName {
 
         write!(f, "\")")
     }
+}
+
+pub(crate) fn glyph_class_name<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClassName>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    class_name()
+        .map(|cn| GlyphClassName(cn.0))
 }
 
 #[derive(Debug)]
