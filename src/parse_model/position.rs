@@ -32,7 +32,7 @@ use super::util::*;
 
 #[derive(Debug)]
 pub struct LigatureComponent {
-    anchors: Vec<(Anchor, MarkClassName)>
+    anchors: Vec<(Anchor, Option<MarkClassName>)>
 }
 
 #[derive(Debug)]
@@ -109,13 +109,24 @@ fn ligature<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
     {
         many1(
             anchor()
-                .skip(required_whitespace())
-                .skip(literal_ignore_case("mark"))
-                .skip(required_whitespace())
-                .and(class_name()
-                    .map(|cn| MarkClassName(cn.0)))
-                .skip(optional_whitespace()))
-            .map(|anchors| LigatureComponent { anchors })
+                .then_ref(|anchor| {
+                    if let Anchor::Null = *anchor {
+                        return optional_whitespace()
+                            .map(|_| None)
+                            .left();
+                    }
+
+                    required_whitespace()
+                        .skip(literal_ignore_case("mark"))
+                        .skip(required_whitespace())
+                        .with(class_name()
+                            .map(|cn| Some(MarkClassName(cn.0))))
+                        .skip(optional_whitespace())
+                        .right()
+                }))
+            .map(|anchors| LigatureComponent {
+                anchors
+            })
     }
 
     literal_ignore_case("ligature")
