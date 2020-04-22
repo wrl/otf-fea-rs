@@ -134,7 +134,7 @@ pub(crate) fn glyph_pattern<Input>() -> impl Parser<FeaRsStream<Input>, Output =
             };
         }
 
-        if pattern.glyphs.len() == 0 && pattern.suffix.len() == 0 {
+        if pattern.glyphs.is_empty() && pattern.suffix.is_empty() {
             let pattern = GlyphPattern {
                 prefix: Vec::new(),
                 glyphs: pattern.prefix,

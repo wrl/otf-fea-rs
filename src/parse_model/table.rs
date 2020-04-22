@@ -198,10 +198,10 @@ fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>
     }
 
     combine::position()
-        .and(satisfy(|x| char_valid(x)))
-        .and(satisfy(|x| char_valid(x)))
-        .and(satisfy(|x| char_valid(x)))
-        .and(satisfy(|x| char_valid(x)))
+        .and(satisfy(char_valid))
+        .and(satisfy(char_valid))
+        .and(satisfy(char_valid))
+        .and(satisfy(char_valid))
         .flat_map(|((((position, one), two), three), four)| {
             let tag = &[one, two, three, four];
 

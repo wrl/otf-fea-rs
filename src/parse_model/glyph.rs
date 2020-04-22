@@ -123,7 +123,7 @@ pub enum GlyphRef {
 impl fmt::Debug for GlyphRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            &GlyphRef::Name(ref name) => {
+            GlyphRef::Name(ref name) => {
                 write!(f, "GlyphRef(name = \"")?;
 
                 for c in &name.0 {
@@ -133,7 +133,7 @@ impl fmt::Debug for GlyphRef {
                 write!(f, "\")")
             },
 
-            &GlyphRef::CID(ref cid) =>
+            GlyphRef::CID(ref cid) =>
                 write!(f, "GlyphRef(CID = {})", cid.0)
         }
     }

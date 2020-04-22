@@ -45,7 +45,7 @@ pub(crate) fn lookup_block_label<Input>() -> impl Parser<FeaRsStream<Input>, Out
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_name_unwrapped()
-        .map(|gn| LookupBlockLabel(gn))
+        .map(LookupBlockLabel)
 }
 
 #[derive(Debug)]
@@ -80,7 +80,7 @@ pub(crate) fn lookup<Input>() -> impl Parser<FeaRsStream<Input>, Output = Lookup
     literal_ignore_case("lookup")
         .skip(required_whitespace())
         .with(lookup_block_label())
-        .map(|label| Lookup(label))
+        .map(Lookup)
 }
 
 pub(crate) enum LookupRefOrDefinition {

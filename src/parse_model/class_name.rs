@@ -32,5 +32,5 @@ pub(crate) fn class_name<Input>() -> impl Parser<FeaRsStream<Input>, Output = Cl
 {
     token(b'@')
         .with(glyph_name_unwrapped())
-        .map(|name| ClassName(name))
+        .map(ClassName)
 }

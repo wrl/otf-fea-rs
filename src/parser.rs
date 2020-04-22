@@ -69,33 +69,31 @@ fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TopL
             dispatch!(&*kwd;
                 b"table" =>
                     table()
-                        .map(|t| TopLevelStatement::Table(t)),
+                        .map(TopLevelStatement::Table),
 
                 b"lookup" =>
                     lookup_definition()
-                        .map(|ld| TopLevelStatement::LookupDefinition(ld)),
+                        .map(TopLevelStatement::LookupDefinition),
 
                 b"languagesystem" =>
                     language_system()
-                        .map(|ls| TopLevelStatement::LanguageSystem(ls)),
+                        .map(TopLevelStatement::LanguageSystem),
 
                 b"feature" =>
                     feature_definition()
-                        .map(|fd| TopLevelStatement::FeatureDefinition(fd)),
+                        .map(TopLevelStatement::FeatureDefinition),
 
                 b"markClass" =>
                     mark_class()
-                        .map(|fd| TopLevelStatement::MarkClass(fd)),
+                        .map(TopLevelStatement::MarkClass),
 
                 b"anchorDef" =>
                     anchor_definition()
-                        .map(|ad| TopLevelStatement::AnchorDefinition(ad)),
+                        .map(TopLevelStatement::AnchorDefinition),
 
                 kwd if kwd[0] == b'@' =>
                     named_glyph_class()
-                        .map(|gc| TopLevelStatement::NamedGlyphClass(gc)),
-
-                // FIXME: NamedGlyphClass
+                        .map(TopLevelStatement::NamedGlyphClass),
 
                 _ => combine::unexpected_any("token"))
         })

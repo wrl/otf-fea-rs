@@ -18,6 +18,5 @@ pub(crate) fn script<Input>() -> impl Parser<FeaRsStream<Input>, Output = Script
     literal_ignore_case("script")
         .skip(required_whitespace())
         .with(tag())
-
-        .map(|script| Script(script))
+        .map(Script)
 }

@@ -82,6 +82,6 @@ pub(crate) fn value_record<Input>() -> impl Parser<FeaRsStream<Input>, Output = 
             }),
 
         metric()
-            .map(|m| ValueRecord::Advance(m))
+            .map(ValueRecord::Advance)
     ))
 }

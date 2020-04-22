@@ -122,19 +122,19 @@ pub(crate) fn anchor<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anchor
                 .and(metric())
                 .and(choice((
                     close()
-                        .map(|a| Either3::A(a)),
+                        .map(Either3::A),
 
                     required_whitespace()
                         .with(choice((
                             contour_point()
                                 .skip(close())
-                                .map(|b| Either3::B(b)),
+                                .map(Either3::B),
 
                             device()
                                 .skip(required_whitespace())
                                 .and(device())
                                 .skip(close())
-                                .map(|devices| Either3::C(devices))
+                                .map(Either3::C)
                         )))
 
                         // FIXME: need device table form
