@@ -6,16 +6,13 @@ use combine::{
     error::ParseError,
 
     optional,
-    token,
-    value,
-
-    parser::repeat::take_until
+    value
 };
 
 use crate::parser::FeaRsStream;
 
-use super::util::*;
 use super::block::*;
+use super::util::*;
 
 #[derive(Debug)]
 pub struct Name {
@@ -56,12 +53,9 @@ pub(crate) fn name<Input, Ident>(_: &Ident) -> impl Parser<FeaRsStream<Input>, O
                         .skip(required_whitespace())))
         ))
 
-        // FIXME: break out into dedicated `string()` parser
-        .skip(token(b'"'))
-        .and(take_until(token(b'"')))
-        .skip(token(b'"'))
+        .and(string())
 
-        .map(|(ids, _name): (_, Vec<_>)| {
+        .map(|(ids, name)| {
             let (platform_id, ids) = ids.unwrap_or((Platform::Windows, None));
 
             let (script_id, language_id) = ids.unwrap_or_else(|| {
@@ -75,7 +69,7 @@ pub(crate) fn name<Input, Ident>(_: &Ident) -> impl Parser<FeaRsStream<Input>, O
                 platform_id: platform_id as isize,
                 script_id,
                 language_id,
-                name: String::new()
+                name
             }
         })
 }
