@@ -118,6 +118,27 @@ pub(crate) fn uinteger<Input>() -> impl Parser<FeaRsStream<Input>, Output = usiz
         })
 }
 
+pub(crate) fn hex_uint<Input>() -> impl Parser<FeaRsStream<Input>, Output = usize>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    combine::position()
+        .skip(token(b'0'))
+        .skip(token(b'x'))
+        .and(many1(digit()))
+        .flat_map(|(position, n): (_, Vec<u8>)| {
+            // unsafe is fine here. we've verified that this vec only contains digits.
+            let as_str = unsafe { str::from_utf8_unchecked(&*n) };
+
+            usize::from_str_radix(as_str, 16)
+                .map_err(|_| {
+                    Input::Error::from_error(position,
+                        StreamErrorFor::<Input>::expected_static_message(
+                            "couldn't parse integer")).into()
+                })
+        })
+}
+
 pub(crate) fn number<Input>() -> impl Parser<FeaRsStream<Input>, Output = isize>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
@@ -127,7 +148,10 @@ pub(crate) fn number<Input>() -> impl Parser<FeaRsStream<Input>, Output = isize>
             token(b'-'),
             token(b'+'))
         )))
-        .and(uinteger())
+        .and(choice((
+            attempt(hex_uint()),
+            uinteger()
+        )))
 
         .flat_map(|((position, sign), int)| {
             isize::try_from(int)
