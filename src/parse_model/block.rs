@@ -27,6 +27,7 @@ use combine::{
 use crate::parser::FeaRsStream;
 
 use super::util::*;
+use super::feature_names::*;
 use super::glyph_class::*;
 use super::lookup_flag::*;
 use super::mark_class::*;
@@ -40,6 +41,7 @@ use super::script::*;
 
 #[derive(Debug)]
 pub enum BlockStatement {
+    FeatureNames(FeatureNames),
     FeatureReference(FeatureReference),
     Language(Language),
     Lookup(Lookup),
@@ -65,6 +67,7 @@ macro_rules! cvt_to_statement (
     }
 );
 
+cvt_to_statement!(FeatureNames);
 cvt_to_statement!(FeatureReference);
 cvt_to_statement!(Language);
 cvt_to_statement!(Lookup);
@@ -118,6 +121,8 @@ pub(crate) fn block_statement<Input, Ident>(_: &Ident) -> FnOpaque<FeaRsStream<I
                     "markClass" => mark_class().map(|mc| mc.into()),
                     "script" => script().map(|s| s.into()),
                     "language" => language().map(|l| l.into()),
+
+                    "featureNames" => feature_names().map(|n| n.into()),
 
                     "subtable" => literal("subtable").map(|_| BlockStatement::Subtable),
 

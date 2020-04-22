@@ -16,6 +16,9 @@ pub use device::*;
 mod feature;
 pub use feature::*;
 
+mod feature_names;
+pub use feature_names::*;
+
 mod glyph;
 pub use glyph::*;
 
