@@ -185,8 +185,6 @@ fn table_statement<Input>(_tag: &TableTag) -> impl Parser<FeaRsStream<Input>, Ou
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     gdef_statement()
-        .skip(optional_whitespace())
-        .skip(token(b';').expected("semicolon"))
 }
 
 fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>

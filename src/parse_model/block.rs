@@ -128,9 +128,6 @@ pub(crate) fn block_statement<Input, Ident>(_: &Ident) -> FnOpaque<FeaRsStream<I
                         )
                 )
             })
-
-            .skip(optional_whitespace())
-            .skip(token(b';').expected("semicolon"))
     }
 
     // opaque is necessary here because otherwise we end up with this ugly recursive type since
@@ -140,9 +137,7 @@ pub(crate) fn block_statement<Input, Ident>(_: &Ident) -> FnOpaque<FeaRsStream<I
         choice((
             named_glyph_class()
                 .expected("glyph class definition")
-                .map(|gc| gc.into())
-                .skip(optional_whitespace())
-                .skip(token(b';').expected("semicolon")),
+                .map(|gc| gc.into()),
             rule()
         ))
     ))
@@ -171,6 +166,8 @@ pub(crate) fn block_statements<Input, Statement, P>(statement_parser: P)
         .with(many(
             optional_whitespace()
                 .with(statement_parser)
+                .skip(optional_whitespace())
+                .skip(token(b';').expected("semicolon"))
                 .skip(optional_whitespace())))
 }
 
