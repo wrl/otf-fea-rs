@@ -6,7 +6,9 @@ edition = "2018"
 
 [dependencies]
 ascii = "1.0.0"
-combine = "4"
+
+[dependencies.combine]
+path = "vendor/combine"
 
 [dependencies.arrayvec]
 version = "0.5"
