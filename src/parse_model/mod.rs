@@ -61,6 +61,9 @@ pub use substitute::*;
 mod table;
 pub use table::*;
 
+mod tables;
+pub use tables::*;
+
 mod tag;
 pub use tag::*;
 
