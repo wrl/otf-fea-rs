@@ -10,12 +10,22 @@ use combine::{
 use crate::parser::FeaRsStream;
 
 use crate::parse_model::table::*;
+use crate::parse_model::metric::*;
 use crate::parse_model::util::*;
 
 #[derive(Debug)]
-pub struct FontRevision(f64);
+pub struct CaretOffset(Metric);
 
-pub(crate) fn head_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+#[derive(Debug)]
+pub struct Ascender(Metric);
+
+#[derive(Debug)]
+pub struct Descender(Metric);
+
+#[derive(Debug)]
+pub struct LineGap(Metric);
+
+pub(crate) fn hhea_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
@@ -24,8 +34,10 @@ pub(crate) fn head_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output 
         .skip(required_whitespace())
         .then(|(position, kwd)| {
             dispatch!(&*kwd;
-                "FontRevision" => decimal_number()
-                    .map(|fr| FontRevision(fr).into()),
+                "CaretOffset" => metric().map(|m| CaretOffset(m).into()),
+                "Ascender" => metric().map(|m| Ascender(m).into()),
+                "Descender" => metric().map(|m| Descender(m).into()),
+                "LineGap" => metric().map(|m| LineGap(m).into()),
 
                 _ => value(position)
                 .flat_map(|position|
