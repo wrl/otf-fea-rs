@@ -23,8 +23,10 @@ use super::glyph_class::*;
 use super::util::*;
 
 #[derive(Debug, PartialEq)]
+#[allow(non_camel_case_types)]
 pub enum TableTag {
-    GDEF
+    GDEF,
+    head
 }
 
 impl fmt::Display for TableTag {
@@ -32,7 +34,8 @@ impl fmt::Display for TableTag {
         use TableTag::*;
 
         match *self {
-            GDEF => write!(f, "GDEF")
+            GDEF => write!(f, "GDEF"),
+            head => write!(f, "head")
         }
     }
 }
@@ -63,6 +66,9 @@ pub struct LigatureCaretByIndex {
     pub carets: Vec<usize>
 }
 
+#[derive(Debug)]
+pub struct FontRevision(f64);
+
 macro_rules! cvt_to_statement (
     ($iden:ident) => {
         impl From<$iden> for TableStatement {
@@ -79,12 +85,15 @@ pub enum TableStatement {
     GlyphClassDef(GlyphClassDef),
     LigatureCaretByPos(LigatureCaretByPos),
     LigatureCaretByIndex(LigatureCaretByIndex),
+
+    FontRevision(FontRevision)
 }
 
 cvt_to_statement!(Attach);
 cvt_to_statement!(GlyphClassDef);
 cvt_to_statement!(LigatureCaretByPos);
 cvt_to_statement!(LigatureCaretByIndex);
+cvt_to_statement!(FontRevision);
 
 #[derive(Debug)]
 pub struct Table {
@@ -96,7 +105,7 @@ fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStat
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+    fn gcdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
         where Input: Stream<Token = u8>,
               Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
     {
@@ -158,7 +167,7 @@ fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStat
         .skip(required_whitespace())
         .then(|(position, kwd)| {
             dispatch!(&*kwd;
-                "GlyphClassDef" => gdef_statement(),
+                "GlyphClassDef" => gcdef_statement(),
                 "Attach" => attach_statement(),
 
                 "LigatureCaretByPos" => ligature_caret()
@@ -179,12 +188,42 @@ fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStat
         })
 }
 
-
-fn table_statement<Input>(_tag: &TableTag) -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+fn head_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    gdef_statement()
+    fn font_revision<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+        where Input: Stream<Token = u8>,
+              Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+    {
+        decimal_number()
+            .map(|fr| FontRevision(fr).into())
+    }
+
+    combine::position()
+        .and(keyword())
+        .skip(required_whitespace())
+        .then(|(position, kwd)| {
+            dispatch!(&*kwd;
+                "FontRevision" => font_revision(),
+
+                _ => value(position)
+                .flat_map(|position|
+                    crate::parse_bail!(Input, position,
+                        "unexpected keyword"))
+            )
+        })
+}
+
+
+fn table_statement<Input>(tag: &TableTag) -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    dispatch!(tag;
+        &TableTag::GDEF => gdef_statement(),
+        &TableTag::head => head_statement()
+    )
 }
 
 fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>
@@ -207,6 +246,7 @@ fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>
 
             Ok(match tag {
                 b"GDEF" => TableTag::GDEF,
+                b"head" => TableTag::head,
 
                 _ =>
                     crate::parse_bail!(Input, position,

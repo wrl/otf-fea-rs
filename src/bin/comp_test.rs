@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 struct SFNTHeader {
     // 0x00010000 for ttf, "OTTO" for otf
     version: u32,
