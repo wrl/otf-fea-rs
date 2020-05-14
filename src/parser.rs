@@ -116,16 +116,16 @@ where
         ($fmt: expr, $info: expr) => {
 
             match $info {
-                Info::Token(t) => println!(concat!($fmt, " token {:?}"),
+                Info::Token(t) => eprintln!(concat!($fmt, " token {:?}"),
                     t.to_ascii_char().unwrap()),
-                Info::Range(r) => println!(concat!($fmt, " range {:?}"), r),
-                Info::Owned(s) => println!(concat!($fmt, " {}"), s),
-                Info::Static(s) => println!(concat!($fmt, " {}"), s)
+                Info::Range(r) => eprintln!(concat!($fmt, " range {:?}"), r),
+                Info::Owned(s) => eprintln!(concat!($fmt, " {}"), s),
+                Info::Static(s) => eprintln!(concat!($fmt, " {}"), s)
             }
         }
     }
 
-    println!("parse error at {}:{}", errors.position.line, errors.position.column);
+    eprintln!("parse error at {}:{}", errors.position.line, errors.position.column);
 
     for e in errors.errors {
         use combine::stream::easy::Error::*;
