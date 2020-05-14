@@ -118,7 +118,7 @@ pub(crate) fn anchor<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anchor
                 .map(|_| Anchor::Null),
 
             metric()
-                .skip(required_whitespace())
+                .skip(optional_whitespace())
                 .and(metric())
                 .and(choice((
                     close()
