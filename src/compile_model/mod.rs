@@ -4,6 +4,7 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 pub mod gpos;
 pub mod gdef;
+pub mod head;
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 pub struct SFNTHeader {
