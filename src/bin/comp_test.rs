@@ -1,5 +1,12 @@
 #![allow(dead_code)]
 
+use std::env;
+use std::fs::File;
+use std::io::prelude::*;
+
+use endian_codec::{PackedSize, EncodeBE, DecodeBE};
+
+#[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct SFNTHeader {
     // 0x00010000 for ttf, "OTTO" for otf
     version: u32,
@@ -16,6 +23,7 @@ struct SFNTHeader {
     range_shift: u16
 }
 
+#[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
 struct TTFTableHeader {
     tag: u32,
     checksum: u32,
@@ -25,7 +33,12 @@ struct TTFTableHeader {
 
 #[allow(non_snake_case, non_camel_case_types)]
 mod GPOS {
+    use endian_codec::{PackedSize, EncodeBE, DecodeBE};
+
+    #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
     struct Header_1_0 {
+        header: super::TTFTableHeader,
+
         major: u16,
         minor: u16,
         script_list_offset: u16,
@@ -33,7 +46,10 @@ mod GPOS {
         lookup_list_offset: u16
     }
 
+    #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
     struct Header_1_1 {
+        header: super::TTFTableHeader,
+
         major: u16,
         minor: u16,
         script_list_offset: u16,
@@ -45,7 +61,12 @@ mod GPOS {
 
 #[allow(non_snake_case, non_camel_case_types)]
 mod GDEF {
+    use endian_codec::{PackedSize, EncodeBE, DecodeBE};
+
+    #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
     struct Header_1_0 {
+        header: super::TTFTableHeader,
+
         major: u16,
         minor: u16,
         glyph_class_def_offset: u16,
@@ -54,7 +75,10 @@ mod GDEF {
         mark_attach_class_def_offset: u16
     }
 
+    #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
     struct Header_1_2 {
+        header: super::TTFTableHeader,
+
         major: u16,
         minor: u16,
         glyph_class_def_offset: u16,
@@ -64,7 +88,10 @@ mod GDEF {
         mark_glyph_sets_def_offset: u16
     }
 
+    #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
     struct Header_1_3 {
+        header: super::TTFTableHeader,
+
         major: u16,
         minor: u16,
         glyph_class_def_offset: u16,
@@ -76,5 +103,34 @@ mod GDEF {
     }
 }
 
+fn read_header(path: &str) {
+    let mut f = File::open(path).unwrap();
+
+    let mut buf = Vec::new();
+    f.read_to_end(&mut buf).unwrap();
+
+    println!("{:?}", SFNTHeader::decode_from_be_bytes(&buf));
+}
+
+fn write_header(path: &str, hdr: &SFNTHeader) {
+    let mut buf = [0u8; SFNTHeader::PACKED_LEN];
+
+    hdr.encode_as_be_bytes(&mut buf);
+
+    let mut f = File::create(path).unwrap();
+    f.write(&buf).unwrap();
+}
+
 fn main() {
+    let path = env::args().skip(1).next()
+        .expect("need a path");
+
+    // read_header(&path);
+    write_header(&path, &SFNTHeader {
+        version: 0x00010000,
+        num_tables: 0,
+        search_range: 16,
+        entry_selector: 0,
+        range_shift: 0
+    });
 }

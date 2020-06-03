@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 ascii = "1.0.0"
 combine = "4.1"
+endian_codec = "0.1"
 
 [dependencies.arrayvec]
 version = "0.5"
