@@ -1,8 +1,8 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
-struct Head {
-    header: super::TTFTableHeader,
+pub struct Head {
+    pub header: super::TTFTableHeader,
 
     pub major_version: u16,
     pub minor_version: u16,
@@ -35,5 +35,5 @@ struct Head {
     pub index_to_loc_format: i16,
 
     // set to 0 for "current format"
-    pub glyph_data_format: i16
+    pub glyph_data_format: i16,
 }

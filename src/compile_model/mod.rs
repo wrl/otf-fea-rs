@@ -7,7 +7,7 @@ pub mod gdef;
 pub mod head;
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
-pub struct SFNTHeader {
+pub struct TTFOffsetTable {
     // 0x00010000 for ttf, "OTTO" for otf
     pub version: u32,
 
@@ -24,9 +24,9 @@ pub struct SFNTHeader {
 }
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
-struct TTFTableHeader {
-    tag: u32,
-    checksum: u32,
-    offset_from_start_of_file: u32,
-    length: u32
+pub struct TTFTableHeader {
+    pub tag: u32,
+    pub checksum: u32,
+    pub offset_from_start_of_file: u32,
+    pub length: u32
 }
