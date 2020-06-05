@@ -2,7 +2,6 @@ use std::io::prelude::*;
 
 use combine::{
     Parser,
-    parser,
     Stream,
     stream,
 
@@ -11,7 +10,10 @@ use combine::{
     token,
     eof,
 
-    parser::repeat::take_until,
+    parser::repeat::{
+        take_until,
+        many
+    },
     parser::byte::space,
 
     // macros
@@ -47,7 +49,7 @@ pub(crate) type FeaRsStream<S> = stream::state::Stream<S, FeaRsParserState>;
  ****************************************************************************/
 
 #[derive(Debug)]
-enum TopLevelStatement {
+pub enum TopLevelStatement {
     LanguageSystem(LanguageSystem),
 
     AnchorDefinition(AnchorDefinition),
@@ -139,22 +141,14 @@ where
     }
 }
 
-pub fn parse<R: Read>(input: R) -> Result<(), ()> {
+pub fn parse_all<R: Read>(input: R) -> Result<Vec<TopLevelStatement>, ()> {
     println!();
 
     let mut parser = optional_whitespace()
-        .with(parser(|input| {
-            let mut parse_iter = top_level_statement()
+        .with(many(
+            top_level_statement()
                 .skip(optional_whitespace())
-                .iter(input);
-
-            for top_level in &mut parse_iter {
-                println!("{:#?}", top_level);
-                println!();
-            }
-
-            parse_iter.into_result(())
-        }))
+        ))
         .skip(eof());
 
     let stream = FeaRsStream {
@@ -171,10 +165,12 @@ pub fn parse<R: Read>(input: R) -> Result<(), ()> {
         }
     };
 
-    if let Err(errs) = parser.parse(stream) {
-        format_errors(errs);
-        return Err(());
-    }
+    match parser.parse(stream) {
+        Err(errs) => {
+            format_errors(errs);
+            Err(())
+        },
 
-    Ok(())
+        Ok((definitions, _stream)) => Ok(definitions),
+    }
 }

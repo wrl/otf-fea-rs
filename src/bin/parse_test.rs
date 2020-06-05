@@ -7,8 +7,17 @@ fn main() {
 
     let f = File::open(&path).unwrap();
 
-    match otf_fea_rs::parse(f) {
-        Ok(_) => std::process::exit(0),
+    match otf_fea_rs::parser::parse_all(f) {
+        Ok(definitions) => {
+            println!();
+
+            for d in definitions {
+                println!("{:#?}\n", d);
+            }
+
+            std::process::exit(0)
+        },
+
         Err(_) => std::process::exit(1)
     }
 }

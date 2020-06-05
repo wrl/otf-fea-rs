@@ -102,7 +102,7 @@ const fn tag_const(x: &[u8; 4]) -> u32 {
          | (x[3] as u32);
 }
 
-fn write_ttf(path: &str) -> io::Result<()> {
+fn write_ttf(_path: &str) -> io::Result<()> {
     let offset_table = TTFOffsetTable {
         version: 0x00010000,
         num_tables: 1,
