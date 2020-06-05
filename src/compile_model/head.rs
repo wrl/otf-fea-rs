@@ -2,8 +2,6 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
 pub struct Head {
-    pub header: super::TTFTableHeader,
-
     pub major_version: u16,
     pub minor_version: u16,
 
@@ -36,4 +34,38 @@ pub struct Head {
 
     // set to 0 for "current format"
     pub glyph_data_format: i16,
+}
+
+impl Head {
+    pub fn new() -> Self {
+        Self {
+            major_version: 1,
+            minor_version: 0,
+
+            font_revision: 0,
+
+            checksum_adjustment: 0,
+            magic_number: 0x5F0F3CF5,
+            flags: 0,
+
+            created: 0,
+            modified: 0,
+
+            units_per_em: 0,
+
+            x_min: 0,
+            y_min: 0,
+            x_max: 0,
+            y_max: 0,
+
+            mac_style: 0,
+
+            lowest_rec_ppem: 0,
+
+            font_direction_hint: 2,
+
+            index_to_loc_format: 0,
+            glyph_data_format: 0
+        }
+    }
 }

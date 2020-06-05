@@ -51,26 +51,96 @@ fn read_header(path: &str) -> io::Result<()> {
     f.read_to_end(&mut buf)?;
 
     println!();
-    let (hdr, rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
-    println!("{:?}", TTFOffsetTable::decode_from_be_bytes(hdr));
+    let (offset_buf, rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
+    println!("{:?}", TTFOffsetTable::decode_from_be_bytes(offset_buf));
 
-    let table_header = TTFTableHeader::decode_from_be_bytes(rest);
+    let (header, rest) = rest.split_at(TTFTableHeader::PACKED_LEN);
+    let table_header = TTFTableHeader::decode_from_be_bytes(header);
     let head = head::Head::decode_from_be_bytes(rest);
     println!("{:?}\n\n{:?}\n", table_header, head);
 
-    let head_bytes = rest.split_at(TTFTableHeader::PACKED_LEN).1;
-    println!("{}", checksum_head(&head_bytes[..(table_header.length as usize)]));
-
+    println!("\n{:?}", buf);
     Ok(())
 }
 
-fn write_header(path: &str, hdr: &TTFOffsetTable) {
-    let mut buf = [0u8; TTFOffsetTable::PACKED_LEN];
+fn checksum_any<T: PackedSize + EncodeBE>(p: &T) -> u32 {
+    let mut buf = vec![0u8; T::PACKED_LEN];
+    p.encode_as_be_bytes(&mut buf[..]);
+    return checksum(&buf);
+}
 
-    hdr.encode_as_be_bytes(&mut buf);
+const fn align_len(len: usize) -> usize {
+    let round_up = (4usize - (len & 0x3)) & 0x3;
+    return len + round_up;
+}
 
-    let mut f = File::create(path).unwrap();
-    f.write(&buf).unwrap();
+fn table_len<T: PackedSize>(_: &T) -> usize {
+    return align_len(T::PACKED_LEN);
+}
+
+fn header_for<T: PackedSize + EncodeBE>(tag: u32,
+        offset_from_start_of_file: usize, p: &T) -> TTFTableHeader {
+    TTFTableHeader {
+        tag,
+        checksum: checksum_any(p),
+        offset_from_start_of_file: align_len(offset_from_start_of_file
+            + TTFTableHeader::PACKED_LEN) as u32,
+        length: T::PACKED_LEN as u32
+    }
+}
+
+fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
+    let start = v.len();
+    v.resize(start + table_len(p), 0u8);
+    p.encode_as_be_bytes(&mut v[start..]);
+}
+
+const fn tag_const(x: &[u8; 4]) -> u32 {
+    return (x[0] as u32) << 24
+         | (x[1] as u32) << 16
+         | (x[2] as u32) << 8
+         | (x[3] as u32);
+}
+
+fn write_ttf(path: &str) -> io::Result<()> {
+    let offset_table = TTFOffsetTable {
+        version: 0x00010000,
+        num_tables: 1,
+        search_range: 16,
+        entry_selector: 0,
+        range_shift: 0
+    };
+
+    let mut head = head::Head::new();
+
+    // all stuff to get a clean diff between our output and `spec9c1.ttf`
+    head.magic_number = 0;
+    head.font_revision = 72090;
+    head.created = 3406620153;
+    head.modified = 3647951938;
+    head.font_direction_hint = 0;
+
+    let head_header = header_for(
+        tag_const(b"head"),
+        TTFOffsetTable::PACKED_LEN,
+        &head);
+
+    println!("{} {:?}", TTFOffsetTable::PACKED_LEN, head_header);
+
+    head.checksum_adjustment = 5023306;
+
+    let mut buf = Vec::new();
+
+    write_into(&mut buf, &offset_table);
+    write_into(&mut buf, &head_header);
+    write_into(&mut buf, &head);
+
+    println!("{:?}", buf);
+
+    let mut f = File::create("ours.ttf")?;
+    f.write(&buf)?;
+
+    Ok(())
 }
 
 fn main() {
@@ -78,11 +148,6 @@ fn main() {
         .expect("need a path");
 
     read_header(&path).unwrap();
-    // write_header(&path, &SFNTHeader {
-    //     version: 0x00010000,
-    //     num_tables: 0,
-    //     search_range: 16,
-    //     entry_selector: 0,
-    //     range_shift: 0
-    // });
+    println!("\n---\n");
+    write_ttf(&path).unwrap();
 }
