@@ -133,6 +133,10 @@ fn write_ttf(path: &str) -> io::Result<()> {
 
     write_into(&mut buf, &offset_table);
     write_into(&mut buf, &head_header);
+
+    head.checksum_adjustment = 0xB1B0AFBA -
+        checksum(&buf).overflowing_add(head_header.checksum).0;
+
     write_into(&mut buf, &head);
 
     println!("{:?}", buf);
