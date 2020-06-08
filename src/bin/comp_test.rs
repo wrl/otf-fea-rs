@@ -57,10 +57,11 @@ fn read_header(path: &str) -> io::Result<()> {
     let (header, rest) = rest.split_at(TTFTableHeader::PACKED_LEN);
     let table_header = TTFTableHeader::decode_from_be_bytes(header);
     let head = head::Head::decode_from_be_bytes(rest);
-    println!("{:?}\n\n{:?}\n", table_header, head);
+    println!("{:?}\n\n{:#?}\n", table_header, head);
 
     println!(" >> created: {:?}", head.created.as_datetime());
     println!(" >> modified: {:?}", head.modified.as_datetime());
+    println!(" >> revision: {:032b}", head.font_revision.to_bits());
 
     println!("\n{:?}", buf);
     Ok(())
@@ -69,6 +70,9 @@ fn read_header(path: &str) -> io::Result<()> {
 fn checksum_any<T: PackedSize + EncodeBE>(p: &T) -> u32 {
     let mut buf = vec![0u8; T::PACKED_LEN];
     p.encode_as_be_bytes(&mut buf[..]);
+
+    // don't need to handle the checksum_head() special case here because, at this phase in
+    // compilation, the `checksum_adjustment` field is 0 anyway.
     return checksum(&buf);
 }
 
@@ -82,7 +86,7 @@ fn table_len<T: PackedSize>(_: &T) -> usize {
 }
 
 fn header_for<T: PackedSize + EncodeBE>(tag: u32,
-        offset_from_start_of_file: usize, p: &T) -> TTFTableHeader {
+    offset_from_start_of_file: usize, p: &T) -> TTFTableHeader {
     TTFTableHeader {
         tag,
         checksum: checksum_any(p),
@@ -129,8 +133,6 @@ fn write_ttf(_path: &str) -> io::Result<()> {
         &head);
 
     println!("{} {:?}", TTFOffsetTable::PACKED_LEN, head_header);
-
-    head.checksum_adjustment = 5023306;
 
     let mut buf = Vec::new();
 

@@ -13,7 +13,7 @@ use crate::parse_model::table::*;
 use crate::parse_model::util::*;
 
 #[derive(Debug)]
-pub struct FontRevision(f64);
+pub struct FontRevision(pub f64);
 
 pub(crate) fn head_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
     where Input: Stream<Token = u8>,
