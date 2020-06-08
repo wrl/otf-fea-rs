@@ -171,6 +171,9 @@ pub fn parse_all<R: Read>(input: R) -> Result<Vec<TopLevelStatement>, ()> {
             Err(())
         },
 
-        Ok((definitions, _stream)) => Ok(definitions),
+        Ok((definitions, stream)) => {
+            let _state = stream.state;
+            Ok(definitions)
+        }
     }
 }
