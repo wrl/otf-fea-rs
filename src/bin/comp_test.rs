@@ -115,7 +115,7 @@ fn write_ttf(_path: &str) -> io::Result<()> {
 
     // all stuff to get a clean diff between our output and `spec9c1.ttf`
     head.magic_number = 0;
-    head.font_revision = 72090;
+    head.font_revision = head::Fixed1616::from_bits(72090);
     head.created = 3406620153;
     head.modified = 3647951938;
     head.font_direction_hint = 0;
@@ -140,6 +140,7 @@ fn write_ttf(_path: &str) -> io::Result<()> {
     write_into(&mut buf, &head);
 
     println!("{:?}", buf);
+    println!("{:?}", head);
 
     let mut f = File::create("ours.ttf")?;
     f.write(&buf)?;
