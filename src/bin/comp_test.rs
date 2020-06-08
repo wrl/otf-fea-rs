@@ -59,6 +59,9 @@ fn read_header(path: &str) -> io::Result<()> {
     let head = head::Head::decode_from_be_bytes(rest);
     println!("{:?}\n\n{:?}\n", table_header, head);
 
+    println!(" >> created: {:?}", head.created.as_datetime());
+    println!(" >> modified: {:?}", head.modified.as_datetime());
+
     println!("\n{:?}", buf);
     Ok(())
 }
@@ -115,9 +118,9 @@ fn write_ttf(_path: &str) -> io::Result<()> {
 
     // all stuff to get a clean diff between our output and `spec9c1.ttf`
     head.magic_number = 0;
-    head.font_revision = head::Fixed1616::from_bits(72090);
-    head.created = 3406620153;
-    head.modified = 3647951938;
+    head.font_revision = util::Fixed1616::from_bits(72090);
+    head.created = 3406620153.into();
+    head.modified = 3647951938.into();
     head.font_direction_hint = 0;
 
     let head_header = header_for(

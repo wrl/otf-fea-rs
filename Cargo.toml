@@ -9,6 +9,7 @@ ascii = "1.0.0"
 combine = "4.1"
 endian_codec = "0.1"
 fixed = "1"
+chrono = "0.4"
 
 [dependencies.arrayvec]
 version = "0.5"

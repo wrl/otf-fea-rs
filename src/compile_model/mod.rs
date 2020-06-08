@@ -6,6 +6,8 @@ pub mod gpos;
 pub mod gdef;
 pub mod head;
 
+pub mod util;
+
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 pub struct TTFOffsetTable {
     // 0x00010000 for ttf, "OTTO" for otf
