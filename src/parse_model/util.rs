@@ -1,6 +1,7 @@
 use std::{
     str,
-    convert::TryFrom
+    str::FromStr,
+    convert::TryFrom,
 };
 
 use combine::{
@@ -19,6 +20,7 @@ use combine::{
 
     attempt,
     look_ahead,
+    satisfy,
 
     // macros
     choice
@@ -174,24 +176,19 @@ pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output 
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    optional(token(b'-').or(token(b'+')))
-        .and(uinteger())
-        .and(optional(
-                token(b'.')
-                    .with(uinteger())))
+    combine::position()
+        .and(many1(
+                satisfy(|t: u8| t.is_ascii_digit() || t == b'.' || t == b'-')
+        ))
+        .flat_map(|(position, digits): (_, Vec<_>)| {
+            // unsafe is fine here. we've verified that this vec only contains valid characters
+            let as_str = unsafe { str::from_utf8_unchecked(&*digits) };
 
-        .map(|((sign, int), frac)| {
-            let mut val = int as f64;
-
-            if let Some(x) = frac {
-                val += (x as f64) / 10.0f64;
-            }
-
-            if let Some(b'-') = sign {
-                val *= -1.0f64;
-            }
-
-            val
+            f64::from_str(as_str)
+                .map_err(|_|
+                    Input::Error::from_error(position,
+                        StreamErrorFor::<Input>::expected_static_message(
+                            "couldn't parse digits as f64")).into())
         })
 }
 
