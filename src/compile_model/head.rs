@@ -1,5 +1,6 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
+use crate::parse_model::*;
 use super::util::*;
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
@@ -68,5 +69,23 @@ impl Head {
             index_to_loc_format: 0,
             glyph_data_format: 0
         }
+    }
+
+    pub fn from_parsed_table(statements: &[TableStatement]) -> Self {
+        let revision = statements.iter()
+            .map(|s| {
+                use TableStatement::*;
+
+                match s {
+                    FontRevision(head::FontRevision(f)) => *f,
+                    _ => unreachable!()
+                }
+            })
+            .last()
+            .unwrap_or(0f64);
+
+        let mut res = Self::new();
+        res.font_revision = Fixed1616::from_f32(revision as f32);
+        res
     }
 }

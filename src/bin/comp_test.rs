@@ -61,7 +61,7 @@ fn read_header(path: &str) -> io::Result<()> {
 
     println!(" >> created: {:?}", head.created.as_datetime());
     println!(" >> modified: {:?}", head.modified.as_datetime());
-    println!(" >> revision: {:032b}", head.font_revision.to_bits());
+    println!(" >> revision: {}", head.font_revision.to_bits());
 
     println!("\n{:?}", buf);
     Ok(())
