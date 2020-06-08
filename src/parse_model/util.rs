@@ -174,12 +174,7 @@ pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output 
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    optional(
-        choice((
-            token(b'-'),
-            token(b'+')
-        ))
-    )
+    optional(token(b'-').or(token(b'+')))
         .and(uinteger())
         .and(optional(
                 token(b'.')
@@ -189,7 +184,7 @@ pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output 
             let mut val = int as f64;
 
             if let Some(x) = frac {
-                val += (x as f64) / 100.0f64;
+                val += (x as f64) / 10.0f64;
             }
 
             if let Some(b'-') = sign {
