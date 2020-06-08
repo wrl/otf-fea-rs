@@ -3,4 +3,5 @@
 pub mod parser;
 pub mod parse_model;
 
+pub mod compiler;
 pub mod compile_model;
