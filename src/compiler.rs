@@ -129,7 +129,9 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     write_into(buf, &head);
 }
 
-pub fn compile(statements: &[TopLevelStatement], out: &mut Vec<u8>) {
+pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
+    where I: Iterator<Item = &'a TopLevelStatement>
+{
     let mut ctx = CompilerState::new();
 
     for s in statements {
@@ -137,4 +139,8 @@ pub fn compile(statements: &[TopLevelStatement], out: &mut Vec<u8>) {
     }
 
     actually_compile(&mut ctx, out);
+}
+
+pub fn compile(statements: &[TopLevelStatement], out: &mut Vec<u8>) {
+    compile_iter(statements.iter(), out)
 }
