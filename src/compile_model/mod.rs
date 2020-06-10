@@ -76,3 +76,14 @@ pub struct TTFTableRecord {
     pub offset_from_start_of_file: u32,
     pub length: u32
 }
+
+impl TTFTableRecord {
+    pub fn table_data<'a>(&self, whole_file: &'a [u8]) -> &'a [u8] {
+        let (start, end) = (
+            self.offset_from_start_of_file as usize,
+            (self.offset_from_start_of_file + self.length) as usize
+        );
+
+        &whole_file[start..end]
+    }
+}

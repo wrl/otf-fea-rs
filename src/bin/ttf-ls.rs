@@ -23,12 +23,7 @@ fn print_offset_table(t: &TTFOffsetTable) {
 }
 
 fn print_table_record(t: &TTFTableRecord, whole_file: &[u8]) {
-    let (start, end) = (
-        t.offset_from_start_of_file as usize,
-        (t.offset_from_start_of_file + t.length) as usize
-    );
-
-    let data = &whole_file[start..end];
+    let data = t.table_data(whole_file);
     let calculated_checksum = match t.tag {
         tag!(h,e,a,d) => util::checksum_head(data),
         _ => util::checksum(data)
@@ -73,12 +68,52 @@ fn read_ttf(path: &str) -> io::Result<()> {
     println!("  tag     checksum        offset          length ");
     println!("-----------------------------------------------------");
 
+    let mut records = Vec::new();
+    let mut head_record = None;
+    let mut running_checksum = 0u32;
+
     for _ in 0..offset_table.num_tables {
         let (record_buf, r) = rest.split_at(TTFTableRecord::PACKED_LEN);
         let record = TTFTableRecord::decode_from_be_bytes(record_buf);
+        rest = r;
 
         print_table_record(&record, &buf);
-        rest = r;
+        records.push(record);
+
+        if record.tag == tag!(h,e,a,d) {
+            head_record = Some(records.len() - 1);
+        }
+
+        running_checksum = running_checksum.overflowing_add(record.checksum).0;
+    }
+
+    println!();
+
+    if let Some(idx) = head_record {
+        let record = records[idx];
+        let head = head::Head::decode_from_be_bytes(record.table_data(&buf));
+
+        let directory_end =
+            TTFOffsetTable::PACKED_LEN
+            + ((offset_table.num_tables as usize) * TTFTableRecord::PACKED_LEN);
+
+        let adjustment =
+            0xB1B0AFBAu32.overflowing_sub(
+                running_checksum.overflowing_add(
+                    util::checksum(&buf[..directory_end])).0).0;
+
+        println!("checking `head` checksum adjustment against calculated file checksum...");
+        println!("    head:       0x{:x}", head.checksum_adjustment);
+        println!("    calculated: 0x{:x}", adjustment);
+        println!();
+
+        if adjustment == head.checksum_adjustment {
+            println!("    good!");
+        } else {
+            println!("    fail!");
+        }
+    } else {
+        println!("no `head` table, skipping file checksum verification");
     }
 
     println!();
