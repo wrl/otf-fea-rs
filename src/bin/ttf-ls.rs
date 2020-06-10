@@ -7,6 +7,31 @@ use endian_codec::{PackedSize, DecodeBE};
 
 use otf_fea_rs::compile_model::*;
 
+////
+// metadata
+////
+
+fn print_offset_table(t: &TTFOffsetTable) {
+    println!("offset table:");
+    println!("    version: {:?}", t.version);
+    println!("    num_tables: {}", t.num_tables);
+    println!("    search_range: {}", t.search_range);
+    println!("    entry_selector: {}", t.entry_selector);
+    println!("    range_shift: {}", t.range_shift);
+}
+
+fn print_table_record(t: &TTFTableHeader) {
+    println!("  {}    {: <16}{: <16}{: <16}",
+        t.tag,
+        t.checksum,
+        t.offset_from_start_of_file,
+        t.length);
+}
+
+////
+// entry point
+////
+
 fn read_header(path: &str) -> io::Result<()> {
     let mut f = File::open(path)?;
 
@@ -15,15 +40,27 @@ fn read_header(path: &str) -> io::Result<()> {
 
     let (offset_buf, mut rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
     let offset_table = TTFOffsetTable::decode_from_be_bytes(offset_buf);
-    println!("{:#?}\n", offset_table);
+    print_offset_table(&offset_table);
+
+    if let TTFVersion::Unknown(_) = offset_table.version {
+        println!("don't know how to read this TTF version");
+        return Ok(())
+    }
+
+    println!();
+
+    println!("  tag     checksum        offset          length ");
+    println!("-----------------------------------------------------");
 
     for _ in 0..offset_table.num_tables {
         let (header_buf, r) = rest.split_at(TTFTableHeader::PACKED_LEN);
         let header = TTFTableHeader::decode_from_be_bytes(header_buf);
-        println!("{:#?}", header);
+
+        print_table_record(&header);
         rest = r;
     }
 
+    println!();
     Ok(())
 }
 
