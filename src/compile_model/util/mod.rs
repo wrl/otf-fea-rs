@@ -1,3 +1,6 @@
+mod checksum;
+pub use checksum::*;
+
 mod fixed1616;
 pub use fixed1616::Fixed1616;
 
@@ -7,5 +10,5 @@ pub use long_date_time::LongDateTime;
 #[macro_use]
 mod tag;
 
-mod checksum;
-pub use checksum::*;
+mod ttf_version;
+pub use ttf_version::TTFVersion;

@@ -79,33 +79,29 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
 }
 
 fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
-    let offset_table = cm::TTFOffsetTable {
-        version: cm::TTFVersion::TTF,
-        num_tables: 1,
-        search_range: 16,
-        entry_selector: 0,
-        range_shift: 0
-    };
+    if let Some(mut head) = ctx.head {
+        // all stuff to get a clean diff between our output and `spec9c1.ttf`
+        head.magic_number = 0;
+        head.created = 3406620153.into();
+        head.modified = 3647951938.into();
+        head.font_direction_hint = 0;
 
-    let mut head = ctx.head.unwrap_or_else(|| cm::head::Head::new());
-
-    // all stuff to get a clean diff between our output and `spec9c1.ttf`
-    head.magic_number = 0;
-    head.created = 3406620153.into();
-    head.modified = 3647951938.into();
-    head.font_direction_hint = 0;
-
-    let hdr = record_for(Tag::from_bytes(b"head").unwrap(),
+        let hdr = record_for(Tag::from_bytes(b"head").unwrap(),
         cm::TTFOffsetTable::PACKED_LEN,
         &head);
 
-    write_into(buf, &offset_table);
-    write_into(buf, &hdr);
+        let offset_table = cm::TTFOffsetTable::new(cm::TTFVersion::TTF, 1);
+        write_into(buf, &offset_table);
+        write_into(buf, &hdr);
 
-    head.checksum_adjustment = 0xB1B0AFBAu32.overflowing_sub(
-        util::checksum(&buf).overflowing_add(hdr.checksum).0).0;
+        head.checksum_adjustment = 0xB1B0AFBAu32.overflowing_sub(
+            util::checksum(&buf).overflowing_add(hdr.checksum).0).0;
 
-    write_into(buf, &head);
+        write_into(buf, &head);
+    } else {
+        let offset_table = cm::TTFOffsetTable::new(cm::TTFVersion::TTF, 0);
+        write_into(buf, &offset_table);
+    }
 }
 
 pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)

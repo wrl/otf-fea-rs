@@ -11,46 +11,7 @@ pub mod head;
 #[macro_use]
 pub mod util;
 
-#[derive(Debug, Copy, Clone)]
-pub enum TTFVersion {
-    TTF,
-    OTF,
-    Unknown(u32)
-}
-
-impl PackedSize for TTFVersion {
-    const PACKED_LEN: usize = 4;
-}
-
-impl EncodeBE for TTFVersion {
-    #[inline]
-    fn encode_as_be_bytes(&self, bytes: &mut [u8]) {
-        let repr = match self {
-            TTFVersion::TTF => 0x00010000u32,
-            TTFVersion::OTF => 0x4f54544fu32,
-            TTFVersion::Unknown(r) => *r // panic?
-        };
-
-        bytes.copy_from_slice(&(repr.to_be_bytes()));
-    }
-}
-
-impl DecodeBE for TTFVersion {
-    #[inline]
-    fn decode_from_be_bytes(bytes: &[u8]) -> Self {
-        let mut arr = [0u8; 4];
-        arr.copy_from_slice(bytes);
-
-        let repr = u32::from_be_bytes(arr);
-
-        match repr {
-            0x00010000u32 => TTFVersion::TTF,
-            0x4f54544fu32 => TTFVersion::OTF,
-            r => TTFVersion::Unknown(r)
-        }
-    }
-}
-
+pub use util::TTFVersion;
 
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -68,6 +29,26 @@ pub struct TTFOffsetTable {
     // (num_tables * 16) - search_range
     pub range_shift: u16
 }
+
+impl TTFOffsetTable {
+    pub fn new(version: TTFVersion, num_tables: u16) -> Self {
+        let max_power_of_two = 15u16.saturating_sub(
+            num_tables.leading_zeros() as u16);
+
+        let search_range = (1 << max_power_of_two) * 16;
+        let entry_selector = max_power_of_two;
+        let range_shift = (num_tables * 16).saturating_sub(search_range);
+
+        Self {
+            version,
+            num_tables,
+            search_range,
+            entry_selector,
+            range_shift
+        }
+    }
+}
+
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
 pub struct TTFTableRecord {
