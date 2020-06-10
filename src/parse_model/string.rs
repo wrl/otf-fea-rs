@@ -7,7 +7,6 @@ use combine::{
     choice,
     any,
 
-    parser::repeat::take_until,
     parser::byte::hex_digit,
     error::ParseError
 };
@@ -21,26 +20,6 @@ use combine::stream::StreamErrorFor;
 use combine::error::StreamError;
 
 use crate::parse_model::util::*;
-
-#[inline]
-pub(crate) fn string<Input>() -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
-{
-    combine::position()
-
-        .skip(token(b'"'))
-        .and(take_until(token(b'"')))
-        .skip(token(b'"'))
-
-        .flat_map(|(position, raw): (_, Vec<_>)| {
-            match String::from_utf8(raw) {
-                Ok(s) => Ok(s),
-                Err(_) => crate::parse_bail!(Input, position,
-                    "invalid UTF-8")
-            }
-        })
-}
 
 #[inline]
 fn string_escaped<Input, Escaped, UP, UPF, Unescape>
