@@ -10,6 +10,11 @@ one_test() {
 	ttf="$p.ttf"
 	out="./$*.fea-rs.ttf"
 
+	[ ! -f "$fea" ] && {
+		echo "$fea" ': no such file or directory'
+		exit 1
+	}
+
 	echo "$fea"
 	echo ''
 	echo '------------------------'
@@ -23,6 +28,7 @@ one_test() {
 			return 0
 		fi
 	fi
+	echo 'fail!'
 	return 1
 }
 
