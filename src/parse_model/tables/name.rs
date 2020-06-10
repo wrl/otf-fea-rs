@@ -11,7 +11,7 @@ use crate::parser::FeaRsStream;
 
 use crate::parse_model::table::*;
 use crate::parse_model::util::*;
-use crate::parse_model::feature_names::name;
+use crate::parse_model::name::*;
 
 #[derive(Debug)]
 pub struct NameId {

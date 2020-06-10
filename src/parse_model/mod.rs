@@ -49,6 +49,9 @@ pub use metric::*;
 mod mark_class;
 pub use mark_class::*;
 
+mod name;
+pub use name::*;
+
 mod parameters;
 pub use parameters::*;
 
