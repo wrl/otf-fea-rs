@@ -102,8 +102,8 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     write_into(buf, &offset_table);
     write_into(buf, &hdr);
 
-    head.checksum_adjustment = 0xB1B0AFBA -
-        util::checksum(&buf).overflowing_add(hdr.checksum).0;
+    head.checksum_adjustment = 0xB1B0AFBAu32.overflowing_sub(
+        util::checksum(&buf).overflowing_add(hdr.checksum).0).0;
 
     write_into(buf, &head);
 }
