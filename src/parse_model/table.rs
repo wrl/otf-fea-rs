@@ -17,6 +17,7 @@ use crate::parse_model::util::*;
 use crate::parse_model::tables::gdef::*;
 use crate::parse_model::tables::head::*;
 use crate::parse_model::tables::hhea::*;
+use crate::parse_model::tables::name::*;
 use crate::parse_model::tables::vhea::*;
 
 #[derive(Debug, PartialEq)]
@@ -25,6 +26,7 @@ pub enum TableTag {
     GDEF,
     head,
     hhea,
+    name,
     vhea
 }
 
@@ -36,6 +38,7 @@ impl fmt::Display for TableTag {
             GDEF => write!(f, "GDEF"),
             head => write!(f, "head"),
             hhea => write!(f, "hhea"),
+            name => write!(f, "name"),
             vhea => write!(f, "vhea")
         }
     }
@@ -68,10 +71,13 @@ pub enum TableStatement {
     Descender(Descender),
     LineGap(LineGap),
 
+    // name
+    NameId(NameId),
+
     // vhea
     VertTypoAscender(VertTypoAscender),
     VertTypoDescender(VertTypoDescender),
-    VertTypoLineGap(VertTypoLineGap)
+    VertTypoLineGap(VertTypoLineGap),
 }
 
 cvt_to_statement!(Attach);
@@ -83,6 +89,7 @@ cvt_to_statement!(CaretOffset);
 cvt_to_statement!(Ascender);
 cvt_to_statement!(Descender);
 cvt_to_statement!(LineGap);
+cvt_to_statement!(NameId);
 cvt_to_statement!(VertTypoAscender);
 cvt_to_statement!(VertTypoDescender);
 cvt_to_statement!(VertTypoLineGap);
@@ -101,6 +108,7 @@ fn table_statement<Input>(tag: &TableTag) -> impl Parser<FeaRsStream<Input>, Out
         &TableTag::GDEF => gdef_statement(),
         &TableTag::head => head_statement(),
         &TableTag::hhea => hhea_statement(),
+        &TableTag::name => name_statement(),
         &TableTag::vhea => vhea_statement()
     )
 }
@@ -127,6 +135,7 @@ fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>
                 b"GDEF" => TableTag::GDEF,
                 b"head" => TableTag::head,
                 b"hhea" => TableTag::hhea,
+                b"name" => TableTag::name,
                 b"vhea" => TableTag::vhea,
 
                 _ =>
