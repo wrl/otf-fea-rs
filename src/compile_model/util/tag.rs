@@ -29,3 +29,42 @@ impl DecodeBE for Tag {
         Tag::from_bytes(&arr).unwrap()
     }
 }
+
+#[macro_export]
+macro_rules! tag {
+    ($a:ident, $b:ident, $c:ident, $d:ident) => {
+        $crate::parse_model::Tag([
+            ascii::AsciiChar::$a,
+            ascii::AsciiChar::$b,
+            ascii::AsciiChar::$c,
+            ascii::AsciiChar::$d
+        ])
+    };
+
+    ($a:ident, $b:ident, $c:ident) => {
+        $crate::parse_model::Tag([
+            ascii::AsciiChar::$a,
+            ascii::AsciiChar::$b,
+            ascii::AsciiChar::$c,
+            ascii::AsciiChar::Space
+        ])
+    };
+
+    ($a:ident, $b:ident) => {
+        $crate::parse_model::Tag([
+            ascii::AsciiChar::$a,
+            ascii::AsciiChar::$b,
+            ascii::AsciiChar::Space,
+            ascii::AsciiChar::Space
+        ])
+    };
+
+    ($a:ident) => {
+        $crate::parse_model::Tag([
+            ascii::AsciiChar::$a,
+            ascii::AsciiChar::Space,
+            ascii::AsciiChar::Space,
+            ascii::AsciiChar::Space
+        ])
+    };
+}

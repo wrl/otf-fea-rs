@@ -2,6 +2,7 @@ use crate::parse_model::*;
 
 use endian_codec::{PackedSize, EncodeBE};
 use crate::compile_model as cm;
+use crate::compile_model::util;
 
 struct CompilerState {
     pub head: Option<cm::head::Head>
@@ -42,28 +43,13 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &TopLevelStatement) {
  * todo: move this out into a separate file
  */
 
-fn checksum(table: &[u8]) -> u32 {
-    return table.chunks(4)
-        .fold(0u32, |acc, bytes| {
-            let raw = match bytes {
-                &[a] => [a, 0, 0, 0],
-                &[a, b] => [a, b, 0, 0],
-                &[a, b, c] => [a, b, c, 0],
-                &[a, b, c, d] => [a, b, c, d],
-                _ => unreachable!()
-            };
-
-            return acc.overflowing_add(u32::from_be_bytes(raw)).0;
-        });
-}
-
 fn checksum_any<T: PackedSize + EncodeBE>(p: &T) -> u32 {
     let mut buf = vec![0u8; T::PACKED_LEN];
     p.encode_as_be_bytes(&mut buf[..]);
 
     // don't need to handle the checksum_head() special case here because, at this phase in
     // compilation, the `checksum_adjustment` field is 0 anyway.
-    return checksum(&buf);
+    return util::checksum(&buf);
 }
 
 const fn align_len(len: usize) -> usize {
@@ -117,7 +103,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     write_into(buf, &hdr);
 
     head.checksum_adjustment = 0xB1B0AFBA -
-        checksum(&buf).overflowing_add(hdr.checksum).0;
+        util::checksum(&buf).overflowing_add(hdr.checksum).0;
 
     write_into(buf, &head);
 }

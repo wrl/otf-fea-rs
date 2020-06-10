@@ -8,6 +8,7 @@ pub mod gpos;
 pub mod gdef;
 pub mod head;
 
+#[macro_use]
 pub mod util;
 
 #[derive(Debug, Copy, Clone)]

@@ -10,41 +10,6 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use otf_fea_rs::compile_model::*;
 use otf_fea_rs::parse_model::Tag;
 
-fn checksum_head(table: &[u8]) -> u32 {
-    return table.chunks(4)
-        .enumerate()
-        .fold(0u32, |acc, (i, bytes)| {
-            let raw = match (i, bytes) {
-                // for the `head` table, we have to treat `checksum_adjustment` as 0 while calculating
-                // the checksum for the header.
-                (2, _) => [0, 0, 0, 0],
-
-                (_, &[a]) => [a, 0, 0, 0],
-                (_, &[a, b]) => [a, b, 0, 0],
-                (_, &[a, b, c]) => [a, b, c, 0],
-                (_, &[a, b, c, d]) => [a, b, c, d],
-                _ => unreachable!()
-            };
-
-            return acc.overflowing_add(u32::from_be_bytes(raw)).0;
-        });
-}
-
-fn checksum(table: &[u8]) -> u32 {
-    return table.chunks(4)
-        .fold(0u32, |acc, bytes| {
-            let raw = match bytes {
-                &[a] => [a, 0, 0, 0],
-                &[a, b] => [a, b, 0, 0],
-                &[a, b, c] => [a, b, c, 0],
-                &[a, b, c, d] => [a, b, c, d],
-                _ => unreachable!()
-            };
-
-            return acc.overflowing_add(u32::from_be_bytes(raw)).0;
-        });
-}
-
 fn read_header(path: &str) -> io::Result<()> {
     let mut f = File::open(path)?;
 
@@ -74,7 +39,7 @@ fn checksum_any<T: PackedSize + EncodeBE>(p: &T) -> u32 {
 
     // don't need to handle the checksum_head() special case here because, at this phase in
     // compilation, the `checksum_adjustment` field is 0 anyway.
-    return checksum(&buf);
+    return util::checksum(&buf);
 }
 
 const fn align_len(len: usize) -> usize {
@@ -134,7 +99,7 @@ fn write_ttf(_path: &str) -> io::Result<()> {
     write_into(&mut buf, &head_record);
 
     head.checksum_adjustment = 0xB1B0AFBA -
-        checksum(&buf).overflowing_add(head_record.checksum).0;
+        util::checksum(&buf).overflowing_add(head_record.checksum).0;
 
     write_into(&mut buf, &head);
 

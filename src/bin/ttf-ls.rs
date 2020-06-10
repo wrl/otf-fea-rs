@@ -5,6 +5,8 @@ use std::io::prelude::*;
 
 use endian_codec::{PackedSize, DecodeBE};
 
+#[macro_use]
+extern crate otf_fea_rs;
 use otf_fea_rs::compile_model::*;
 
 ////
@@ -20,10 +22,29 @@ fn print_offset_table(t: &TTFOffsetTable) {
     println!("    range_shift: {}", t.range_shift);
 }
 
-fn print_table_record(t: &TTFTableRecord) {
-    println!("  {}    {: <16}{: <16}{: <16}",
+fn print_table_record(t: &TTFTableRecord, whole_file: &[u8]) {
+    let (start, end) = (
+        t.offset_from_start_of_file as usize,
+        (t.offset_from_start_of_file + t.length) as usize
+    );
+
+    let data = &whole_file[start..end];
+    let calculated_checksum = match t.tag {
+        tag!(h,e,a,d) => util::checksum_head(data),
+        _ => util::checksum(data)
+    };
+
+    let good =
+        if t.checksum == calculated_checksum {
+            ' '
+        } else {
+            '!'
+        };
+
+    println!("  {}    {: <13}{}{} {: <16}{: <16}",
         t.tag,
         t.checksum,
+        good, good,
         t.offset_from_start_of_file,
         t.length);
 }
@@ -56,7 +77,7 @@ fn read_ttf(path: &str) -> io::Result<()> {
         let (record_buf, r) = rest.split_at(TTFTableRecord::PACKED_LEN);
         let record = TTFTableRecord::decode_from_be_bytes(record_buf);
 
-        print_table_record(&record);
+        print_table_record(&record, &buf);
         rest = r;
     }
 
