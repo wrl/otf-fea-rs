@@ -8,7 +8,7 @@ one_test() {
 	p="$TESTS_DIR/$*"
 	fea="$p.fea"
 	ttf="$p.ttf"
-	out="./$*.fea-rs.ttf"
+	out="$OUT_DIR/$*.fea-rs.ttf"
 
 	[ ! -f "$fea" ] && {
 		echo "$fea" ': no such file or directory'
