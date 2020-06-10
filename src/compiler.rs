@@ -75,13 +75,13 @@ fn table_len<T: PackedSize>(_: &T) -> usize {
     return align_len(T::PACKED_LEN);
 }
 
-fn header_for<T: PackedSize + EncodeBE>(tag: Tag,
-    offset_from_start_of_file: usize, p: &T) -> cm::TTFTableHeader {
-    cm::TTFTableHeader {
+fn record_for<T: PackedSize + EncodeBE>(tag: Tag,
+    offset_from_start_of_file: usize, p: &T) -> cm::TTFTableRecord {
+    cm::TTFTableRecord {
         tag,
         checksum: checksum_any(p),
         offset_from_start_of_file: align_len(offset_from_start_of_file
-            + cm::TTFTableHeader::PACKED_LEN) as u32,
+            + cm::TTFTableRecord::PACKED_LEN) as u32,
         length: T::PACKED_LEN as u32
     }
 }
@@ -109,7 +109,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     head.modified = 3647951938.into();
     head.font_direction_hint = 0;
 
-    let hdr = header_for(Tag::from_bytes(b"head").unwrap(),
+    let hdr = record_for(Tag::from_bytes(b"head").unwrap(),
         cm::TTFOffsetTable::PACKED_LEN,
         &head);
 

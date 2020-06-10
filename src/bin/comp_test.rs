@@ -55,10 +55,10 @@ fn read_header(path: &str) -> io::Result<()> {
     let (offset_buf, rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
     println!("{:?}", TTFOffsetTable::decode_from_be_bytes(offset_buf));
 
-    let (header, rest) = rest.split_at(TTFTableHeader::PACKED_LEN);
-    let table_header = TTFTableHeader::decode_from_be_bytes(header);
+    let (record, rest) = rest.split_at(TTFTableRecord::PACKED_LEN);
+    let table_record = TTFTableRecord::decode_from_be_bytes(record);
     let head = head::Head::decode_from_be_bytes(rest);
-    println!("{:?}\n\n{:#?}\n", table_header, head);
+    println!("{:?}\n\n{:#?}\n", table_record, head);
 
     println!(" >> created: {:?}", head.created.as_datetime());
     println!(" >> modified: {:?}", head.modified.as_datetime());
@@ -86,13 +86,13 @@ fn table_len<T: PackedSize>(_: &T) -> usize {
     return align_len(T::PACKED_LEN);
 }
 
-fn header_for<T: PackedSize + EncodeBE>(tag: Tag,
-    offset_from_start_of_file: usize, p: &T) -> TTFTableHeader {
-    TTFTableHeader {
+fn record_for<T: PackedSize + EncodeBE>(tag: Tag,
+    offset_from_start_of_file: usize, p: &T) -> TTFTableRecord {
+    TTFTableRecord {
         tag,
         checksum: checksum_any(p),
         offset_from_start_of_file: align_len(offset_from_start_of_file
-            + TTFTableHeader::PACKED_LEN) as u32,
+            + TTFTableRecord::PACKED_LEN) as u32,
         length: T::PACKED_LEN as u32
     }
 }
@@ -121,20 +121,20 @@ fn write_ttf(_path: &str) -> io::Result<()> {
     head.modified = 3647951938.into();
     head.font_direction_hint = 0;
 
-    let head_header = header_for(
+    let head_record = record_for(
         Tag::from_bytes(b"head").unwrap(),
         TTFOffsetTable::PACKED_LEN,
         &head);
 
-    println!("{} {:?}", TTFOffsetTable::PACKED_LEN, head_header);
+    println!("{} {:?}", TTFOffsetTable::PACKED_LEN, head_record);
 
     let mut buf = Vec::new();
 
     write_into(&mut buf, &offset_table);
-    write_into(&mut buf, &head_header);
+    write_into(&mut buf, &head_record);
 
     head.checksum_adjustment = 0xB1B0AFBA -
-        checksum(&buf).overflowing_add(head_header.checksum).0;
+        checksum(&buf).overflowing_add(head_record.checksum).0;
 
     write_into(&mut buf, &head);
 

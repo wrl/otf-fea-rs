@@ -69,7 +69,7 @@ pub struct TTFOffsetTable {
 }
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
-pub struct TTFTableHeader {
+pub struct TTFTableRecord {
     pub tag: Tag,
     pub checksum: u32,
     pub offset_from_start_of_file: u32,

@@ -20,7 +20,7 @@ fn print_offset_table(t: &TTFOffsetTable) {
     println!("    range_shift: {}", t.range_shift);
 }
 
-fn print_table_record(t: &TTFTableHeader) {
+fn print_table_record(t: &TTFTableRecord) {
     println!("  {}    {: <16}{: <16}{: <16}",
         t.tag,
         t.checksum,
@@ -32,7 +32,7 @@ fn print_table_record(t: &TTFTableHeader) {
 // entry point
 ////
 
-fn read_header(path: &str) -> io::Result<()> {
+fn read_ttf(path: &str) -> io::Result<()> {
     let mut f = File::open(path)?;
 
     let mut buf = Vec::new();
@@ -53,10 +53,10 @@ fn read_header(path: &str) -> io::Result<()> {
     println!("-----------------------------------------------------");
 
     for _ in 0..offset_table.num_tables {
-        let (header_buf, r) = rest.split_at(TTFTableHeader::PACKED_LEN);
-        let header = TTFTableHeader::decode_from_be_bytes(header_buf);
+        let (record_buf, r) = rest.split_at(TTFTableRecord::PACKED_LEN);
+        let record = TTFTableRecord::decode_from_be_bytes(record_buf);
 
-        print_table_record(&header);
+        print_table_record(&record);
         rest = r;
     }
 
@@ -68,5 +68,5 @@ fn main() {
     let path = env::args().skip(1).next()
         .expect("need a path");
 
-    read_header(&path).unwrap();
+    read_ttf(&path).unwrap();
 }
