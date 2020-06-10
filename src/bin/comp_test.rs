@@ -8,6 +8,7 @@ use std::io::prelude::*;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use otf_fea_rs::compile_model::*;
+use otf_fea_rs::parse_model::Tag;
 
 fn checksum_head(table: &[u8]) -> u32 {
     return table.chunks(4)
@@ -85,7 +86,7 @@ fn table_len<T: PackedSize>(_: &T) -> usize {
     return align_len(T::PACKED_LEN);
 }
 
-fn header_for<T: PackedSize + EncodeBE>(tag: u32,
+fn header_for<T: PackedSize + EncodeBE>(tag: Tag,
     offset_from_start_of_file: usize, p: &T) -> TTFTableHeader {
     TTFTableHeader {
         tag,
@@ -102,16 +103,9 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
     p.encode_as_be_bytes(&mut v[start..]);
 }
 
-const fn tag_const(x: &[u8; 4]) -> u32 {
-    return (x[0] as u32) << 24
-         | (x[1] as u32) << 16
-         | (x[2] as u32) << 8
-         | (x[3] as u32);
-}
-
 fn write_ttf(_path: &str) -> io::Result<()> {
     let offset_table = TTFOffsetTable {
-        version: 0x00010000,
+        version: TTFVersion::TTF,
         num_tables: 1,
         search_range: 16,
         entry_selector: 0,
@@ -128,7 +122,7 @@ fn write_ttf(_path: &str) -> io::Result<()> {
     head.font_direction_hint = 0;
 
     let head_header = header_for(
-        tag_const(b"head"),
+        Tag::from_bytes(b"head").unwrap(),
         TTFOffsetTable::PACKED_LEN,
         &head);
 

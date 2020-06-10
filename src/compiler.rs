@@ -75,7 +75,7 @@ fn table_len<T: PackedSize>(_: &T) -> usize {
     return align_len(T::PACKED_LEN);
 }
 
-fn header_for<T: PackedSize + EncodeBE>(tag: u32,
+fn header_for<T: PackedSize + EncodeBE>(tag: Tag,
     offset_from_start_of_file: usize, p: &T) -> cm::TTFTableHeader {
     cm::TTFTableHeader {
         tag,
@@ -92,16 +92,9 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
     p.encode_as_be_bytes(&mut v[start..]);
 }
 
-const fn tag_const(x: &[u8; 4]) -> u32 {
-    return (x[0] as u32) << 24
-         | (x[1] as u32) << 16
-         | (x[2] as u32) << 8
-         | (x[3] as u32);
-}
-
 fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     let offset_table = cm::TTFOffsetTable {
-        version: 0x00010000,
+        version: cm::TTFVersion::TTF,
         num_tables: 1,
         search_range: 16,
         entry_selector: 0,
@@ -116,7 +109,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     head.modified = 3647951938.into();
     head.font_direction_hint = 0;
 
-    let hdr = header_for(tag_const(b"head"),
+    let hdr = header_for(Tag::from_bytes(b"head").unwrap(),
         cm::TTFOffsetTable::PACKED_LEN,
         &head);
 
