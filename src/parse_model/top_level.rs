@@ -29,7 +29,9 @@ pub enum TopLevelStatement {
     FeatureDefinition(FeatureDefinition),
     LookupDefinition(LookupDefinition),
 
-    Table(Table)
+    Anonymous(Anonymous),
+
+    Table(Table),
 }
 
 pub(crate) fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TopLevelStatement>
@@ -62,6 +64,10 @@ pub(crate) fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Ou
                 b"anchorDef" =>
                     anchor_definition()
                         .map(TopLevelStatement::AnchorDefinition),
+
+                b"anon" | b"anonymous" =>
+                    anonymous()
+                        .map(TopLevelStatement::Anonymous),
 
                 kwd if kwd[0] == b'@' =>
                     named_glyph_class()

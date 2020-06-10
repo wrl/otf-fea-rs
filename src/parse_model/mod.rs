@@ -1,6 +1,9 @@
 mod anchor;
 pub use anchor::*;
 
+mod anonymous;
+pub use anonymous::*;
+
 mod block;
 pub use block::*;
 
