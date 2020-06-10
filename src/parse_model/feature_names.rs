@@ -12,6 +12,7 @@ use combine::{
 use crate::parser::FeaRsStream;
 
 use super::block::*;
+use super::string::*;
 use super::util::*;
 
 #[derive(Debug)]

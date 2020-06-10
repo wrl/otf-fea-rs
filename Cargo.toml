@@ -10,6 +10,7 @@ combine = "4.1"
 endian_codec = "0.1"
 fixed = "1"
 chrono = "0.4"
+encoding_rs = "0.8"
 
 [dependencies.arrayvec]
 version = "0.5"

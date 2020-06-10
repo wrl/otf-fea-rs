@@ -12,6 +12,7 @@ use crate::parser::FeaRsStream;
 
 use crate::parse_model::table::*;
 use crate::parse_model::util::*;
+use crate::parse_model::string::*;
 
 #[derive(Debug)]
 pub struct NameId {
@@ -40,13 +41,13 @@ fn nameid<Input>() -> impl Parser<FeaRsStream<Input>, Output = NameId>
                 ))
         ))
 
-        .and(string())
-
-        .flat_map(|(((position, name_id), attributes), string)| {
-            let (platform_id, platform_enc_id, lang_id) = match attributes {
+        .flat_map(|((position, name_id), attributes)| {
+            let attributes = match attributes {
+                // mac
                 Some((1, Some((enc, lang)))) => (1, enc, lang),
                 Some((1, None)) => (1, 0, 0),
 
+                // windows
                 Some((3, Some((enc, lang)))) => (3, enc, lang),
                 Some((3, None))
                     | None => (3, 1, 0x0409),
@@ -54,6 +55,20 @@ fn nameid<Input>() -> impl Parser<FeaRsStream<Input>, Output = NameId>
                 Some((p, _)) => crate::parse_bail!(Input, position,
                     format!("expected platform ID 1 or 3 (got {})", p))
             };
+
+            Ok((name_id, attributes))
+        })
+
+        .then_ref(|(_, (platform_id, ..))|
+            match platform_id {
+                1 => string_mac_escaped().left(),
+                3 => string_win_escaped().right(),
+                _ => unreachable!()
+            }
+        )
+
+        .flat_map(|((name_id, attributes), string)| {
+            let (platform_id, platform_enc_id, lang_id) = attributes;
 
             Ok(NameId {
                 name_id,

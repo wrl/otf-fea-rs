@@ -61,6 +61,8 @@ pub use script::*;
 mod substitute;
 pub use substitute::*;
 
+mod string;
+
 mod table;
 pub use table::*;
 

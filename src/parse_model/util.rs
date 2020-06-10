@@ -28,7 +28,6 @@ use combine::{
 
 use combine::parser::repeat::{
     skip_until,
-    take_until,
     many1,
     many
 };
@@ -219,24 +218,4 @@ pub(crate) fn keyword<Input>() -> impl Parser<Input, Output = String>
 {
     // from_utf8_unchecked() is safe here because letter() only matches ASCII chars.
     many1(letter()).map(|x| unsafe { String::from_utf8_unchecked(x) })
-}
-
-#[inline]
-pub(crate) fn string<Input>() -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
-{
-    combine::position()
-
-        .skip(token(b'"'))
-        .and(take_until(token(b'"')))
-        .skip(token(b'"'))
-
-        .flat_map(|(position, raw): (_, Vec<_>)| {
-            match String::from_utf8(raw) {
-                Ok(s) => Ok(s),
-                Err(_) => crate::parse_bail!(Input, position,
-                    "invalid UTF-8")
-            }
-        })
 }
