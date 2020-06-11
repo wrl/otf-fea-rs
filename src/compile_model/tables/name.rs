@@ -61,6 +61,7 @@ impl Name {
                 (records_start_offset + (i * EncodedNameRecord::PACKED_LEN))..]);
         }
 
+        res.shrink_to_fit();
         res
     }
 
