@@ -26,15 +26,15 @@ impl CompilerState {
     }
 }
 
-fn handle_head_table(ctx: &mut CompilerState, statements: &[pm::TableStatement]) {
-    ctx.tables.head = Some(tables::Head::from_parsed_table(statements));
-}
-
 fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
     let pm::Table { tag, statements } = table;
 
     match tag {
-        pm::TableTag::head => handle_head_table(ctx, statements),
+        pm::TableTag::head =>
+            ctx.tables.head = Some(tables::Head::from_parsed_table(statements)),
+        pm::TableTag::name =>
+            ctx.tables.name = Some(tables::Name::from_parsed_table(statements)),
+
         _ => panic!()
     }
 }
@@ -84,19 +84,19 @@ fn record_for<T: PackedSize + EncodeBE>(tag: pm::Tag,
 
 fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
     let start = v.len();
-    v.resize(start + table_len(p), 0u8);
+    v.resize(align_len(start + table_len(p)), 0u8);
     p.encode_as_be_bytes(&mut v[start..]);
 }
 
 fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
-    if let Some(mut head) = ctx.tables.head {
+    if let Some(ref mut head) = ctx.tables.head {
         // all stuff to get a clean diff between our output and `spec9c1.ttf`
         head.magic_number = 0;
         head.created = 3406620153.into();
         head.modified = 3647951938.into();
         head.font_direction_hint = 0;
 
-        let hdr = record_for(tag!(h,e,a,d), TTFOffsetTable::PACKED_LEN, &head);
+        let hdr = record_for(tag!(h,e,a,d), TTFOffsetTable::PACKED_LEN, head);
 
         let offset_table = TTFOffsetTable::new(TTFVersion::TTF, 1);
         write_into(buf, &offset_table);
@@ -105,7 +105,23 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
         head.checksum_adjustment = 0xB1B0AFBAu32.overflowing_sub(
             util::checksum(&buf).overflowing_add(hdr.checksum).0).0;
 
-        write_into(buf, &head);
+        write_into(buf, head);
+    } else if let Some(ref name) = ctx.tables.name {
+        let name_encoded = name.to_be();
+
+        let offset_table = TTFOffsetTable::new(TTFVersion::TTF, 1);
+        let record = TTFTableRecord {
+            tag: tag!(n,a,m,e),
+            checksum: util::checksum(&name_encoded),
+            offset_from_start_of_file: align_len(
+                TTFOffsetTable::PACKED_LEN
+                + TTFTableRecord::PACKED_LEN) as u32,
+            length: name_encoded.len() as u32
+        };
+
+        write_into(buf, &offset_table);
+        write_into(buf, &record);
+        buf.extend(&name_encoded);
     } else {
         let offset_table = TTFOffsetTable::new(TTFVersion::TTF, 0);
         write_into(buf, &offset_table);

@@ -69,7 +69,7 @@ mod string;
 mod table;
 pub use table::*;
 
-mod tables;
+pub mod tables;
 pub use tables::*;
 
 mod tag;

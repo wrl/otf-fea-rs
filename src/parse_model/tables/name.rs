@@ -15,11 +15,11 @@ use crate::parse_model::name::*;
 
 #[derive(Debug)]
 pub struct NameId {
-    name_id: isize,
-    platform_id: isize,
-    platform_enc_id: isize,
-    language_id: isize,
-    name: String
+    pub name_id: isize,
+    pub platform_id: isize,
+    pub platform_enc_id: isize,
+    pub language_id: isize,
+    pub name: String
 }
 
 fn nameid<Input>() -> impl Parser<FeaRsStream<Input>, Output = NameId>
