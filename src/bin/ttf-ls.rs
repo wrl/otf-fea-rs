@@ -10,6 +10,44 @@ extern crate otf_fea_rs;
 use otf_fea_rs::compile_model::*;
 
 ////
+// head table
+////
+
+fn display_head(offset_table: &TTFOffsetTable, record: &TTFTableRecord,
+    whole_file: &[u8], combined_records_checksum: u32) {
+    let head = tables::Head::decode_from_be_bytes(record.table_data(whole_file));
+
+    let directory_end =
+        TTFOffsetTable::PACKED_LEN
+        + ((offset_table.num_tables as usize) * TTFTableRecord::PACKED_LEN);
+
+    let adjustment =
+        0xB1B0AFBAu32.overflowing_sub(
+            combined_records_checksum.overflowing_add(
+                util::checksum(&whole_file[..directory_end])).0).0;
+
+    println!("checking `head` checksum adjustment against calculated file checksum...");
+    println!("    head:       0x{:x}", head.checksum_adjustment);
+    println!("    calculated: 0x{:x}", adjustment);
+    println!();
+
+    if adjustment == head.checksum_adjustment {
+        println!("    good!");
+    } else {
+        println!("    fail!");
+    }
+}
+
+////
+// name table
+////
+
+fn display_name(table_data: &[u8]) {
+    let table = tables::Name::decode_from_be_bytes(table_data);
+    println!("{:#?}", table);
+}
+
+////
 // metadata
 ////
 
@@ -91,29 +129,15 @@ fn read_ttf(path: &str) -> io::Result<()> {
 
     if let Some(idx) = head_record {
         let record = records[idx];
-        let head = tables::Head::decode_from_be_bytes(record.table_data(&buf));
-
-        let directory_end =
-            TTFOffsetTable::PACKED_LEN
-            + ((offset_table.num_tables as usize) * TTFTableRecord::PACKED_LEN);
-
-        let adjustment =
-            0xB1B0AFBAu32.overflowing_sub(
-                running_checksum.overflowing_add(
-                    util::checksum(&buf[..directory_end])).0).0;
-
-        println!("checking `head` checksum adjustment against calculated file checksum...");
-        println!("    head:       0x{:x}", head.checksum_adjustment);
-        println!("    calculated: 0x{:x}", adjustment);
-        println!();
-
-        if adjustment == head.checksum_adjustment {
-            println!("    good!");
-        } else {
-            println!("    fail!");
-        }
+        display_head(&offset_table, &record, &buf, running_checksum);
     } else {
         println!("no `head` table, skipping file checksum verification");
+    }
+
+    println!();
+
+    if let Some(name_record) = records.iter().find(|r| r.tag == tag!(n,a,m,e)) {
+        display_name(name_record.table_data(&buf));
     }
 
     println!();
