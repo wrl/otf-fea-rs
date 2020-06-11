@@ -91,7 +91,7 @@ fn read_ttf(path: &str) -> io::Result<()> {
 
     if let Some(idx) = head_record {
         let record = records[idx];
-        let head = head::Head::decode_from_be_bytes(record.table_data(&buf));
+        let head = tables::Head::decode_from_be_bytes(record.table_data(&buf));
 
         let directory_end =
             TTFOffsetTable::PACKED_LEN

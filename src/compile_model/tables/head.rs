@@ -1,7 +1,7 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::parse_model::*;
-use super::util::*;
+use crate::compile_model::util::*;
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
 pub struct Head {

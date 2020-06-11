@@ -22,7 +22,7 @@ fn read_header(path: &str) -> io::Result<()> {
 
     let (record, rest) = rest.split_at(TTFTableRecord::PACKED_LEN);
     let table_record = TTFTableRecord::decode_from_be_bytes(record);
-    let head = head::Head::decode_from_be_bytes(rest);
+    let head = tables::Head::decode_from_be_bytes(rest);
     println!("{:?}\n\n{:#?}\n", table_record, head);
 
     println!(" >> created: {:?}", head.created.as_datetime());
@@ -77,7 +77,7 @@ fn write_ttf(_path: &str) -> io::Result<()> {
         range_shift: 0
     };
 
-    let mut head = head::Head::new();
+    let mut head = tables::Head::new();
 
     // all stuff to get a clean diff between our output and `spec9c1.ttf`
     head.magic_number = 0;

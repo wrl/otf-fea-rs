@@ -4,20 +4,26 @@ use endian_codec::{PackedSize, EncodeBE};
 use crate::compile_model as cm;
 use crate::compile_model::util;
 
+struct CompilerTables {
+    pub head: Option<cm::tables::Head>,
+}
+
 struct CompilerState {
-    pub head: Option<cm::head::Head>
+    tables: CompilerTables
 }
 
 impl CompilerState {
     fn new() -> Self {
         Self {
-            head: None,
+            tables: CompilerTables {
+                head: None
+            }
         }
     }
 }
 
 fn handle_head_table(ctx: &mut CompilerState, statements: &[TableStatement]) {
-    ctx.head = Some(cm::head::Head::from_parsed_table(statements));
+    ctx.tables.head = Some(cm::tables::Head::from_parsed_table(statements));
 }
 
 fn handle_table(ctx: &mut CompilerState, table: &Table) {
@@ -79,7 +85,7 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
 }
 
 fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
-    if let Some(mut head) = ctx.head {
+    if let Some(mut head) = ctx.tables.head {
         // all stuff to get a clean diff between our output and `spec9c1.ttf`
         head.magic_number = 0;
         head.created = 3406620153.into();

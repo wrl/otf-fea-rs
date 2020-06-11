@@ -4,9 +4,7 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::parse_model::Tag;
 
-pub mod gpos;
-pub mod gdef;
-pub mod head;
+pub mod tables;
 
 #[macro_use]
 pub mod util;
