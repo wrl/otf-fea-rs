@@ -1,11 +1,14 @@
-use crate::parse_model::*;
+use crate::parse_model as pm;
 
 use endian_codec::{PackedSize, EncodeBE};
-use crate::compile_model as cm;
+use crate::compile_model::*;
 use crate::compile_model::util;
 
+use crate::tag;
+
 struct CompilerTables {
-    pub head: Option<cm::tables::Head>,
+    pub head: Option<tables::Head>,
+    pub name: Option<tables::Name>
 }
 
 struct CompilerState {
@@ -16,27 +19,28 @@ impl CompilerState {
     fn new() -> Self {
         Self {
             tables: CompilerTables {
-                head: None
+                head: None,
+                name: None
             }
         }
     }
 }
 
-fn handle_head_table(ctx: &mut CompilerState, statements: &[TableStatement]) {
-    ctx.tables.head = Some(cm::tables::Head::from_parsed_table(statements));
+fn handle_head_table(ctx: &mut CompilerState, statements: &[pm::TableStatement]) {
+    ctx.tables.head = Some(tables::Head::from_parsed_table(statements));
 }
 
-fn handle_table(ctx: &mut CompilerState, table: &Table) {
-    let Table { tag, statements } = table;
+fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
+    let pm::Table { tag, statements } = table;
 
     match tag {
-        TableTag::head => handle_head_table(ctx, statements),
+        pm::TableTag::head => handle_head_table(ctx, statements),
         _ => panic!()
     }
 }
 
-fn handle_top_level(ctx: &mut CompilerState, statement: &TopLevelStatement) {
-    use TopLevelStatement::*;
+fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) {
+    use pm::TopLevelStatement::*;
 
     match statement {
         Table(ref t) => handle_table(ctx, t),
@@ -67,13 +71,13 @@ fn table_len<T: PackedSize>(_: &T) -> usize {
     return align_len(T::PACKED_LEN);
 }
 
-fn record_for<T: PackedSize + EncodeBE>(tag: Tag,
-    offset_from_start_of_file: usize, p: &T) -> cm::TTFTableRecord {
-    cm::TTFTableRecord {
+fn record_for<T: PackedSize + EncodeBE>(tag: pm::Tag,
+    offset_from_start_of_file: usize, p: &T) -> TTFTableRecord {
+    TTFTableRecord {
         tag,
         checksum: checksum_any(p),
         offset_from_start_of_file: align_len(offset_from_start_of_file
-            + cm::TTFTableRecord::PACKED_LEN) as u32,
+            + TTFTableRecord::PACKED_LEN) as u32,
         length: T::PACKED_LEN as u32
     }
 }
@@ -92,11 +96,9 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
         head.modified = 3647951938.into();
         head.font_direction_hint = 0;
 
-        let hdr = record_for(Tag::from_bytes(b"head").unwrap(),
-        cm::TTFOffsetTable::PACKED_LEN,
-        &head);
+        let hdr = record_for(tag!(h,e,a,d), TTFOffsetTable::PACKED_LEN, &head);
 
-        let offset_table = cm::TTFOffsetTable::new(cm::TTFVersion::TTF, 1);
+        let offset_table = TTFOffsetTable::new(TTFVersion::TTF, 1);
         write_into(buf, &offset_table);
         write_into(buf, &hdr);
 
@@ -105,13 +107,13 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
 
         write_into(buf, &head);
     } else {
-        let offset_table = cm::TTFOffsetTable::new(cm::TTFVersion::TTF, 0);
+        let offset_table = TTFOffsetTable::new(TTFVersion::TTF, 0);
         write_into(buf, &offset_table);
     }
 }
 
 pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
-    where I: Iterator<Item = &'a TopLevelStatement>
+    where I: Iterator<Item = &'a pm::TopLevelStatement>
 {
     let mut ctx = CompilerState::new();
 
@@ -122,6 +124,6 @@ pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
     actually_compile(&mut ctx, out);
 }
 
-pub fn compile(statements: &[TopLevelStatement], out: &mut Vec<u8>) {
+pub fn compile(statements: &[pm::TopLevelStatement], out: &mut Vec<u8>) {
     compile_iter(statements.iter(), out)
 }
