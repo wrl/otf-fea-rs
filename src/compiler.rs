@@ -65,21 +65,24 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
 }
 
 fn prepare_head(ctx: &mut CompilerState) {
-    if let Some(ref mut head) = ctx.head_table {
-        // all stuff to get a clean diff between our output and `spec9c1.ttf`
-        head.magic_number = 0;
-        head.created = 3406620153.into();
-        head.modified = 3647951938.into();
-        head.font_direction_hint = 0;
+    let mut head = match ctx.head_table {
+        Some(ref mut head) => head,
+        None => return
+    };
 
-        let mut encoded = vec![0u8; tables::Head::PACKED_LEN];
-        head.encode_as_be_bytes(&mut encoded);
+    // all stuff to get a clean diff between our output and `spec9c1.ttf`
+    head.magic_number = 0;
+    head.created = 3406620153.into();
+    head.modified = 3647951938.into();
+    head.font_direction_hint = 0;
 
-        ctx.tables.insert(0, (
-            tag!(h,e,a,d),
-            encoded
-        ));
-    }
+    let mut encoded = vec![0u8; tables::Head::PACKED_LEN];
+    head.encode_as_be_bytes(&mut encoded);
+
+    ctx.tables.insert(0, (
+        tag!(h,e,a,d),
+        encoded
+    ));
 }
 
 fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {

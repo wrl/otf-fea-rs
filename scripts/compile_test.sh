@@ -4,6 +4,8 @@ RUNNER=./target/debug/compile
 TESTS_DIR=../fonttools/Tests/feaLib/data
 OUT_DIR=./compiler_test_out
 
+mkdir -p $OUT_DIR
+
 one_test() {
 	p="$TESTS_DIR/$*"
 	fea="$p.fea"
