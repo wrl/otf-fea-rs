@@ -9,10 +9,12 @@ fn main() {
 
     match otf_fea_rs::parser::parse_all(f) {
         Ok(definitions) => {
-            println!();
+            if env::var("FEA_RS_NO_PRINT").is_err() {
+                println!();
 
-            for d in definitions {
-                println!("{:#?}\n", d);
+                for d in definitions {
+                    println!("{:#?}\n", d);
+                }
             }
 
             std::process::exit(0)

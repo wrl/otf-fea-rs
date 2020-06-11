@@ -70,8 +70,6 @@ where
 }
 
 pub fn parse_all<R: Read>(input: R) -> Result<Vec<TopLevelStatement>, ()> {
-    println!();
-
     let mut parser = optional_whitespace()
         .with(many(
             top_level_statement()
