@@ -49,7 +49,17 @@ pub(crate) fn name<Input>() -> impl Parser<FeaRsStream<Input>, Output = Name>
                     .skip(required_whitespace())))
         )
 
-        .map(|ids| ids.unwrap_or((Platform::Windows, None)))
+        .map(|ids| {
+            let (platform_id, ids) = ids.unwrap_or((Platform::Windows, None));
+            let (script_id, language_id) = ids.unwrap_or_else(|| {
+                match platform_id {
+                    Platform::Mac => (0, 0),
+                    Platform::Windows => (1, 0x409),
+                }
+            });
+
+            (platform_id, script_id, language_id)
+        })
 
         .then_ref(|(platform, ..)|
             match platform {
@@ -58,19 +68,11 @@ pub(crate) fn name<Input>() -> impl Parser<FeaRsStream<Input>, Output = Name>
             }
         )
 
-        .map(|((platform_id, ids), name)| {
-            let (script_id, language_id) = ids.unwrap_or_else(|| {
-                match platform_id {
-                    Platform::Mac => (0, 0),
-                    Platform::Windows => (1, 0x409),
-                }
-            });
-
+        .map(|((platform_id, script_id, language_id), name)|
             Name {
                 platform_id: platform_id as isize,
                 script_id,
                 language_id,
                 name
-            }
-        })
+            })
 }
