@@ -1,3 +1,5 @@
 /target
 **/*.rs.bk
 Cargo.lock
+
+/compiler_test_out/
