@@ -6,9 +6,14 @@ use crate::parse_model::Tag;
 
 pub mod tables;
 
+mod script_list;
+pub use script_list::{
+    ScriptList,
+    ScriptRecord,
+};
+
 #[macro_use]
 pub mod util;
-
 pub use util::TTFVersion;
 
 

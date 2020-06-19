@@ -39,11 +39,18 @@ fn display_head(offset_table: &TTFOffsetTable, record: &TTFTableRecord,
 }
 
 ////
-// name table
+// gpos
 ////
 
-fn display_name(table_data: &[u8]) {
-    let table = tables::Name::decode_from_be_bytes(table_data);
+fn display_gpos(table_data: &[u8]) {
+    let table = match tables::GPOS::decode_from_be_bytes(table_data) {
+        Ok(t) => t,
+        Err(_) => {
+            eprintln!("error decoding GPOS table");
+            return
+        }
+    };
+
     println!("{:#?}", table);
 }
 
@@ -136,8 +143,8 @@ fn read_ttf(path: &str) -> io::Result<()> {
 
     println!();
 
-    if let Some(name_record) = records.iter().find(|r| r.tag == tag!(n,a,m,e)) {
-        display_name(name_record.table_data(&buf));
+    if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(G,P,O,S)) {
+        display_gpos(gpos_record.table_data(&buf));
     }
 
     println!();

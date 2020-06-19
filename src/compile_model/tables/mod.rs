@@ -1,4 +1,6 @@
 mod gpos;
+pub use gpos::GPOS;
+
 mod gdef;
 
 mod head;

@@ -2,15 +2,10 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use encoding_rs::UTF_16BE;
 
 use crate::parse_model as pm;
+use crate::compile_model::util::decode_u16_be;
 
 #[derive(Debug)]
 pub struct Name(pub Vec<NameRecord>);
-
-fn decode_be(bytes: &[u8], offset: usize) -> u16 {
-    let mut a = [0u8; 2];
-    a.copy_from_slice(&bytes[offset..offset+2]);
-    u16::from_be_bytes(a)
-}
 
 impl Name {
     pub fn from_parsed_table(statements: &[pm::TableStatement]) -> Self {
@@ -69,9 +64,9 @@ impl Name {
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
         let mut records = Vec::new();
 
-        let _format = decode_be(bytes, 0);
-        let count = decode_be(bytes, 2) as usize;
-        let string_offset = decode_be(bytes, 4) as usize;
+        let _format = decode_u16_be(bytes, 0);
+        let count = decode_u16_be(bytes, 2) as usize;
+        let string_offset = decode_u16_be(bytes, 4) as usize;
 
         let string_storage = &bytes[string_offset..];
 
