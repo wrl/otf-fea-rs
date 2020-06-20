@@ -151,9 +151,9 @@ fn read_ttf(path: &str) -> io::Result<()> {
 
     println!();
 
-    if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(n,a,m,e)) {
-        display_name(gpos_record.table_data(&buf));
-    }
+    // if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(n,a,m,e)) {
+    //     display_name(gpos_record.table_data(&buf));
+    // }
 
     if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(G,P,O,S)) {
         display_gpos(gpos_record.table_data(&buf));

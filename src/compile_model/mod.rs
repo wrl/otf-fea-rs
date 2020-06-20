@@ -18,6 +18,12 @@ pub use feature_list::{
     FeatureRecord,
 };
 
+mod lookup_list;
+pub use lookup_list::{
+    LookupList,
+    Lookup
+};
+
 #[macro_use]
 pub mod util;
 pub use util::TTFVersion;

@@ -11,6 +11,7 @@ endian_codec = "0.1"
 fixed = "1"
 chrono = "0.4"
 encoding_rs = "0.8"
+bitflags = "1.2"
 
 [dependencies.arrayvec]
 version = "0.5"
