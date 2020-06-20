@@ -83,3 +83,7 @@ impl TTFTableRecord {
         &whole_file[start..end]
     }
 }
+
+trait TTFTable: Sized {
+    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()>;
+}

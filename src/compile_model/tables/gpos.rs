@@ -8,7 +8,7 @@ use crate::compile_model::lookup_list::*;
 pub struct GPOS {
     script_list: ScriptList,
     feature_list: FeatureList,
-    lookup_list: LookupList,
+    lookup_list: LookupList<u16>,
     feature_variations_offset: Option<u16>
 }
 

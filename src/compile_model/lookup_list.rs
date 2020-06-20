@@ -2,15 +2,16 @@ use bitflags::bitflags;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
+use crate::compile_model::TTFTable;
 
 ////
 // LookupList
 ////
 
 #[derive(Debug)]
-pub struct LookupList(Vec<Lookup>);
+pub struct LookupList<T: DecodeBE>(Vec<Lookup<T>>);
 
-impl LookupList {
+impl<T: DecodeBE> LookupList<T> {
     pub fn new() -> Self {
         Self(Vec::new())
     }
@@ -45,11 +46,12 @@ bitflags! {
 }
 
 #[derive(Debug)]
-pub struct Lookup {
+pub struct Lookup<T> {
     pub lookup_type: u16,
     pub lookup_flags: LookupFlags,
+    pub mark_filtering_set: Option<u16>,
 
-    pub subtable_offsets: Vec<u16>
+    pub subtables: Vec<T>,
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -59,18 +61,33 @@ struct LookupTableHeader {
     pub subtable_count: u16
 }
 
-impl Lookup {
+impl<T: DecodeBE> Lookup<T> {
     #[inline]
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
         let header = decode_from_slice::<LookupTableHeader>(bytes);
-        let subtable_offsets =
+        let subtables =
             decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
+            .map(|offset: u16| {
+                decode_from_slice(&bytes[offset as usize..])
+            })
             .collect();
+
+        let lookup_flags = LookupFlags::from_bits_truncate(header.lookup_flags);
+        let mark_filtering_set =
+            if lookup_flags.contains(LookupFlags::USE_MARK_FILTERING_SET) {
+                Some(decode_u16_be(bytes,
+                    LookupTableHeader::PACKED_LEN
+                    + (header.subtable_count as usize * 2)))
+            } else {
+                None
+            };
 
         Lookup {
             lookup_type: header.lookup_type,
-            lookup_flags: LookupFlags::from_bits_truncate(header.lookup_flags),
-            subtable_offsets
+            lookup_flags,
+            mark_filtering_set,
+
+            subtables
         }
     }
 }
@@ -92,6 +109,7 @@ pub enum Coverage {
     GlyphRanges(Vec<GlyphRange>)
 }
 
+#[allow(dead_code)]
 impl Coverage {
     #[inline]
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Option<Self> {
