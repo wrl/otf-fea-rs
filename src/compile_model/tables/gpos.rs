@@ -1,11 +1,12 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::script_list::*;
+use crate::compile_model::feature_list::*;
 
 #[derive(Debug)]
 pub struct GPOS {
     script_list: ScriptList,
-    feature_list_offset: u16,
+    feature_list: FeatureList,
     lookup_list_offset: u16,
     feature_variations_offset: Option<u16>
 }
@@ -21,35 +22,21 @@ impl GPOS {
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
         let version: Version = decode_from_be_bytes(bytes);
 
-        let gpos = match (version.major, version.minor) {
-            (1, 0) => {
-                let header: Header_1_0 = decode_from_be_bytes(bytes);
-
-                GPOS {
-                    script_list: ScriptList::decode_from_be_bytes(
-                                     &bytes[header.script_list_offset as usize..]),
-                    feature_list_offset: header.feature_list_offset,
-                    lookup_list_offset: header.lookup_list_offset,
-                    feature_variations_offset: None,
-                }
-            },
-
-            (1, 1) => {
-                let header: Header_1_1 = decode_from_be_bytes(bytes);
-
-                GPOS {
-                    script_list: ScriptList::decode_from_be_bytes(
-                                     &bytes[header.script_list_offset as usize..]),
-                    feature_list_offset: header.feature_list_offset,
-                    lookup_list_offset: header.lookup_list_offset,
-                    feature_variations_offset: Some(header.feature_variations_offset),
-                }
-            }
+        let offsets: Offsets = match (version.major, version.minor) {
+            (1, 0) => Header_1_0::decode_from_be_bytes(bytes).into(),
+            (1, 1) => Header_1_1::decode_from_be_bytes(bytes).into(),
 
             _ => return Err(())
         };
 
-        Ok(gpos)
+        Ok(GPOS {
+            script_list: ScriptList::decode_from_be_bytes(
+                &bytes[offsets.script as usize..]),
+            feature_list: FeatureList::decode_from_be_bytes(
+                &bytes[offsets.feature as usize..]),
+            lookup_list_offset: offsets.lookup,
+            feature_variations_offset: offsets.feature_variations
+        })
     }
 }
 
@@ -57,6 +44,13 @@ impl GPOS {
 struct Version {
     major: u16,
     minor: u16
+}
+
+struct Offsets {
+    script: u16,
+    feature: u16,
+    lookup: u16,
+    feature_variations: Option<u16>
 }
 
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
@@ -68,6 +62,17 @@ struct Header_1_0 {
     lookup_list_offset: u16
 }
 
+impl From<Header_1_0> for Offsets {
+    fn from(header: Header_1_0) -> Self {
+        Self {
+            script: header.script_list_offset,
+            feature: header.feature_list_offset,
+            lookup: header.lookup_list_offset,
+            feature_variations: None
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
 struct Header_1_1 {
     major: u16,
@@ -76,4 +81,15 @@ struct Header_1_1 {
     feature_list_offset: u16,
     lookup_list_offset: u16,
     feature_variations_offset: u16
+}
+
+impl From<Header_1_1> for Offsets {
+    fn from(header: Header_1_1) -> Self {
+        Self {
+            script: header.script_list_offset,
+            feature: header.feature_list_offset,
+            lookup: header.lookup_list_offset,
+            feature_variations: Some(header.feature_variations_offset)
+        }
+    }
 }

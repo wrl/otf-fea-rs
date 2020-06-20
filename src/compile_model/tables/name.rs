@@ -1,8 +1,8 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use encoding_rs::UTF_16BE;
 
+use crate::compile_model::util::decode::*;
 use crate::parse_model as pm;
-use crate::compile_model::util::decode_u16_be;
 
 #[derive(Debug)]
 pub struct Name(pub Vec<NameRecord>);

@@ -12,6 +12,12 @@ pub use script_list::{
     ScriptRecord,
 };
 
+mod feature_list;
+pub use feature_list::{
+    FeatureList,
+    FeatureRecord,
+};
+
 #[macro_use]
 pub mod util;
 pub use util::TTFVersion;
