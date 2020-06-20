@@ -13,9 +13,8 @@ impl ScriptList {
 
     #[inline]
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
-        Self(decode_from_pool_owned(
-                decode_u16_be(bytes, 0),
-                &bytes[2..]))
+        let records = decode_from_pool(decode_u16_be(bytes, 0), &bytes[2..]);
+        Self(records.collect())
     }
 }
 

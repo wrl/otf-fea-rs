@@ -62,24 +62,15 @@ impl Name {
 
     #[inline]
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
-        let mut records = Vec::new();
-
         let _format = decode_u16_be(bytes, 0);
-        let count = decode_u16_be(bytes, 2) as usize;
+        let count = decode_u16_be(bytes, 2);
         let string_offset = decode_u16_be(bytes, 4) as usize;
 
         let string_storage = &bytes[string_offset..];
 
-        for i in 0..count {
-            let start = 6 + (i as usize * EncodedNameRecord::PACKED_LEN);
-            let end = start + EncodedNameRecord::PACKED_LEN;
-
-            let decoded = EncodedNameRecord::decode_from_be_bytes(
-                &bytes[start..end]);
-
-            records.push(
-                NameRecord::from_encoded(decoded, string_storage));
-        }
+        let records = decode_from_pool(count, &bytes[6..])
+            .map(|r| NameRecord::from_encoded(r, string_storage))
+            .collect();
 
         // FIXME: deal with format #1 with the lang tag records.
         //        i can't find any fonts that use format one, so leaving for later.

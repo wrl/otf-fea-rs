@@ -7,6 +7,7 @@ use endian_codec::{PackedSize, DecodeBE};
 
 #[macro_use]
 extern crate otf_fea_rs;
+use otf_fea_rs::compile_model::util::decode::*;
 use otf_fea_rs::compile_model::*;
 
 ////
@@ -108,7 +109,7 @@ fn read_ttf(path: &str) -> io::Result<()> {
     let mut buf = Vec::new();
     f.read_to_end(&mut buf)?;
 
-    let (offset_buf, mut rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
+    let (offset_buf, rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
     let offset_table = TTFOffsetTable::decode_from_be_bytes(offset_buf);
     print_offset_table(&offset_table);
 
@@ -122,24 +123,22 @@ fn read_ttf(path: &str) -> io::Result<()> {
     println!("  tag     checksum        offset          length ");
     println!("-----------------------------------------------------");
 
-    let mut records = Vec::new();
     let mut head_record = None;
     let mut running_checksum = 0u32;
 
-    for _ in 0..offset_table.num_tables {
-        let (record_buf, r) = rest.split_at(TTFTableRecord::PACKED_LEN);
-        let record = TTFTableRecord::decode_from_be_bytes(record_buf);
-        rest = r;
+    let records: Vec<TTFTableRecord> = decode_from_pool(offset_table.num_tables, rest)
+        .enumerate()
+        .map(|(i, record)| {
+            print_table_record(&record, &buf);
+            running_checksum = running_checksum.overflowing_add(record.checksum).0;
 
-        print_table_record(&record, &buf);
-        records.push(record);
+            if record.tag == tag!(h,e,a,d) {
+                head_record = Some(i);
+            }
 
-        if record.tag == tag!(h,e,a,d) {
-            head_record = Some(records.len() - 1);
-        }
-
-        running_checksum = running_checksum.overflowing_add(record.checksum).0;
-    }
+            record
+        })
+        .collect();
 
     println!();
 
@@ -152,9 +151,9 @@ fn read_ttf(path: &str) -> io::Result<()> {
 
     println!();
 
-    // if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(n,a,m,e)) {
-    //     display_name(gpos_record.table_data(&buf));
-    // }
+    if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(n,a,m,e)) {
+        display_name(gpos_record.table_data(&buf));
+    }
 
     if let Some(gpos_record) = records.iter().find(|r| r.tag == tag!(G,P,O,S)) {
         display_gpos(gpos_record.table_data(&buf));

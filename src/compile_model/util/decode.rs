@@ -8,7 +8,7 @@ pub(crate) fn decode_u16_be(bytes: &[u8], offset: usize) -> u16 {
 }
 
 #[inline]
-pub(crate) fn decode_from_pool<'a, T: DecodeBE>(count: u16, bytes: &'a [u8])
+pub fn decode_from_pool<'a, T: DecodeBE>(count: u16, bytes: &'a [u8])
         -> impl Iterator<Item = T> + 'a
 {
     (0..count)
@@ -18,10 +18,4 @@ pub(crate) fn decode_from_pool<'a, T: DecodeBE>(count: u16, bytes: &'a [u8])
 
             T::decode_from_be_bytes(&bytes[start..end])
         })
-}
-
-#[inline]
-pub(crate) fn decode_from_pool_owned<T: DecodeBE>(count: u16, bytes: &[u8]) -> Vec<T> {
-    decode_from_pool(count, bytes)
-        .collect()
 }
