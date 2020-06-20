@@ -9,9 +9,9 @@ use crate::compile_model::TTFTable;
 ////
 
 #[derive(Debug)]
-pub struct LookupList<T: DecodeBE>(Vec<Lookup<T>>);
+pub struct LookupList<T: TTFTable>(Vec<Lookup<T>>);
 
-impl<T: DecodeBE> LookupList<T> {
+impl<T: TTFTable> LookupList<T> {
     pub fn new() -> Self {
         Self(Vec::new())
     }
@@ -61,16 +61,10 @@ struct LookupTableHeader {
     pub subtable_count: u16
 }
 
-impl<T: DecodeBE> Lookup<T> {
+impl<T: TTFTable> Lookup<T> {
     #[inline]
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
         let header = decode_from_slice::<LookupTableHeader>(bytes);
-        let subtables =
-            decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
-            .map(|offset: u16| {
-                decode_from_slice(&bytes[offset as usize..])
-            })
-            .collect();
 
         let lookup_flags = LookupFlags::from_bits_truncate(header.lookup_flags);
         let mark_filtering_set =
@@ -81,6 +75,14 @@ impl<T: DecodeBE> Lookup<T> {
             } else {
                 None
             };
+
+        let subtables =
+            decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
+            .filter_map(|offset: u16| {
+                T::decode_from_be_bytes(&bytes[offset as usize..])
+                    .ok()
+            })
+            .collect();
 
         Lookup {
             lookup_type: header.lookup_type,

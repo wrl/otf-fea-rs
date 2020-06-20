@@ -84,6 +84,6 @@ impl TTFTableRecord {
     }
 }
 
-trait TTFTable: Sized {
+pub trait TTFTable: Sized {
     fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()>;
 }

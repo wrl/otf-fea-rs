@@ -3,13 +3,29 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
+use crate::compile_model::util::decode::*;
+use crate::compile_model::TTFTable;
 
 #[derive(Debug)]
 pub struct GPOS {
     script_list: ScriptList,
     feature_list: FeatureList,
-    lookup_list: LookupList<u16>,
+    lookup_list: LookupList<GPOSLookup>,
     feature_variations_offset: Option<u16>
+}
+
+#[derive(Debug)]
+struct GPOSLookup {
+    pub format: u16
+}
+
+impl TTFTable for GPOSLookup {
+    #[inline]
+    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
+        Ok(GPOSLookup {
+            format: decode_u16_be(bytes, 0)
+        })
+    }
 }
 
 fn decode_from_be_bytes<T>(bytes: &[u8]) -> T
