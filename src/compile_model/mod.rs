@@ -24,6 +24,8 @@ pub use lookup_list::{
     Lookup
 };
 
+pub mod value_record;
+
 #[macro_use]
 pub mod util;
 pub use util::TTFVersion;

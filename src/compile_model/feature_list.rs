@@ -23,13 +23,14 @@ impl FeatureList {
         let records = decode_from_pool(records_count, &bytes[2..]);
 
         let features = records.map(|r: FeatureRecord| {
-            let feature_table = &bytes[r.feature_offset as usize..];
-            let lookup_index_count = decode_u16_be(feature_table, 2);
+            let table = &bytes[r.feature_offset as usize..];
+            let lookup_index_count = decode_u16_be(table, 2);
 
             Feature {
                 tag: r.tag,
-                lookup_indices: decode_from_pool(lookup_index_count, &feature_table[4..])
-                    .collect()
+                lookup_indices:
+                    decode_from_pool(lookup_index_count, &table[4..])
+                        .collect()
             }
         });
 

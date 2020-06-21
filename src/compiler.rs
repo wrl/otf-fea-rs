@@ -49,18 +49,13 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
  * todo: move this out into a separate file
  */
 
-const fn align_len(len: usize) -> usize {
-    let round_up = (4usize - (len & 0x3)) & 0x3;
-    return len + round_up;
-}
-
 fn table_len<T: PackedSize>(_: &T) -> usize {
-    return align_len(T::PACKED_LEN);
+    return util::align_len(T::PACKED_LEN);
 }
 
 fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
     let start = v.len();
-    v.resize(align_len(start + table_len(p)), 0u8);
+    v.resize(util::align_len(start + table_len(p)), 0u8);
     p.encode_as_be_bytes(&mut v[start..]);
 }
 
@@ -92,7 +87,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
         TTFVersion::TTF, ctx.tables.len() as u16);
     write_into(buf, &offset_table);
 
-    let mut offset = align_len(buf.len() +
+    let mut offset = util::align_len(buf.len() +
         (ctx.tables.len() * TTFTableRecord::PACKED_LEN));
     let mut running_checksum = 0u32;
 
@@ -108,11 +103,11 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
 
         write_into(buf, &record);
 
-        offset += align_len(encoded.len());
+        offset += util::align_len(encoded.len());
         running_checksum = running_checksum.overflowing_add(checksum).0;
     }
 
-    buf.resize(align_len(buf.len()), 0u8);
+    buf.resize(util::align_len(buf.len()), 0u8);
 
     if let Some(ref mut head) = ctx.head_table {
         head.checksum_adjustment = 0xB1B0AFBAu32.overflowing_sub(
@@ -123,7 +118,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
 
     for (_, encoded) in ctx.tables.iter() {
         buf.extend(encoded.iter());
-        buf.resize(align_len(buf.len()), 0u8);
+        buf.resize(util::align_len(buf.len()), 0u8);
     }
 }
 
