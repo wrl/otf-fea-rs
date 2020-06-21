@@ -40,6 +40,10 @@ impl fmt::Debug for ValueRecord {
 }
 
 impl ValueRecord {
+    // to keep encoded data size as small as possible, ValueRecords can be encoded to just a subset
+    // of their fields - down to and including 0 fields in some cases. the presence of each field
+    // in the encoded representation is indicated by a set bit flag in the `format` variable.
+
     pub fn decode_from_be_bytes(bytes: &[u8], mut format: u16) -> Self {
         let mut buf = [0u16; 8];
         let mut buf_idx = 0;
