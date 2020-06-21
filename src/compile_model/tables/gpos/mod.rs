@@ -16,7 +16,7 @@ use lookup::*;
 pub struct GPOS {
     script_list: ScriptList,
     feature_list: FeatureList,
-    lookup_list: LookupList<GPOSLookup>,
+    lookup_list: LookupList<GPOSSubtable>,
     feature_variations_offset: Option<usize>
 }
 

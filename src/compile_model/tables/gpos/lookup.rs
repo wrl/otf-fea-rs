@@ -32,10 +32,15 @@ impl PairValueRecord {
 }
 
 #[derive(Debug)]
-pub(crate) struct GPOSLookup {
+pub(crate) enum GPOSLookup {
+    PairGlyphs(Vec<Vec<PairValueRecord>>)
+}
+
+#[derive(Debug)]
+pub(crate) struct GPOSSubtable {
     pub format: u16,
     pub coverage: Coverage,
-    pub pairs: Vec<Vec<PairValueRecord>>
+    pub lookup: GPOSLookup,
 }
 
 impl GPOSLookup {
@@ -68,9 +73,19 @@ impl GPOSLookup {
             })
         .collect()
     }
+
+    #[inline]
+    fn decode_from_be_bytes(bytes: &[u8], format: u16) -> Result<Self, ()> {
+        let header: PairPosFormat1Header = decode_from_slice(bytes);
+
+        Ok(match format {
+            1 => Self::PairGlyphs(Self::decode_pairs(bytes, header)),
+            _ => return Err(())
+        })
+    }
 }
 
-impl TTFTable for GPOSLookup {
+impl TTFTable for GPOSSubtable {
     #[inline]
     fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
         let format = decode_u16_be(bytes, 0);
@@ -80,13 +95,12 @@ impl TTFTable for GPOSLookup {
                 .ok_or(())?
         };
 
-        let header: PairPosFormat1Header = decode_from_slice(&bytes[4..]);
-        let pairs = Self::decode_pairs(bytes, header);
+        let lookup = GPOSLookup::decode_from_be_bytes(&bytes[4..], format)?;
 
-        Ok(GPOSLookup {
+        Ok(GPOSSubtable {
             format,
             coverage,
-            pairs
+            lookup
         })
     }
 }
