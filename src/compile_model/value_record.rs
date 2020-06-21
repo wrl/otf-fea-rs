@@ -72,4 +72,29 @@ impl ValueRecord {
             y_advance_device_offset: buf[7]
         }
     }
+
+    #[allow(unused_assignments)]
+    pub fn encode_to_be_bytes(&self, bytes: &mut [u8], format: u16) {
+        let mut bytes_idx = 0;
+
+        macro_rules! write_if_in_format {
+            ($shift:expr, $var:ident) => {
+                if (format & (1u16 << $shift)) > 0 {
+                    &bytes[bytes_idx..bytes_idx + 2]
+                        .copy_from_slice(&self.$var.to_be_bytes());
+                    bytes_idx += 2;
+                }
+            }
+        }
+
+        write_if_in_format!(0, x_placement);
+        write_if_in_format!(1, y_placement);
+        write_if_in_format!(2, x_advance);
+        write_if_in_format!(3, y_advance);
+
+        write_if_in_format!(4, x_placement_device_offset);
+        write_if_in_format!(5, y_placement_device_offset);
+        write_if_in_format!(6, x_advance_device_offset);
+        write_if_in_format!(7, y_advance_device_offset);
+    }
 }
