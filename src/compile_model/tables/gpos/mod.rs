@@ -4,6 +4,7 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 use crate::compile_model::util::decode::*;
+use crate::compile_model::TTFTable;
 
 mod header;
 use header::*;
@@ -16,12 +17,12 @@ pub struct GPOS {
     script_list: ScriptList,
     feature_list: FeatureList,
     lookup_list: LookupList<GPOSLookup>,
-    feature_variations_offset: Option<u16>
+    feature_variations_offset: Option<usize>
 }
 
-impl GPOS {
+impl TTFTable for GPOS {
     #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
+    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
         let version: Version = decode_from_slice(bytes);
 
         let offsets: Offsets = match (version.major, version.minor) {
@@ -32,9 +33,9 @@ impl GPOS {
         };
 
         Ok(GPOS {
-            script_list: ScriptList::decode_from_be_bytes(&bytes[offsets.script as usize..]),
-            feature_list: FeatureList::decode_from_be_bytes(&bytes[offsets.feature as usize..]),
-            lookup_list: LookupList::decode_from_be_bytes(&bytes[offsets.lookup as usize..]),
+            script_list: ScriptList::decode_from_be_bytes(&bytes[offsets.script..]),
+            feature_list: FeatureList::decode_from_be_bytes(&bytes[offsets.feature..]),
+            lookup_list: LookupList::decode_from_be_bytes(&bytes[offsets.lookup..]),
             feature_variations_offset: offsets.feature_variations
         })
     }

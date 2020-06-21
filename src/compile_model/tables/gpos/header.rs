@@ -1,20 +1,20 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
-#[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
-pub(crate) struct Version {
-    pub(crate) major: u16,
-    pub(crate) minor: u16
+#[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
+pub(super) struct Version {
+    pub(super) major: u16,
+    pub(super) minor: u16
 }
 
-pub(crate) struct Offsets {
-    pub(crate) script: u16,
-    pub(crate) feature: u16,
-    pub(crate) lookup: u16,
-    pub(crate) feature_variations: Option<u16>
+pub(super) struct Offsets {
+    pub(super) script: usize,
+    pub(super) feature: usize,
+    pub(super) lookup: usize,
+    pub(super) feature_variations: Option<usize>
 }
 
-#[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
-pub(crate) struct Header_1_0 {
+#[derive(PackedSize, EncodeBE, DecodeBE)]
+pub(super) struct Header_1_0 {
     major: u16,
     minor: u16,
     script_list_offset: u16,
@@ -25,16 +25,16 @@ pub(crate) struct Header_1_0 {
 impl From<Header_1_0> for Offsets {
     fn from(header: Header_1_0) -> Self {
         Self {
-            script: header.script_list_offset,
-            feature: header.feature_list_offset,
-            lookup: header.lookup_list_offset,
+            script: header.script_list_offset as usize,
+            feature: header.feature_list_offset as usize,
+            lookup: header.lookup_list_offset as usize,
             feature_variations: None
         }
     }
 }
 
-#[derive(Debug, Copy, Clone, PackedSize, EncodeBE, DecodeBE)]
-pub(crate) struct Header_1_1 {
+#[derive(PackedSize, EncodeBE, DecodeBE)]
+pub(super) struct Header_1_1 {
     major: u16,
     minor: u16,
     script_list_offset: u16,
@@ -46,10 +46,10 @@ pub(crate) struct Header_1_1 {
 impl From<Header_1_1> for Offsets {
     fn from(header: Header_1_1) -> Self {
         Self {
-            script: header.script_list_offset,
-            feature: header.feature_list_offset,
-            lookup: header.lookup_list_offset,
-            feature_variations: Some(header.feature_variations_offset)
+            script: header.script_list_offset as usize,
+            feature: header.feature_list_offset as usize,
+            lookup: header.lookup_list_offset as usize,
+            feature_variations: Some(header.feature_variations_offset as usize)
         }
     }
 }
