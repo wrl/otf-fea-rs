@@ -1,10 +1,6 @@
 use std::fmt;
-
-use endian_codec::{PackedSize, EncodeBE, DecodeBE};
-
 use crate::compile_model::util::decode::*;
 
-#[derive(PackedSize, EncodeBE, DecodeBE)]
 pub struct ValueRecord {
     pub x_placement: i16,
     pub y_placement: i16,
