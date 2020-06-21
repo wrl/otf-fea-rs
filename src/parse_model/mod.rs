@@ -1,6 +1,9 @@
 mod anchor;
 pub use anchor::*;
 
+mod anonymous;
+pub use anonymous::*;
+
 mod block;
 pub use block::*;
 
@@ -46,6 +49,9 @@ pub use metric::*;
 mod mark_class;
 pub use mark_class::*;
 
+mod name;
+pub use name::*;
+
 mod parameters;
 pub use parameters::*;
 
@@ -58,14 +64,19 @@ pub use script::*;
 mod substitute;
 pub use substitute::*;
 
+mod string;
+
 mod table;
 pub use table::*;
 
-mod tables;
+pub mod tables;
 pub use tables::*;
 
 mod tag;
 pub use tag::*;
+
+mod top_level;
+pub use top_level::*;
 
 mod value_record;
 pub use value_record::*;

@@ -2,23 +2,12 @@ use std::io::prelude::*;
 
 use combine::{
     Parser,
-    parser,
-    Stream,
     stream,
 
-    look_ahead,
-
-    token,
     eof,
 
-    parser::repeat::take_until,
-    parser::byte::space,
-
-    // macros
-    dispatch
+    parser::repeat::many,
 };
-
-use combine::error::ParseError;
 
 use combine::stream::{
     buffered,
@@ -41,65 +30,6 @@ pub(crate) struct FeaRsParserState {
 }
 
 pub(crate) type FeaRsStream<S> = stream::state::Stream<S, FeaRsParserState>;
-
-/****************************************************************************
- * top-level statements
- ****************************************************************************/
-
-#[derive(Debug)]
-enum TopLevelStatement {
-    LanguageSystem(LanguageSystem),
-
-    AnchorDefinition(AnchorDefinition),
-    MarkClass(MarkClass),
-    NamedGlyphClass(NamedGlyphClass),
-
-    FeatureDefinition(FeatureDefinition),
-    LookupDefinition(LookupDefinition),
-
-    Table(Table)
-}
-
-fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TopLevelStatement>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
-{
-    look_ahead(take_until(space()))
-        .then(|kwd: Vec<_>| {
-            dispatch!(&*kwd;
-                b"table" =>
-                    table()
-                        .map(TopLevelStatement::Table),
-
-                b"lookup" =>
-                    lookup_definition()
-                        .map(TopLevelStatement::LookupDefinition),
-
-                b"languagesystem" =>
-                    language_system()
-                        .map(TopLevelStatement::LanguageSystem),
-
-                b"feature" =>
-                    feature_definition()
-                        .map(TopLevelStatement::FeatureDefinition),
-
-                b"markClass" =>
-                    mark_class()
-                        .map(TopLevelStatement::MarkClass),
-
-                b"anchorDef" =>
-                    anchor_definition()
-                        .map(TopLevelStatement::AnchorDefinition),
-
-                kwd if kwd[0] == b'@' =>
-                    named_glyph_class()
-                        .map(TopLevelStatement::NamedGlyphClass),
-
-                _ => combine::unexpected_any("token"))
-        })
-        .skip(optional_whitespace())
-        .skip(token(b';'))
-}
 
 /****************************************************************************
  * parse func
@@ -139,22 +69,12 @@ where
     }
 }
 
-pub fn parse<R: Read>(input: R) -> Result<(), ()> {
-    println!();
-
+pub fn parse_all<R: Read>(input: R) -> Result<Vec<TopLevelStatement>, ()> {
     let mut parser = optional_whitespace()
-        .with(parser(|input| {
-            let mut parse_iter = top_level_statement()
+        .with(many(
+            top_level_statement()
                 .skip(optional_whitespace())
-                .iter(input);
-
-            for top_level in &mut parse_iter {
-                println!("{:#?}", top_level);
-                println!();
-            }
-
-            parse_iter.into_result(())
-        }))
+        ))
         .skip(eof());
 
     let stream = FeaRsStream {
@@ -171,10 +91,21 @@ pub fn parse<R: Read>(input: R) -> Result<(), ()> {
         }
     };
 
-    if let Err(errs) = parser.parse(stream) {
-        format_errors(errs);
-        return Err(());
-    }
+    match parser.parse(stream) {
+        Err(errs) => {
+            format_errors(errs);
+            Err(())
+        },
 
-    Ok(())
+        Ok((definitions, stream)) => {
+            let _state = stream.state;
+            Ok(definitions)
+        }
+    }
+}
+
+// helper stub function so that we're not paying the massive monomorphisation cost on every
+// recompile of client code
+pub fn parse_file(file: ::std::fs::File) -> Result<Vec<TopLevelStatement>, ()> {
+    parse_all(file)
 }

@@ -1,5 +1,9 @@
 #![allow(bindings_with_variant_name)]
 
-mod parser;
-mod parse_model;
-pub use parser::parse;
+pub mod parser;
+pub mod parse_model;
+
+pub mod compiler;
+
+#[macro_use]
+pub mod compile_model;

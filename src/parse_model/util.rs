@@ -1,6 +1,7 @@
 use std::{
     str,
-    convert::TryFrom
+    str::FromStr,
+    convert::TryFrom,
 };
 
 use combine::{
@@ -19,6 +20,7 @@ use combine::{
 
     attempt,
     look_ahead,
+    satisfy,
 
     // macros
     choice
@@ -26,7 +28,6 @@ use combine::{
 
 use combine::parser::repeat::{
     skip_until,
-    take_until,
     many1,
     many
 };
@@ -174,29 +175,19 @@ pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output 
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    optional(
-        choice((
-            token(b'-'),
-            token(b'+')
+    combine::position()
+        .and(many1(
+                satisfy(|t: u8| t.is_ascii_digit() || t == b'.' || t == b'-')
         ))
-    )
-        .and(uinteger())
-        .and(optional(
-                token(b'.')
-                    .with(uinteger())))
+        .flat_map(|(position, digits): (_, Vec<_>)| {
+            // unsafe is fine here. we've verified that this vec only contains valid characters
+            let as_str = unsafe { str::from_utf8_unchecked(&*digits) };
 
-        .map(|((sign, int), frac)| {
-            let mut val = int as f64;
-
-            if let Some(x) = frac {
-                val += (x as f64) / 100.0f64;
-            }
-
-            if let Some(b'-') = sign {
-                val *= -1.0f64;
-            }
-
-            val
+            f64::from_str(as_str)
+                .map_err(|_|
+                    Input::Error::from_error(position,
+                        StreamErrorFor::<Input>::expected_static_message(
+                            "couldn't parse digits as f64")).into())
         })
 }
 
@@ -227,24 +218,4 @@ pub(crate) fn keyword<Input>() -> impl Parser<Input, Output = String>
 {
     // from_utf8_unchecked() is safe here because letter() only matches ASCII chars.
     many1(letter()).map(|x| unsafe { String::from_utf8_unchecked(x) })
-}
-
-#[inline]
-pub(crate) fn string<Input>() -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
-          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
-{
-    combine::position()
-
-        .skip(token(b'"'))
-        .and(take_until(token(b'"')))
-        .skip(token(b'"'))
-
-        .flat_map(|(position, raw): (_, Vec<_>)| {
-            match String::from_utf8(raw) {
-                Ok(s) => Ok(s),
-                Err(_) => crate::parse_bail!(Input, position,
-                    "invalid UTF-8")
-            }
-        })
 }

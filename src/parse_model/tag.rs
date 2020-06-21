@@ -5,7 +5,8 @@ use std::{
 
 use ascii::{
     AsciiChar,
-    ToAsciiChar
+    ToAsciiChar,
+    ToAsciiCharError
 };
 
 use combine::{
@@ -20,8 +21,24 @@ use combine::{
 use crate::parser::FeaRsStream;
 use super::glyph::*;
 
-#[derive(Eq)]
+#[derive(Eq, Copy, Clone)]
 pub struct Tag(pub [AsciiChar; 4]);
+
+impl Tag {
+    pub fn from_bytes(v: &[u8]) -> Result<Self, ToAsciiCharError> {
+        let mut tag = Tag([AsciiChar::Space; 4]);
+
+        let iter = v.iter()
+            .map(|x| AsciiChar::from_ascii(*x))
+            .take(4);
+
+        for (i, c) in iter.enumerate() {
+            tag.0[i] = c?;
+        }
+
+        Ok(tag)
+    }
+}
 
 impl fmt::Debug for Tag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -190,9 +190,6 @@ pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>
     ident_parser()
         .skip(optional_whitespace())
 
-        // FIXME: there's really no reason to "thread" ident through with a clone like this. it
-        //        should be possible to have a variant of `then` which only passes an immutable
-        //        ref in and then forwards its input through.
         .then_ref(move |ident| {
             optional(
                 between(
