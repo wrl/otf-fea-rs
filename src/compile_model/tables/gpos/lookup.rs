@@ -4,7 +4,6 @@ use crate::compile_model::value_record::*;
 use crate::compile_model::util::decode::*;
 use crate::compile_model::lookup_list::*;
 use crate::compile_model::TTFTable;
-use crate::compile_model::util;
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct PairPosFormat1Header {
@@ -53,19 +52,17 @@ impl GPOSLookup {
             (header.value_format_1, header.value_format_2);
 
         let vr_sizes = (
-            value_formats.0.count_ones() * 2,
-            value_formats.1.count_ones() * 2
+            value_formats.0.count_ones() as usize * 2,
+            value_formats.1.count_ones() as usize * 2
         );
 
-        let encoded_table_len = util::align_len(
-            (2 + vr_sizes.0 + vr_sizes.1) as usize);
+        let encoded_table_len = 2usize + vr_sizes.0 + vr_sizes.1;
 
         decode_from_pool(header.pair_set_count,
             &bytes[PairPosFormat1Header::PACKED_LEN..])
             .map(|offset: u16| {
                 let table = &bytes[offset as usize..];
                 let count = decode_u16_be(table, 0);
-                println!(" !?>DFS {}", count);
 
                 (0..count)
                     .map(|i| {
