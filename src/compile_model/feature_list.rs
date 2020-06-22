@@ -36,6 +36,14 @@ impl FeatureList {
 
         Self(features.collect())
     }
+
+    #[inline]
+    pub fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) {
+        buf.extend(&(self.0.len() as u16).to_be_bytes());
+
+        for feature in self.0.iter() {
+        }
+    }
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]

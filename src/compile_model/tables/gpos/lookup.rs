@@ -8,6 +8,8 @@ use crate::compile_model::util;
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct PairPosFormat1Header {
+    pub format: u16,
+    pub coverage_offset: u16,
     pub value_format_1: u16,
     pub value_format_2: u16,
     pub pair_set_count: u16
@@ -38,14 +40,15 @@ pub(crate) enum GPOSLookup {
 
 #[derive(Debug)]
 pub(crate) struct GPOSSubtable {
-    pub format: u16,
     pub coverage: Coverage,
     pub lookup: GPOSLookup,
 }
 
 impl GPOSLookup {
     #[inline]
-    fn decode_pairs(bytes: &[u8], header: PairPosFormat1Header) -> Vec<Vec<PairValueRecord>> {
+    fn decode_pairs(bytes: &[u8]) -> Vec<Vec<PairValueRecord>> {
+        let header: PairPosFormat1Header = decode_from_slice(bytes);
+
         let value_formats =
             (header.value_format_1, header.value_format_2);
 
@@ -58,10 +61,11 @@ impl GPOSLookup {
             (2 + vr_sizes.0 + vr_sizes.1) as usize);
 
         decode_from_pool(header.pair_set_count,
-            &bytes[4 + PairPosFormat1Header::PACKED_LEN..])
+            &bytes[PairPosFormat1Header::PACKED_LEN..])
             .map(|offset: u16| {
                 let table = &bytes[offset as usize..];
                 let count = decode_u16_be(table, 0);
+                println!(" !?>DFS {}", count);
 
                 (0..count)
                     .map(|i| {
@@ -76,10 +80,8 @@ impl GPOSLookup {
 
     #[inline]
     fn decode_from_be_bytes(bytes: &[u8], format: u16) -> Result<Self, ()> {
-        let header: PairPosFormat1Header = decode_from_slice(bytes);
-
         Ok(match format {
-            1 => Self::PairGlyphs(Self::decode_pairs(bytes, header)),
+            1 => Self::PairGlyphs(Self::decode_pairs(bytes)),
             _ => return Err(())
         })
     }
@@ -95,10 +97,9 @@ impl TTFTable for GPOSSubtable {
                 .ok_or(())?
         };
 
-        let lookup = GPOSLookup::decode_from_be_bytes(&bytes[4..], format)?;
+        let lookup = GPOSLookup::decode_from_be_bytes(bytes, format)?;
 
         Ok(GPOSSubtable {
-            format,
             coverage,
             lookup
         })

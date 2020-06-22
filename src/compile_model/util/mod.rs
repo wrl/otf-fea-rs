@@ -2,6 +2,7 @@ mod checksum;
 pub use checksum::*;
 
 pub mod decode;
+pub mod encode;
 
 mod fixed1616;
 pub use fixed1616::Fixed1616;

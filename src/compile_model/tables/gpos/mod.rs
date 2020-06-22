@@ -1,4 +1,4 @@
-use endian_codec::DecodeBE;
+use endian_codec::{PackedSize, DecodeBE};
 
 use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
@@ -17,7 +17,7 @@ pub struct GPOS {
     script_list: ScriptList,
     feature_list: FeatureList,
     lookup_list: LookupList<GPOSSubtable>,
-    feature_variations_offset: Option<usize>
+    feature_variations: Option<usize>
 }
 
 impl TTFTable for GPOS {
@@ -36,7 +36,37 @@ impl TTFTable for GPOS {
             script_list: ScriptList::decode_from_be_bytes(&bytes[offsets.script..]),
             feature_list: FeatureList::decode_from_be_bytes(&bytes[offsets.feature..]),
             lookup_list: LookupList::decode_from_be_bytes(&bytes[offsets.lookup..]),
-            feature_variations_offset: offsets.feature_variations
+            feature_variations: offsets.feature_variations
         })
+    }
+}
+
+impl GPOS {
+    #[inline]
+    pub(crate) fn to_be(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        let header_size =
+            if self.feature_variations.is_some() {
+                Header_1_1::PACKED_LEN
+            } else {
+                Header_1_0::PACKED_LEN
+            };
+
+        buf.resize(header_size, 0u8);
+
+        let mut offsets = Offsets {
+            script: 0,
+            feature: 0,
+            lookup: 0,
+            feature_variations: None
+        };
+
+        offsets.script = buf.len();
+        self.script_list.encode_as_be_bytes(&mut buf);
+        offsets.feature = buf.len();
+        self.feature_list.encode_as_be_bytes(&mut buf);
+
+        buf
     }
 }
