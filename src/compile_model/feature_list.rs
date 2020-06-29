@@ -39,7 +39,12 @@ impl FeatureList {
 
     #[inline]
     pub fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) {
+        let list_start = buf.len();
+
         buf.extend(&(self.0.len() as u16).to_be_bytes());
+
+        buf.resize(buf.len()
+            + (self.0.len() * FeatureRecord::PACKED_LEN), 0u8);
 
         for feature in self.0.iter() {
         }

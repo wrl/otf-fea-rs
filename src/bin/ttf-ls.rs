@@ -61,7 +61,11 @@ fn display_gpos(table_data: &[u8]) {
         }
     };
 
-    println!("{:#?}", table);
+    // println!("{:#?}", table);
+    let mut buf = Vec::new();
+    table.encode_as_be_bytes(&mut buf).unwrap();
+    println!("ours: {:?}", buf);
+    println!("src:  {:?}", &table_data[..buf.len()]);
 }
 
 ////

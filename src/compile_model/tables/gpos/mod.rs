@@ -4,6 +4,7 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 use crate::compile_model::util::decode::*;
+use crate::compile_model::util::encode::*;
 use crate::compile_model::TTFTable;
 
 mod header;
@@ -39,19 +40,13 @@ impl TTFTable for GPOS {
             feature_variations: offsets.feature_variations
         })
     }
-}
 
-impl GPOS {
     #[inline]
-    pub(crate) fn to_be(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-
+    fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) -> Result<(), ()> {
         let header_size =
-            if self.feature_variations.is_some() {
-                Header_1_1::PACKED_LEN
-            } else {
-                Header_1_0::PACKED_LEN
-            };
+            self.feature_variations
+                .map(|_| Header_1_1::PACKED_LEN)
+                .unwrap_or(Header_1_0::PACKED_LEN);
 
         buf.resize(header_size, 0u8);
 
@@ -63,10 +58,13 @@ impl GPOS {
         };
 
         offsets.script = buf.len();
-        self.script_list.encode_as_be_bytes(&mut buf);
+        self.script_list.encode_as_be_bytes(buf);
         offsets.feature = buf.len();
-        self.feature_list.encode_as_be_bytes(&mut buf);
+        self.feature_list.encode_as_be_bytes(buf);
 
-        buf
+        let header: Header_1_0 = offsets.into();
+        encode_to_slice(buf, &header);
+
+        Ok(())
     }
 }

@@ -88,4 +88,5 @@ impl TTFTableRecord {
 
 pub trait TTFTable: Sized {
     fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()>;
+    fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) -> Result<(), ()>;
 }

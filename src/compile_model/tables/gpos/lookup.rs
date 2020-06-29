@@ -101,4 +101,9 @@ impl TTFTable for GPOSSubtable {
             lookup
         })
     }
+
+    #[inline]
+    fn encode_as_be_bytes(&self, _buf: &mut Vec<u8>) -> Result<(), ()> {
+        Ok(())
+    }
 }

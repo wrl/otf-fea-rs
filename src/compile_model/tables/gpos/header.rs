@@ -13,6 +13,31 @@ pub(super) struct Offsets {
     pub(super) feature_variations: Option<usize>
 }
 
+impl From<Offsets> for Header_1_0 {
+    fn from(offsets: Offsets) -> Self {
+        Self {
+            major: 1,
+            minor: 0,
+            script_list_offset: offsets.script as u16,
+            feature_list_offset: offsets.feature as u16,
+            lookup_list_offset: offsets.lookup as u16,
+        }
+    }
+}
+
+impl From<Offsets> for Header_1_1 {
+    fn from(offsets: Offsets) -> Self {
+        Self {
+            major: 1,
+            minor: 1,
+            script_list_offset: offsets.script as u16,
+            feature_list_offset: offsets.feature as u16,
+            lookup_list_offset: offsets.lookup as u16,
+            feature_variations_offset: offsets.feature_variations.unwrap_or(0) as u16,
+        }
+    }
+}
+
 #[derive(PackedSize, EncodeBE, DecodeBE)]
 pub(super) struct Header_1_0 {
     major: u16,
