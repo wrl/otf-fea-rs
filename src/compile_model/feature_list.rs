@@ -1,6 +1,11 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
+use crate::compile_model::{
+    TTFEncode,
+    EncodeBuf
+};
+
 use crate::parse_model as pm;
 
 #[derive(Debug)]
@@ -36,18 +41,48 @@ impl FeatureList {
 
         Self(features.collect())
     }
+}
 
-    #[inline]
-    pub fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) {
-        let list_start = buf.len();
+fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> Result<usize, ()>
+{
+    let start = buf.bytes.len();
 
-        buf.extend(&(self.0.len() as u16).to_be_bytes());
+    let header = FeatureTable {
+        params: 0,
+        lookup_index_count: feature.lookup_indices.len() as u16
+    };
 
-        buf.resize(buf.len()
-            + (self.0.len() * FeatureRecord::PACKED_LEN), 0u8);
+    buf.append(&header)?;
+
+    for lookup_index in feature.lookup_indices.iter() {
+        buf.append(lookup_index)?;
+    }
+
+    Ok(start)
+}
+
+impl TTFEncode for FeatureList {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+        let start = buf.bytes.len();
+        let len = self.0.len();
+
+        buf.append(&(len as u16))?;
+
+        let mut record_start = buf.bytes.len();
+
+        buf.bytes.resize(start + (len * FeatureRecord::PACKED_LEN), 0u8);
 
         for feature in self.0.iter() {
+            let record = FeatureRecord {
+                tag: feature.tag,
+                feature_offset: encode_feature_table(buf, feature)? as u16,
+            };
+
+            buf.encode_at(&record, record_start)?;
+            record_start += FeatureRecord::PACKED_LEN;
         }
+
+        Ok(start)
     }
 }
 

@@ -1,32 +1,38 @@
-use endian_codec::EncodeBE;
+use crate::compile_model::{
+    TTFEncode,
+    EncodeBuf
+};
 
-#[inline]
-pub(crate) fn encode_u16_be(bytes: &mut [u8], offset: usize, val: u16) {
-    &bytes[offset..offset+2].copy_from_slice(&val.to_be_bytes());
+pub(crate) struct WriteIntoPool<'a, I> {
+    iter: I,
+    buf: &'a mut EncodeBuf
 }
 
-#[inline]
-pub fn encode_to_slice<T: EncodeBE>(bytes: &mut [u8], val: &T) {
-    val.encode_as_be_bytes(&mut bytes[..T::PACKED_LEN])
+impl<'a, I, T> Iterator for WriteIntoPool<'a, I>
+    where I: Iterator<Item = &'a T>,
+          T: TTFEncode + 'a
+{
+    type Item = u16;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|item| {
+            self.buf.append(item).unwrap() as u16
+        })
+    }
 }
 
 pub(crate) trait TTFEncodeExt<'a, T>: Iterator<Item = &'a T>
-    where T: EncodeBE + 'a,
+    where T: TTFEncode + 'a,
           Self: Sized + 'a
 {
     #[inline]
-    fn collect_into_ttf_pool(self, buf: &mut Vec<u8>) {
-        for item in self {
-            let start = buf.len();
-            let end = start + T::PACKED_LEN;
-            buf.resize(end, 0u8);
-
-            encode_to_slice(&mut buf[start..end], item);
-        }
+    fn write_into_ttf_pool(self, buf: &mut EncodeBuf) -> WriteIntoPool<Self> {
+        WriteIntoPool { iter: self, buf }
     }
 }
 
 impl<'a, T, I> TTFEncodeExt<'a, T> for I
-    where T: EncodeBE + 'a,
+    where T: TTFEncode + 'a,
           I: Iterator<Item = &'a T> + Sized + 'a
 { }

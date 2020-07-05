@@ -61,11 +61,15 @@ fn display_gpos(table_data: &[u8]) {
         }
     };
 
+    println!("\n{:#?}\n", table.script_list);
+
     // println!("{:#?}", table);
-    let mut buf = Vec::new();
-    table.encode_as_be_bytes(&mut buf).unwrap();
-    println!("ours: {:?}", buf);
-    println!("src:  {:?}", &table_data[..buf.len()]);
+    let mut buf = EncodeBuf::new();
+    table.ttf_encode(&mut buf).unwrap();
+
+    let bytes = buf.as_bytes();
+    println!("ours: {:?}", bytes);
+    println!("src:  {:?}", &table_data[..bytes.len()]);
 }
 
 ////

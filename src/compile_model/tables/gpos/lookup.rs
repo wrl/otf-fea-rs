@@ -15,7 +15,7 @@ struct PairPosFormat1Header {
 }
 
 #[derive(Debug)]
-pub(crate) struct PairValueRecord {
+pub struct PairValueRecord {
     pub second_glyph: u16,
     pub records: (ValueRecord, ValueRecord)
 }
@@ -33,12 +33,12 @@ impl PairValueRecord {
 }
 
 #[derive(Debug)]
-pub(crate) enum GPOSLookup {
+pub enum GPOSLookup {
     PairGlyphs(Vec<Vec<PairValueRecord>>)
 }
 
 #[derive(Debug)]
-pub(crate) struct GPOSSubtable {
+pub struct GPOSSubtable {
     pub coverage: Coverage,
     pub lookup: GPOSLookup,
 }

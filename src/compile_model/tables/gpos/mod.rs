@@ -4,8 +4,11 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 use crate::compile_model::util::decode::*;
-use crate::compile_model::util::encode::*;
-use crate::compile_model::TTFTable;
+use crate::compile_model::{
+    TTFTable,
+    TTFEncode,
+    EncodeBuf
+};
 
 mod header;
 use header::*;
@@ -15,10 +18,10 @@ use lookup::*;
 
 #[derive(Debug)]
 pub struct GPOS {
-    script_list: ScriptList,
-    feature_list: FeatureList,
-    lookup_list: LookupList<GPOSSubtable>,
-    feature_variations: Option<usize>
+    pub script_list: ScriptList,
+    pub feature_list: FeatureList,
+    pub lookup_list: LookupList<GPOSSubtable>,
+    pub feature_variations: Option<usize>
 }
 
 impl TTFTable for GPOS {
@@ -42,29 +45,31 @@ impl TTFTable for GPOS {
     }
 
     #[inline]
-    fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) -> Result<(), ()> {
+    fn encode_as_be_bytes(&self, _buf: &mut Vec<u8>) -> Result<(), ()> {
+        Ok(())
+    }
+}
+
+impl TTFEncode for GPOS {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
         let header_size =
             self.feature_variations
                 .map(|_| Header_1_1::PACKED_LEN)
                 .unwrap_or(Header_1_0::PACKED_LEN);
 
-        buf.resize(header_size, 0u8);
+        let start = buf.bytes.len();
+        buf.bytes.resize(header_size, 0u8);
 
-        let mut offsets = Offsets {
-            script: 0,
-            feature: 0,
-            lookup: 0,
+        let offsets = Offsets {
+            script: self.script_list.ttf_encode(buf)?,
+            feature: self.feature_list.ttf_encode(buf)?,
+            lookup: 44,
             feature_variations: None
         };
 
-        offsets.script = buf.len();
-        self.script_list.encode_as_be_bytes(buf);
-        offsets.feature = buf.len();
-        self.feature_list.encode_as_be_bytes(buf);
-
         let header: Header_1_0 = offsets.into();
-        encode_to_slice(buf, &header);
+        buf.encode_at(&header, start)?;
 
-        Ok(())
+        Ok(start)
     }
 }
