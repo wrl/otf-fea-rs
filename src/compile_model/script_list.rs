@@ -100,6 +100,12 @@ impl TTFDecode for Script {
     }
 }
 
+impl TTFEncode for Script {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+        Ok(buf.bytes.len())
+    }
+}
+
 impl ScriptList {
     pub fn new() -> Self {
         Self(Vec::new())
@@ -124,9 +130,19 @@ impl TTFEncode for ScriptList {
 
         buf.append(&(self.0.len() as u16))?;
 
-        // self.0.iter()
-        //     .write_into_ttf_pool(buf)
-        //     .for_each(|_| {}); // not doing anything with the offsets here
+        let mut record_offset = buf.bytes.len();
+        buf.bytes.resize(record_offset +
+            (self.0.len() * ScriptRecord::PACKED_LEN), 0u8);
+
+        for script in self.0.iter() {
+            let record = ScriptRecord {
+                tag: script.tag,
+                script_offset: (script.ttf_encode(buf)? - start) as u16
+            };
+
+           buf.encode_at(&record, record_offset)?;
+           record_offset += ScriptRecord::PACKED_LEN;
+        }
 
         Ok(start)
     }
