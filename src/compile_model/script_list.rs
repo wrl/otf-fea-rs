@@ -75,6 +75,26 @@ impl TTFDecode for LangSys {
     }
 }
 
+impl TTFEncode for LangSys {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+        let start = buf.bytes.len();
+
+        let table = LangSysTable {
+            lookup_order: 0,
+            required_feature_index: self.required_feature_index.unwrap_or(0xFFFF),
+            feature_index_count: self.feature_indices.len() as u16
+        };
+
+        buf.append(&table)?;
+
+        for idx in self.feature_indices.iter() {
+            buf.append(idx)?;
+        }
+
+        Ok(start)
+    }
+}
+
 impl TTFDecode for Script {
     fn ttf_decode(bytes: &[u8], tag: Option<pm::Tag>) -> Self {
         let table: ScriptTable = decode_from_slice(bytes);
@@ -102,7 +122,28 @@ impl TTFDecode for Script {
 
 impl TTFEncode for Script {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
-        Ok(buf.bytes.len())
+        let start = buf.bytes.len();
+
+        buf.bytes.resize(start + ScriptTable::PACKED_LEN, 0u8);
+
+        let table = ScriptTable {
+            default_lang_sys: (buf.append(&self.default_lang_sys)? - start) as u16,
+            lang_sys_count: self.lang_sys.len() as u16
+        };
+
+        buf.encode_at(&table, start)?;
+
+        for lang_sys in self.lang_sys.iter() {
+            let record = LangSysRecord {
+                // FIXME: unwrap()
+                tag: lang_sys.tag.unwrap(),
+                lang_sys_offset: (buf.append(lang_sys)? - start) as u16
+            };
+
+            buf.append(&record)?;
+        }
+
+        Ok(start)
     }
 }
 
