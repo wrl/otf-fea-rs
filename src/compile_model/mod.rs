@@ -128,7 +128,7 @@ pub trait TTFTable: Sized {
 }
 
 pub trait TTFDecode: Sized {
-    fn ttf_decode(bytes: &[u8], tag: Option<Tag>) -> Self;
+    fn ttf_decode(bytes: &[u8]) -> Self;
 }
 
 pub trait TTFEncode: Sized {
@@ -145,5 +145,15 @@ impl<T: EncodeBE> TTFEncode for T
         self.encode_as_be_bytes(&mut buf.bytes[start..end]);
 
         Ok(start)
+    }
+}
+
+#[derive(Debug)]
+pub struct TTFTagged<T>(Tag, T);
+
+impl<T> TTFTagged<T> {
+    #[inline]
+    pub fn new(tag: Tag, inner: T) -> Self {
+        Self(tag, inner)
     }
 }
