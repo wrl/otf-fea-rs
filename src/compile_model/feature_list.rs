@@ -70,12 +70,13 @@ impl TTFEncode for FeatureList {
 
         let mut record_start = buf.bytes.len();
 
-        buf.bytes.resize(start + (len * FeatureRecord::PACKED_LEN), 0u8);
+        buf.bytes.resize(record_start + (len * FeatureRecord::PACKED_LEN), 0u8);
 
         for feature in self.0.iter() {
             let record = FeatureRecord {
                 tag: feature.tag,
-                feature_offset: encode_feature_table(buf, feature)? as u16,
+                feature_offset:
+                    (encode_feature_table(buf, feature)? - start) as u16
             };
 
             buf.encode_at(&record, record_start)?;
