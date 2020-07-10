@@ -2,7 +2,11 @@ use bitflags::bitflags;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
-use crate::compile_model::TTFTable;
+use crate::compile_model::{
+    TTFTable,
+    TTFEncode,
+    EncodeBuf
+};
 
 ////
 // LookupList
@@ -26,6 +30,16 @@ impl<T: TTFTable> LookupList<T> {
                 Lookup::decode_from_be_bytes(&bytes[offset as usize..]));
 
         Self(lookups.collect())
+    }
+}
+
+impl<T: TTFTable> TTFEncode for LookupList<T> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+        let start = buf.bytes.len();
+
+        buf.append(&(self.0.len() as u16))?;
+
+        Ok(start)
     }
 }
 

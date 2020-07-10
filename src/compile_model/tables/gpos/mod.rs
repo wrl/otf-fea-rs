@@ -61,9 +61,9 @@ impl TTFEncode for GPOS {
         buf.bytes.resize(header_size, 0u8);
 
         let offsets = Offsets {
-            script: self.script_list.ttf_encode(buf)?,
-            feature: self.feature_list.ttf_encode(buf)?,
-            lookup: 44,
+            script: buf.append(&self.script_list)?,
+            feature: buf.append(&self.feature_list)?,
+            lookup: buf.append(&self.lookup_list)?,
             feature_variations: None
         };
 

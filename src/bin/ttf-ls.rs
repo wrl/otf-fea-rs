@@ -68,8 +68,8 @@ fn display_gpos(table_data: &[u8]) {
     table.ttf_encode(&mut buf).unwrap();
 
     let bytes = buf.as_bytes();
-    println!("ours: {:?}", bytes);
-    println!("src:  {:?}", &table_data[..bytes.len()]);
+    println!("ours: {:?}", &bytes[44..]);
+    println!("src:  {:?}", &table_data[44..bytes.len()]);
 }
 
 ////
