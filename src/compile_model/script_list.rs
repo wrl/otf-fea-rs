@@ -161,9 +161,12 @@ impl ScriptList {
     pub fn new() -> Self {
         Self(Vec::new())
     }
+}
 
+
+impl TTFDecode for ScriptList {
     #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> Self {
         let records = decode_from_pool(decode_u16_be(bytes, 0), &bytes[2..]);
 
         let scripts = records.map(|sr: ScriptRecord| {

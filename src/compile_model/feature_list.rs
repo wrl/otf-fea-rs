@@ -18,9 +18,11 @@ impl FeatureList {
     pub fn new() -> Self {
         Self(Vec::new())
     }
+}
 
+impl TTFDecode for FeatureList {
     #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> Self {
         let records_count = decode_u16_be(bytes, 0);
         let records = decode_from_pool(records_count, &bytes[2..]);
 

@@ -34,9 +34,9 @@ impl TTFDecode for GPOS {
         };
 
         GPOS {
-            script_list: ScriptList::decode_from_be_bytes(&bytes[offsets.script..]),
-            feature_list: FeatureList::decode_from_be_bytes(&bytes[offsets.feature..]),
-            lookup_list: LookupList::decode_from_be_bytes(&bytes[offsets.lookup..]),
+            script_list: ScriptList::ttf_decode(&bytes[offsets.script..]),
+            feature_list: FeatureList::ttf_decode(&bytes[offsets.feature..]),
+            lookup_list: LookupList::ttf_decode(&bytes[offsets.lookup..]),
             feature_variations: offsets.feature_variations
         }
     }

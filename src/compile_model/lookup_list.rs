@@ -11,19 +11,21 @@ use crate::compile_model::util::encode::*;
 #[derive(Debug)]
 pub struct LookupList<T>(Vec<Lookup<T>>);
 
-impl<T: TTFDecode> LookupList<T> {
+impl<T> LookupList<T> {
     pub fn new() -> Self {
         Self(Vec::new())
     }
+}
 
+impl<T: TTFDecode> TTFDecode for LookupList<T> {
     #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> Self {
         let records_count = decode_u16_be(bytes, 0);
         let records = decode_from_pool(records_count, &bytes[2..]);
 
         let lookups = records
             .map(|offset: u16|
-                Lookup::decode_from_be_bytes(&bytes[offset as usize..]));
+                Lookup::ttf_decode(&bytes[offset as usize..]));
 
         Self(lookups.collect())
     }
@@ -81,9 +83,9 @@ struct LookupTableHeader {
     pub subtable_count: u16
 }
 
-impl<T: TTFDecode> Lookup<T> {
+impl<T: TTFDecode> TTFDecode for Lookup<T> {
     #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> Self {
         let header = decode_from_slice::<LookupTableHeader>(bytes);
 
         let lookup_flags = LookupFlags::from_bits_truncate(header.lookup_flags);
