@@ -38,6 +38,16 @@ impl<T: TTFTable> TTFEncode for LookupList<T> {
         let start = buf.bytes.len();
 
         buf.append(&(self.0.len() as u16))?;
+        let mut record_offset = buf.bytes.len();
+        buf.bytes.resize(record_offset +
+            (self.0.len() * u16::PACKED_LEN), 0u8);
+
+        for lookup in &self.0 {
+            let offset = (buf.append(lookup)? - start) as u16;
+
+            buf.encode_at(&offset, record_offset)?;
+            record_offset += u16::PACKED_LEN;
+        }
 
         Ok(start)
     }
@@ -105,6 +115,30 @@ impl<T: TTFTable> Lookup<T> {
 
             subtables
         }
+    }
+}
+
+impl<T: TTFTable> TTFEncode for Lookup<T> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+        let start = buf.bytes.len();
+        let mut flags = self.lookup_flags;
+
+        flags.set(LookupFlags::USE_MARK_FILTERING_SET,
+            self.mark_filtering_set.is_some());
+
+        let header = LookupTableHeader {
+            lookup_type: self.lookup_type,
+            lookup_flags: self.lookup_flags.bits(),
+            subtable_count: self.subtables.len() as u16
+        };
+
+        buf.append(&header)?;
+
+        if let Some(mfs) = self.mark_filtering_set {
+            buf.append(&mfs)?;
+        }
+
+        Ok(start)
     }
 }
 
