@@ -1,12 +1,9 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
+use crate::compile_model::util::encode::*;
 use crate::compile_model::{
-    TTFEncode,
-    TTFDecode,
     TTFTagged,
-    CompileResult,
-    EncodeBuf
 };
 
 use crate::parse_model as pm;

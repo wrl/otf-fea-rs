@@ -2,12 +2,8 @@ use bitflags::bitflags;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
-use crate::compile_model::{
-    TTFTable,
-    TTFEncode,
-    CompileResult,
-    EncodeBuf
-};
+use crate::compile_model::util::encode::*;
+use crate::compile_model::TTFTable;
 
 ////
 // LookupList

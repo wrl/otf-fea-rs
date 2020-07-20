@@ -1,5 +1,9 @@
 use endian_codec::DecodeBE;
 
+pub trait TTFDecode: Sized {
+    fn ttf_decode(bytes: &[u8]) -> Self;
+}
+
 #[inline]
 pub(crate) fn decode_u16_be(bytes: &[u8], offset: usize) -> u16 {
     let mut a = [0u8; 2];

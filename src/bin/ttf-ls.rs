@@ -8,6 +8,7 @@ use endian_codec::{PackedSize, DecodeBE};
 #[macro_use]
 extern crate otf_fea_rs;
 use otf_fea_rs::compile_model::util::decode::*;
+use otf_fea_rs::compile_model::util::encode::*;
 use otf_fea_rs::compile_model::*;
 
 ////
