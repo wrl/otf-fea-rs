@@ -5,6 +5,7 @@ use crate::compile_model::{
     TTFEncode,
     TTFDecode,
     TTFTagged,
+    CompileResult,
     EncodeBuf
 };
 
@@ -73,7 +74,7 @@ impl TTFDecode for LangSys {
 }
 
 impl TTFEncode for LangSys {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
 
         let table = LangSysTable {
@@ -116,7 +117,7 @@ impl TTFDecode for Script {
 }
 
 impl TTFEncode for Script {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
 
         buf.bytes.resize(start + ScriptTable::PACKED_LEN, 0u8);
@@ -161,7 +162,7 @@ impl ScriptList {
 }
 
 impl TTFEncode for ScriptList {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
 
         buf.append(&(self.0.len() as u16))?;

@@ -7,6 +7,7 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::{
     TTFTable,
     TTFEncode,
+    CompileResult,
     EncodeBuf
 };
 
@@ -51,7 +52,7 @@ impl TTFTable for GPOS {
 }
 
 impl TTFEncode for GPOS {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let header_size =
             self.feature_variations
                 .map(|_| Header_1_1::PACKED_LEN)

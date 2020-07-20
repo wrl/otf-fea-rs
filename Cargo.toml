@@ -5,8 +5,11 @@ authors = ["William Light <wrl@lhiaudio.com>"]
 edition = "2018"
 
 [dependencies]
+thiserror = "1.0"
+
 ascii = "1.0.0"
 combine = "4.1"
+
 endian_codec = "0.1"
 fixed = "1"
 chrono = "0.4"

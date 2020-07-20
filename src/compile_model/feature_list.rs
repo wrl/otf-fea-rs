@@ -3,6 +3,7 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::compile_model::util::decode::*;
 use crate::compile_model::{
     TTFEncode,
+    CompileResult,
     EncodeBuf
 };
 
@@ -43,7 +44,7 @@ impl FeatureList {
     }
 }
 
-fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> Result<usize, ()>
+fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> CompileResult<usize>
 {
     let start = buf.bytes.len();
 
@@ -62,7 +63,7 @@ fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> Result<usize,
 }
 
 impl TTFEncode for FeatureList {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
         let len = self.0.len();
 

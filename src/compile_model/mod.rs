@@ -24,6 +24,9 @@ pub use lookup_list::{
     Lookup
 };
 
+mod error;
+pub use error::CompileError;
+
 pub mod value_record;
 
 #[macro_use]
@@ -86,6 +89,13 @@ impl TTFTableRecord {
     }
 }
 
+pub trait TTFTable: Sized {
+    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()>;
+    fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) -> Result<(), ()>;
+}
+
+pub type CompileResult<T> = Result<T, CompileError>;
+
 pub struct EncodeBuf {
     pub(crate) bytes: Vec<u8>
 }
@@ -103,17 +113,17 @@ impl EncodeBuf {
     }
 
     #[inline]
-    pub(crate) fn append<T: TTFEncode>(&mut self, val: &T) -> Result<usize, ()> {
+    pub(crate) fn append<T: TTFEncode>(&mut self, val: &T) -> CompileResult<usize> {
         // FIXME: unwrap()
         val.ttf_encode(self)
     }
 
     #[inline]
-    pub(crate) fn encode_at<T: EncodeBE>(&mut self, val: &T, start: usize) -> Result<usize, ()> {
+    pub(crate) fn encode_at<T: EncodeBE>(&mut self, val: &T, start: usize) -> CompileResult<usize> {
         let end = start + T::PACKED_LEN;
 
         if end > self.bytes.len() {
-            return Err(())
+            return Err(CompileError::BufferTooSmallForType(stringify!(T)));
         }
 
         val.encode_as_be_bytes(&mut self.bytes[start..end]);
@@ -122,22 +132,17 @@ impl EncodeBuf {
     }
 }
 
-pub trait TTFTable: Sized {
-    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()>;
-    fn encode_as_be_bytes(&self, buf: &mut Vec<u8>) -> Result<(), ()>;
-}
-
 pub trait TTFDecode: Sized {
     fn ttf_decode(bytes: &[u8]) -> Self;
 }
 
 pub trait TTFEncode: Sized {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()>;
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize>;
 }
 
 impl<T: EncodeBE> TTFEncode for T
 {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> Result<usize, ()> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
         let end = start + T::PACKED_LEN;
 
