@@ -73,6 +73,20 @@ impl TTFDecode for LangSys {
     }
 }
 
+macro_rules! try_as_u16 {
+    ($val:expr, $scope:expr, $item:expr) => {{
+        use std::convert::TryFrom;
+        let val = $val;
+
+        u16::try_from(val)
+            .map_err(|_| $crate::compile_model::CompileError::U16Overflow {
+                scope: $scope,
+                item: $item,
+                value: val
+            })
+    }}
+}
+
 impl TTFEncode for LangSys {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
@@ -80,7 +94,8 @@ impl TTFEncode for LangSys {
         let table = LangSysTable {
             lookup_order: 0,
             required_feature_index: self.required_feature_index.unwrap_or(0xFFFF),
-            feature_index_count: self.feature_indices.len() as u16
+            feature_index_count: try_as_u16!(self.feature_indices.len(),
+                "LangSys".into(), "feature_index_count")?
         };
 
         buf.append(&table)?;
@@ -123,8 +138,10 @@ impl TTFEncode for Script {
         buf.bytes.resize(start + ScriptTable::PACKED_LEN, 0u8);
 
         let table = ScriptTable {
-            default_lang_sys: (buf.append(&self.default_lang_sys)? - start) as u16,
-            lang_sys_count: self.lang_sys.len() as u16
+            default_lang_sys: try_as_u16!(buf.append(&self.default_lang_sys)? - start,
+                "ScriptTable".into(), "default_lang_sys")?,
+            lang_sys_count: try_as_u16!(self.lang_sys.len(),
+                "ScriptTable".into(), "lang_sys_count")?
         };
 
         buf.encode_at(&table, start)?;
@@ -132,7 +149,8 @@ impl TTFEncode for Script {
         for TTFTagged(tag, lang_sys) in &self.lang_sys {
             let record = LangSysRecord {
                 tag: *tag,
-                lang_sys_offset: (buf.append(lang_sys)? - start) as u16
+                lang_sys_offset: try_as_u16!(buf.append(lang_sys)? - start,
+                    format!("LangSysRecord[{}]", tag), "lang_sys_offset")?
             };
 
             buf.append(&record)?;
@@ -165,7 +183,8 @@ impl TTFEncode for ScriptList {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
 
-        buf.append(&(self.0.len() as u16))?;
+        buf.append(
+            &try_as_u16!(self.0.len(), "ScriptList".into(), "record_count")?)?;
 
         let mut record_offset = buf.bytes.len();
         buf.bytes.resize(record_offset +
@@ -174,7 +193,8 @@ impl TTFEncode for ScriptList {
         for TTFTagged(tag, script) in &self.0 {
             let record = ScriptRecord {
                 tag: *tag,
-                script_offset: (buf.append(script)? - start) as u16
+                script_offset: try_as_u16!(buf.append(script)? - start,
+                    format!("ScriptList[{}]", tag), "script_offset")?
             };
 
            buf.encode_at(&record, record_offset)?;
