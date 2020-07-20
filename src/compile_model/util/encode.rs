@@ -22,20 +22,21 @@ impl EncodeBuf {
 
     #[inline]
     pub(crate) fn append<T: TTFEncode>(&mut self, val: &T) -> CompileResult<usize> {
-        // FIXME: unwrap()
         val.ttf_encode(self)
     }
 
     #[inline]
-    pub(crate) fn encode_at<T: EncodeBE>(&mut self, val: &T, start: usize) -> CompileResult<usize> {
+    pub(crate) fn encode_at<T: EncodeBE>(&mut self, val: &T, start: usize)
+            -> CompileResult<usize> {
         let end = start + T::PACKED_LEN;
 
         if end > self.bytes.len() {
+            // FIXME: does this correctly stringify the type name,
+            // or do we just get a string of "T"?
             return Err(CompileError::BufferTooSmallForType(stringify!(T)));
         }
 
         val.encode_as_be_bytes(&mut self.bytes[start..end]);
-
         Ok(start)
     }
 }

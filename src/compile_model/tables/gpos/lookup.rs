@@ -1,9 +1,9 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
-use crate::compile_model::value_record::*;
 use crate::compile_model::util::decode::*;
+use crate::compile_model::util::encode::*;
+use crate::compile_model::value_record::*;
 use crate::compile_model::lookup_list::*;
-use crate::compile_model::TTFTable;
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct PairPosFormat1Header {
@@ -84,26 +84,29 @@ impl GPOSLookup {
     }
 }
 
-impl TTFTable for GPOSSubtable {
+impl TTFDecode for GPOSSubtable {
     #[inline]
-    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
+    fn ttf_decode(bytes: &[u8]) -> Self {
         let format = decode_u16_be(bytes, 0);
         let coverage = {
             let offset = decode_u16_be(bytes, 2) as usize;
-            Coverage::decode_from_be_bytes(&bytes[offset..])
-                .ok_or(())?
+
+            // FIXME: unwrap()
+            Coverage::decode_from_be_bytes(&bytes[offset..]).unwrap()
         };
 
-        let lookup = GPOSLookup::decode_from_be_bytes(bytes, format)?;
+        // FIXME: unwrap()
+        let lookup = GPOSLookup::decode_from_be_bytes(bytes, format).unwrap();
 
-        Ok(GPOSSubtable {
+        GPOSSubtable {
             coverage,
             lookup
-        })
+        }
     }
+}
 
-    #[inline]
-    fn encode_as_be_bytes(&self, _buf: &mut Vec<u8>) -> Result<(), ()> {
-        Ok(())
+impl TTFEncode for GPOSSubtable {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+        Ok(buf.bytes.len())
     }
 }

@@ -3,16 +3,15 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
-use crate::compile_model::TTFTable;
 
 ////
 // LookupList
 ////
 
 #[derive(Debug)]
-pub struct LookupList<T: TTFTable>(Vec<Lookup<T>>);
+pub struct LookupList<T>(Vec<Lookup<T>>);
 
-impl<T: TTFTable> LookupList<T> {
+impl<T: TTFDecode> LookupList<T> {
     pub fn new() -> Self {
         Self(Vec::new())
     }
@@ -30,7 +29,7 @@ impl<T: TTFTable> LookupList<T> {
     }
 }
 
-impl<T: TTFTable> TTFEncode for LookupList<T> {
+impl<T: TTFEncode> TTFEncode for LookupList<T> {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
 
@@ -82,7 +81,7 @@ struct LookupTableHeader {
     pub subtable_count: u16
 }
 
-impl<T: TTFTable> Lookup<T> {
+impl<T: TTFDecode> Lookup<T> {
     #[inline]
     pub fn decode_from_be_bytes(bytes: &[u8]) -> Self {
         let header = decode_from_slice::<LookupTableHeader>(bytes);
@@ -99,9 +98,8 @@ impl<T: TTFTable> Lookup<T> {
 
         let subtables =
             decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
-            .filter_map(|offset: u16| {
-                T::decode_from_be_bytes(&bytes[offset as usize..])
-                    .ok()
+            .map(|offset: u16| {
+                T::ttf_decode(&bytes[offset as usize..])
             })
             .collect();
 
@@ -115,7 +113,7 @@ impl<T: TTFTable> Lookup<T> {
     }
 }
 
-impl<T: TTFTable> TTFEncode for Lookup<T> {
+impl<T: TTFEncode> TTFEncode for Lookup<T> {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
