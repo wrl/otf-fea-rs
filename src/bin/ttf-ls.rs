@@ -54,13 +54,7 @@ fn display_name(table_data: &[u8]) {
 ////
 
 fn display_gpos(table_data: &[u8]) {
-    let table = match tables::GPOS::decode_from_be_bytes(table_data) {
-        Ok(t) => t,
-        Err(_) => {
-            eprintln!("error decoding GPOS table");
-            return
-        }
-    };
+    let table = tables::GPOS::ttf_decode(table_data);
 
     println!("\n{:#?}\n", table.script_list);
 

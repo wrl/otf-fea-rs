@@ -5,9 +5,6 @@ use crate::compile_model::util::encode::*;
 use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
-use crate::compile_model::{
-    TTFTable,
-};
 
 mod header;
 use header::*;
@@ -23,29 +20,25 @@ pub struct GPOS {
     pub feature_variations: Option<usize>
 }
 
-impl TTFTable for GPOS {
+impl TTFDecode for GPOS {
     #[inline]
-    fn decode_from_be_bytes(bytes: &[u8]) -> Result<Self, ()> {
+    fn ttf_decode(bytes: &[u8]) -> Self {
         let version: Version = decode_from_slice(bytes);
 
         let offsets: Offsets = match (version.major, version.minor) {
             (1, 0) => Header_1_0::decode_from_be_bytes(bytes).into(),
             (1, 1) => Header_1_1::decode_from_be_bytes(bytes).into(),
 
-            _ => return Err(())
+            // FIXME: extend TTFDecode to return a result
+            _ => panic!()
         };
 
-        Ok(GPOS {
+        GPOS {
             script_list: ScriptList::decode_from_be_bytes(&bytes[offsets.script..]),
             feature_list: FeatureList::decode_from_be_bytes(&bytes[offsets.feature..]),
             lookup_list: LookupList::decode_from_be_bytes(&bytes[offsets.lookup..]),
             feature_variations: offsets.feature_variations
-        })
-    }
-
-    #[inline]
-    fn encode_as_be_bytes(&self, _buf: &mut Vec<u8>) -> Result<(), ()> {
-        Ok(())
+        }
     }
 }
 
