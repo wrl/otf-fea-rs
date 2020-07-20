@@ -159,13 +159,13 @@ pub enum Coverage {
 #[allow(dead_code)]
 impl Coverage {
     #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> Option<Self> {
+    pub fn decode_from_be_bytes(bytes: &[u8]) -> DecodeResult<Self> {
         let format = decode_u16_be(bytes, 0);
         let count = decode_u16_be(bytes, 2);
 
         let list_slice = &bytes[4..];
 
-        Some(match format {
+        Ok(match format {
             1 => Self::Glyphs(
                 decode_from_pool(count, list_slice).collect()),
 
@@ -173,7 +173,7 @@ impl Coverage {
                 decode_from_pool(count, list_slice).collect()),
 
             // FIXME: pass errors up
-            _ => return None
+            _ => return Err(DecodeError::InvalidValue("Coverage".into()))
         })
     }
 }

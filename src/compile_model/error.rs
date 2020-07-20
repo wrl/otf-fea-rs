@@ -1,5 +1,16 @@
 use thiserror::Error;
 
+pub type DecodeResult<T> = Result<T, DecodeError>;
+
+#[derive(Debug, Error)]
+pub enum DecodeError {
+    #[error("tried to decode a {0}, but the buffer was too small")]
+    BufferUnderflow(&'static str),
+
+    #[error("invalid/unrecognised value in {0}")]
+    InvalidValue(String)
+}
+
 pub type EncodeResult<T> = Result<T, EncodeError>;
 
 #[derive(Debug, Error)]

@@ -1,5 +1,10 @@
 use endian_codec::DecodeBE;
 
+pub use crate::compile_model::error::{
+    DecodeError,
+    DecodeResult
+};
+
 pub trait TTFDecode: Sized {
     fn ttf_decode(bytes: &[u8]) -> Self;
 }
