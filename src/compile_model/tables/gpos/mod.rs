@@ -43,7 +43,7 @@ impl TTFDecode for GPOS {
 }
 
 impl TTFEncode for GPOS {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let header_size =
             self.feature_variations
                 .map(|_| Header_1_1::PACKED_LEN)

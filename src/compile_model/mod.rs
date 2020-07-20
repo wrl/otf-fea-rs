@@ -25,7 +25,7 @@ pub use lookup_list::{
 };
 
 mod error;
-pub use error::CompileError;
+pub use error::*;
 
 pub mod value_record;
 

@@ -1,8 +1,9 @@
 use endian_codec::EncodeBE;
 
-use crate::compile_model::error::*;
-
-pub type CompileResult<T> = Result<T, CompileError>;
+pub use crate::compile_model::error::{
+    EncodeError,
+    EncodeResult
+};
 
 pub struct EncodeBuf {
     pub(crate) bytes: Vec<u8>
@@ -21,19 +22,19 @@ impl EncodeBuf {
     }
 
     #[inline]
-    pub(crate) fn append<T: TTFEncode>(&mut self, val: &T) -> CompileResult<usize> {
+    pub(crate) fn append<T: TTFEncode>(&mut self, val: &T) -> EncodeResult<usize> {
         val.ttf_encode(self)
     }
 
     #[inline]
     pub(crate) fn encode_at<T: EncodeBE>(&mut self, val: &T, start: usize)
-            -> CompileResult<usize> {
+            -> EncodeResult<usize> {
         let end = start + T::PACKED_LEN;
 
         if end > self.bytes.len() {
             // FIXME: does this correctly stringify the type name,
             // or do we just get a string of "T"?
-            return Err(CompileError::BufferTooSmallForType(stringify!(T)));
+            return Err(EncodeError::BufferTooSmallForType(stringify!(T)));
         }
 
         val.encode_as_be_bytes(&mut self.bytes[start..end]);
@@ -42,12 +43,12 @@ impl EncodeBuf {
 }
 
 pub trait TTFEncode: Sized {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize>;
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize>;
 }
 
 impl<T: EncodeBE> TTFEncode for T
 {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let end = start + T::PACKED_LEN;
 

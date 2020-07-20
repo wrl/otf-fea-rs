@@ -42,7 +42,7 @@ impl TTFDecode for FeatureList {
     }
 }
 
-fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> CompileResult<usize>
+fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> EncodeResult<usize>
 {
     let start = buf.bytes.len();
 
@@ -61,7 +61,7 @@ fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> CompileResult
 }
 
 impl TTFEncode for FeatureList {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let len = self.0.len();
 

@@ -1,7 +1,9 @@
 use thiserror::Error;
 
+pub type EncodeResult<T> = Result<T, EncodeError>;
+
 #[derive(Debug, Error)]
-pub enum CompileError {
+pub enum EncodeError {
     #[error("u16 Overflow ({scope}::{item} is {value})")]
     U16Overflow {
         scope: String,

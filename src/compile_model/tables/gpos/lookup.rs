@@ -106,7 +106,7 @@ impl TTFDecode for GPOSSubtable {
 }
 
 impl TTFEncode for GPOSSubtable {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         Ok(buf.bytes.len())
     }
 }

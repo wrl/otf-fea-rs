@@ -76,7 +76,7 @@ macro_rules! try_as_u16 {
         let val = $val;
 
         u16::try_from(val)
-            .map_err(|_| $crate::compile_model::CompileError::U16Overflow {
+            .map_err(|_| $crate::compile_model::EncodeError::U16Overflow {
                 scope: $scope,
                 item: $item,
                 value: val
@@ -85,7 +85,7 @@ macro_rules! try_as_u16 {
 }
 
 impl TTFEncode for LangSys {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         let table = LangSysTable {
@@ -129,7 +129,7 @@ impl TTFDecode for Script {
 }
 
 impl TTFEncode for Script {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         buf.bytes.resize(start + ScriptTable::PACKED_LEN, 0u8);
@@ -180,7 +180,7 @@ impl TTFDecode for ScriptList {
 }
 
 impl TTFEncode for ScriptList {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         buf.append(

@@ -32,7 +32,7 @@ impl<T: TTFDecode> TTFDecode for LookupList<T> {
 }
 
 impl<T: TTFEncode> TTFEncode for LookupList<T> {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         buf.append(&(self.0.len() as u16))?;
@@ -116,7 +116,7 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
 }
 
 impl<T: TTFEncode> TTFEncode for Lookup<T> {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> CompileResult<usize> {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
 
