@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use bitflags::bitflags;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
@@ -170,8 +172,41 @@ impl TTFDecode for Coverage {
             2 => Self::GlyphRanges(
                 decode_from_pool(count, list_slice).collect()),
 
-            // FIXME: pass errors up
-            _ => return Err(DecodeError::InvalidValue("format", "Coverage".into()))
+            _ => return Err(
+                DecodeError::InvalidValue("format", "Coverage".into()))
         })
+    }
+}
+
+#[inline]
+fn encode_coverage<T: EncodeBE>(buf: &mut EncodeBuf, format: u16, data: &[T])
+        -> EncodeResult<usize> {
+    let start = buf.bytes.len();
+
+    buf.append(&format)?;
+
+    // FIXME: generalised u16 writing?
+    let count = u16::try_from(data.len())
+        .map_err(|_| EncodeError::U16Overflow {
+            scope: "Coverage".into(),
+            item: "count",
+            value: data.len()
+        })?;
+
+    buf.append(&count)?;
+
+    for val in data {
+        buf.append(val)?;
+    }
+
+    Ok(start)
+}
+
+impl TTFEncode for Coverage {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        match self {
+            Self::Glyphs(ref glyphs) => encode_coverage(buf, 1, glyphs),
+            Self::GlyphRanges(ref ranges) => encode_coverage(buf, 2, ranges)
+        }
     }
 }
