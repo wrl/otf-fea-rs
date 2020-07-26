@@ -76,32 +76,30 @@ impl GPOSLookup {
     }
 
     #[inline]
-    fn decode_from_be_bytes(bytes: &[u8], format: u16) -> Result<Self, ()> {
+    fn decode(bytes: &[u8], format: u16) -> DecodeResult<Self> {
         Ok(match format {
             1 => Self::PairGlyphs(Self::decode_pairs(bytes)),
-            _ => return Err(())
+            _ => return Err(DecodeError::InvalidValue("format",
+                    "GPOS subtable".into()))
         })
     }
 }
 
 impl TTFDecode for GPOSSubtable {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let format = decode_u16_be(bytes, 0);
         let coverage = {
             let offset = decode_u16_be(bytes, 2) as usize;
-
-            // FIXME: unwrap()
-            Coverage::decode_from_be_bytes(&bytes[offset..]).unwrap()
+            Coverage::decode_from_be_bytes(&bytes[offset..])?
         };
 
-        // FIXME: unwrap()
-        let lookup = GPOSLookup::decode_from_be_bytes(bytes, format).unwrap();
+        let lookup = GPOSLookup::decode(bytes, format)?;
 
-        GPOSSubtable {
+        Ok(GPOSSubtable {
             coverage,
             lookup
-        }
+        })
     }
 }
 

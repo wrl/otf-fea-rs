@@ -7,8 +7,8 @@ pub enum DecodeError {
     #[error("tried to decode a {0}, but the buffer was too small")]
     BufferUnderflow(&'static str),
 
-    #[error("invalid/unrecognised value in {0}")]
-    InvalidValue(String)
+    #[error("invalid/unrecognised value {0} in {1}")]
+    InvalidValue(&'static str, String)
 }
 
 pub type EncodeResult<T> = Result<T, EncodeError>;

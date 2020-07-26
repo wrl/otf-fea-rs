@@ -54,7 +54,7 @@ fn display_name(table_data: &[u8]) {
 ////
 
 fn display_gpos(table_data: &[u8]) {
-    let table = tables::GPOS::ttf_decode(table_data);
+    let table = tables::GPOS::ttf_decode(table_data).unwrap();
 
     println!("\n{:#?}\n", table.script_list);
 

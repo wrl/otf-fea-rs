@@ -6,7 +6,7 @@ pub use crate::compile_model::error::{
 };
 
 pub trait TTFDecode: Sized {
-    fn ttf_decode(bytes: &[u8]) -> Self;
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self>;
 }
 
 #[inline]

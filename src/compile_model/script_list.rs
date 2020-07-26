@@ -50,7 +50,7 @@ struct LangSysTable {
 }
 
 impl TTFDecode for LangSys {
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let table: LangSysTable = decode_from_slice(bytes);
 
         let required_feature_index =
@@ -63,10 +63,10 @@ impl TTFDecode for LangSys {
             table.feature_index_count,
             &bytes[LangSysTable::PACKED_LEN..]);
 
-        LangSys {
+        Ok(LangSys {
             required_feature_index,
             feature_indices: feature_indices.collect()
-        }
+        })
     }
 }
 
@@ -106,7 +106,7 @@ impl TTFEncode for LangSys {
 }
 
 impl TTFDecode for Script {
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let table: ScriptTable = decode_from_slice(bytes);
 
         let lang_sys_records = decode_from_pool(
@@ -114,17 +114,18 @@ impl TTFDecode for Script {
             &bytes[ScriptTable::PACKED_LEN..]);
 
         let default_lang_sys = LangSys::ttf_decode(
-            &bytes[table.default_lang_sys as usize..]);
+            &bytes[table.default_lang_sys as usize..])?;
 
-        let lang_sys = lang_sys_records.map(|lsr: LangSysRecord| {
-            TTFTagged::new(lsr.tag,
-                LangSys::ttf_decode(&bytes[lsr.lang_sys_offset as usize..]))
-        });
+        let lang_sys = lang_sys_records
+            .map(|lsr: LangSysRecord|
+                LangSys::ttf_decode(&bytes[lsr.lang_sys_offset as usize..])
+                    .map(|sys| TTFTagged::new(lsr.tag, sys)))
+            .collect::<DecodeResult<_>>()?;
 
-        Script {
+        Ok(Script {
             default_lang_sys,
-            lang_sys: lang_sys.collect()
-        }
+            lang_sys
+        })
     }
 }
 
@@ -166,16 +167,18 @@ impl ScriptList {
 
 impl TTFDecode for ScriptList {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let records = decode_from_pool(decode_u16_be(bytes, 0), &bytes[2..]);
 
-        let scripts = records.map(|sr: ScriptRecord| {
-            let table_data = &bytes[sr.script_offset as usize..];
+        records
+            .map(|sr: ScriptRecord| {
+                let table_data = &bytes[sr.script_offset as usize..];
 
-            TTFTagged::new(sr.tag, Script::ttf_decode(table_data))
-        });
-
-        Self(scripts.collect())
+                Script::ttf_decode(table_data)
+                    .map(|script| TTFTagged::new(sr.tag, script))
+            })
+            .collect::<DecodeResult<Vec<_>>>()
+            .map(Self)
     }
 }
 

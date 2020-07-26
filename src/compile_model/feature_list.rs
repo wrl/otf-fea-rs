@@ -22,7 +22,7 @@ impl FeatureList {
 
 impl TTFDecode for FeatureList {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let records_count = decode_u16_be(bytes, 0);
         let records = decode_from_pool(records_count, &bytes[2..]);
 
@@ -38,7 +38,7 @@ impl TTFDecode for FeatureList {
             }
         });
 
-        Self(features.collect())
+        Ok(Self(features.collect()))
     }
 }
 

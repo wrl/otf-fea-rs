@@ -22,7 +22,7 @@ pub struct GPOS {
 
 impl TTFDecode for GPOS {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let version: Version = decode_from_slice(bytes);
 
         let offsets: Offsets = match (version.major, version.minor) {
@@ -33,12 +33,12 @@ impl TTFDecode for GPOS {
             _ => panic!()
         };
 
-        GPOS {
-            script_list: ScriptList::ttf_decode(&bytes[offsets.script..]),
-            feature_list: FeatureList::ttf_decode(&bytes[offsets.feature..]),
-            lookup_list: LookupList::ttf_decode(&bytes[offsets.lookup..]),
+        Ok(GPOS {
+            script_list: ScriptList::ttf_decode(&bytes[offsets.script..])?,
+            feature_list: FeatureList::ttf_decode(&bytes[offsets.feature..])?,
+            lookup_list: LookupList::ttf_decode(&bytes[offsets.lookup..])?,
             feature_variations: offsets.feature_variations
-        }
+        })
     }
 }
 

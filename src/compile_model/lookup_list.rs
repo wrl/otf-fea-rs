@@ -19,7 +19,7 @@ impl<T> LookupList<T> {
 
 impl<T: TTFDecode> TTFDecode for LookupList<T> {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let records_count = decode_u16_be(bytes, 0);
         let records = decode_from_pool(records_count, &bytes[2..]);
 
@@ -27,7 +27,8 @@ impl<T: TTFDecode> TTFDecode for LookupList<T> {
             .map(|offset: u16|
                 Lookup::ttf_decode(&bytes[offset as usize..]));
 
-        Self(lookups.collect())
+        lookups.collect::<DecodeResult<_>>()
+            .map(Self)
     }
 }
 
@@ -85,7 +86,7 @@ struct LookupTableHeader {
 
 impl<T: TTFDecode> TTFDecode for Lookup<T> {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> Self {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let header = decode_from_slice::<LookupTableHeader>(bytes);
 
         let lookup_flags = LookupFlags::from_bits_truncate(header.lookup_flags);
@@ -100,18 +101,17 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
 
         let subtables =
             decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
-            .map(|offset: u16| {
-                T::ttf_decode(&bytes[offset as usize..])
-            })
-            .collect();
+            .map(|offset: u16|
+                T::ttf_decode(&bytes[offset as usize..]))
+            .collect::<DecodeResult<_>>()?;
 
-        Lookup {
+        Ok(Lookup {
             lookup_type: header.lookup_type,
             lookup_flags,
             mark_filtering_set,
 
             subtables
-        }
+        })
     }
 }
 
@@ -173,7 +173,7 @@ impl Coverage {
                 decode_from_pool(count, list_slice).collect()),
 
             // FIXME: pass errors up
-            _ => return Err(DecodeError::InvalidValue("Coverage".into()))
+            _ => return Err(DecodeError::InvalidValue("format", "Coverage".into()))
         })
     }
 }
