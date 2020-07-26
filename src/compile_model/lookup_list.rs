@@ -92,6 +92,13 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
         let header = decode_from_slice::<LookupTableHeader>(bytes);
 
         let lookup_flags = LookupFlags::from_bits_truncate(header.lookup_flags);
+
+        let subtables =
+            decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
+            .map(|offset: u16|
+                T::ttf_decode(&bytes[offset as usize..]))
+            .collect::<DecodeResult<_>>()?;
+
         let mark_filtering_set =
             if lookup_flags.contains(LookupFlags::USE_MARK_FILTERING_SET) {
                 Some(decode_u16_be(bytes,
@@ -100,12 +107,6 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
             } else {
                 None
             };
-
-        let subtables =
-            decode_from_pool(header.subtable_count, &bytes[LookupTableHeader::PACKED_LEN..])
-            .map(|offset: u16|
-                T::ttf_decode(&bytes[offset as usize..]))
-            .collect::<DecodeResult<_>>()?;
 
         Ok(Lookup {
             lookup_type: header.lookup_type,
@@ -133,8 +134,17 @@ impl<T: TTFEncode> TTFEncode for Lookup<T> {
 
         buf.append(&header)?;
 
+        let mut offset = buf.bytes.len();
+        buf.bytes.resize(start + (u16::PACKED_LEN * self.subtables.len()), 0u8);
+
         if let Some(mfs) = self.mark_filtering_set {
             buf.append(&mfs)?;
+        }
+
+        for subtable in &self.subtables {
+            let st_offset = buf.append(subtable)? as u16;
+            buf.encode_at(&st_offset, offset)?;
+            offset += u16::PACKED_LEN;
         }
 
         Ok(start)
