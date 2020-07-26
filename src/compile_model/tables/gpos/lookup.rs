@@ -86,12 +86,11 @@ impl GPOSLookup {
 }
 
 impl TTFDecode for GPOSSubtable {
-    #[inline]
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let format = decode_u16_be(bytes, 0);
         let coverage = {
             let offset = decode_u16_be(bytes, 2) as usize;
-            Coverage::decode_from_be_bytes(&bytes[offset..])?
+            Coverage::ttf_decode(&bytes[offset..])?
         };
 
         let lookup = GPOSLookup::decode(bytes, format)?;

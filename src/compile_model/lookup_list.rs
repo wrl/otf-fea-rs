@@ -156,10 +156,8 @@ pub enum Coverage {
     GlyphRanges(Vec<GlyphRange>)
 }
 
-#[allow(dead_code)]
-impl Coverage {
-    #[inline]
-    pub fn decode_from_be_bytes(bytes: &[u8]) -> DecodeResult<Self> {
+impl TTFDecode for Coverage {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let format = decode_u16_be(bytes, 0);
         let count = decode_u16_be(bytes, 2);
 
