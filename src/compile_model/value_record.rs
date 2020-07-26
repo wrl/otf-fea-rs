@@ -44,8 +44,31 @@ impl ValueRecord {
     // of their fields - down to and including 0 fields in some cases. the presence of each field
     // in the encoded representation is indicated by a set bit flag in the `format` variable.
 
+    #[inline]
+    pub fn smallest_possible_format(&self) -> u16 {
+        let mut ret = 0u16;
+
+        macro_rules! set_bit_if_var_set {
+            ($shift:expr, $var:ident) => {
+                ret |= ((self.$var != 0) as u16) << $shift;
+            }
+        }
+
+        set_bit_if_var_set!(0, x_placement);
+        set_bit_if_var_set!(1, y_placement);
+        set_bit_if_var_set!(2, x_advance);
+        set_bit_if_var_set!(3, y_advance);
+
+        set_bit_if_var_set!(4, x_placement_device_offset);
+        set_bit_if_var_set!(5, y_placement_device_offset);
+        set_bit_if_var_set!(6, x_advance_device_offset);
+        set_bit_if_var_set!(7, y_advance_device_offset);
+
+        ret
+    }
+
     #[allow(unused_assignments)]
-    pub fn decode_from_be_bytes(bytes: &[u8], format: u16) -> Self {
+    pub fn decode_from_format(bytes: &[u8], format: u16) -> Self {
         let mut ret = Self {
             x_placement: 0,
             y_placement: 0,
@@ -83,7 +106,7 @@ impl ValueRecord {
     }
 
     #[allow(unused_assignments)]
-    pub fn encode_to_be_bytes(&self, bytes: &mut [u8], format: u16) {
+    pub fn encode_to_format(&self, bytes: &mut [u8], format: u16) {
         let mut bytes_idx = 0;
 
         macro_rules! write_if_in_format {

@@ -25,8 +25,8 @@ impl PairValueRecord {
         Self {
             second_glyph: decode_u16_be(bytes, 0),
             records: (
-                ValueRecord::decode_from_be_bytes(&bytes[2..], value_formats.0),
-                ValueRecord::decode_from_be_bytes(
+                ValueRecord::decode_from_format(&bytes[2..], value_formats.0),
+                ValueRecord::decode_from_format(
                     &bytes[2 + first_vr_size..], value_formats.1))
         }
     }
@@ -76,7 +76,7 @@ impl GPOSLookup {
     }
 
     #[inline]
-    fn decode(bytes: &[u8], format: u16) -> DecodeResult<Self> {
+    fn decode_from_format(bytes: &[u8], format: u16) -> DecodeResult<Self> {
         Ok(match format {
             1 => Self::PairGlyphs(Self::decode_pairs(bytes)),
             _ => return Err(DecodeError::InvalidValue("format",
@@ -93,7 +93,7 @@ impl TTFDecode for GPOSSubtable {
             Coverage::ttf_decode(&bytes[offset..])?
         };
 
-        let lookup = GPOSLookup::decode(bytes, format)?;
+        let lookup = GPOSLookup::decode_from_format(bytes, format)?;
 
         Ok(GPOSSubtable {
             coverage,
