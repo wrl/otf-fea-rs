@@ -21,7 +21,7 @@ pub struct PairValueRecord {
 }
 
 impl PairValueRecord {
-    fn decode_from_be_bytes(bytes: &[u8], first_vr_size: usize, value_formats: (u16, u16)) -> Self {
+    fn decode_with_vf(bytes: &[u8], first_vr_size: usize, value_formats: (u16, u16)) -> Self {
         Self {
             second_glyph: decode_u16_be(bytes, 0),
             records: (
@@ -29,6 +29,15 @@ impl PairValueRecord {
                 ValueRecord::decode_from_format(
                     &bytes[2 + first_vr_size..], value_formats.1))
         }
+    }
+
+    fn encode_with_vf(&self, buf: &mut EncodeBuf, value_formats: (u16, u16)) -> EncodeResult<()> {
+        buf.append(&self.second_glyph)?;
+
+        self.records.0.encode_to_format(buf, value_formats.0)?;
+        self.records.1.encode_to_format(buf, value_formats.1)?;
+
+        Ok(())
     }
 }
 
@@ -67,7 +76,7 @@ impl GPOSLookup {
                 (0..count)
                     .map(|i| {
                         let start = 2 + (i as usize * encoded_table_len);
-                        PairValueRecord::decode_from_be_bytes(&table[start..],
+                        PairValueRecord::decode_with_vf(&table[start..],
                             vr_sizes.0 as usize, value_formats)
                     })
                 .collect()
@@ -81,7 +90,7 @@ impl GPOSLookup {
 
         buf.bytes.resize(start + PairPosFormat1Header::PACKED_LEN, 0u8);
 
-        let value_records = glyphs.iter()
+        let value_formats = glyphs.iter()
             .map(|records| {
                 records.iter().fold((0u16, 0u16), |vr, pair|
                     (vr.0 | pair.records.0.smallest_possible_format(),
@@ -92,11 +101,26 @@ impl GPOSLookup {
                         vr.1 | smallest.1)
             });
 
+        let mut record_start = buf.bytes.len();
+        buf.bytes.resize(record_start + (u16::PACKED_LEN * glyphs.len()), 0u8);
+
+        for set in glyphs {
+            let offset = (buf.bytes.len() - start) as u16;
+            buf.encode_at(&offset, record_start)?;
+            record_start += u16::PACKED_LEN;
+
+            buf.append(&(set.len() as u16))?;
+
+            for pair in set {
+                pair.encode_with_vf(buf, value_formats)?;
+            }
+        }
+
         let header = PairPosFormat1Header {
             format: 1,
             coverage_offset: 42440,
-            value_format_1: value_records.0,
-            value_format_2: value_records.1,
+            value_format_1: value_formats.0,
+            value_format_2: value_formats.1,
             pair_set_count: glyphs.len() as u16
         };
 

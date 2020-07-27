@@ -1,5 +1,6 @@
 use std::fmt;
 use crate::compile_model::util::decode::*;
+use crate::compile_model::util::encode::*;
 
 pub struct ValueRecord {
     pub x_placement: i16,
@@ -106,15 +107,11 @@ impl ValueRecord {
     }
 
     #[allow(unused_assignments)]
-    pub fn encode_to_format(&self, bytes: &mut [u8], format: u16) {
-        let mut bytes_idx = 0;
-
+    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16) -> EncodeResult<()> {
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
-                    &bytes[bytes_idx..bytes_idx + 2]
-                        .copy_from_slice(&self.$var.to_be_bytes());
-                    bytes_idx += 2;
+                    buf.append(&self.$var)?;
                 }
             }
         }
@@ -128,5 +125,7 @@ impl ValueRecord {
         write_if_in_format!(5, y_placement_device_offset);
         write_if_in_format!(6, x_advance_device_offset);
         write_if_in_format!(7, y_advance_device_offset);
+
+        Ok(())
     }
 }
