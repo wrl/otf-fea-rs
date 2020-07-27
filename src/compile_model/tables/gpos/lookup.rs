@@ -76,6 +76,36 @@ impl GPOSLookup {
     }
 
     #[inline]
+    fn encode_pair_glyphs(glyphs: &[Vec<PairValueRecord>], buf: &mut EncodeBuf, coverage: &Coverage) -> EncodeResult<usize> {
+        let start = buf.bytes.len();
+
+        buf.bytes.resize(start + PairPosFormat1Header::PACKED_LEN, 0u8);
+
+        let value_records = glyphs.iter()
+            .map(|records| {
+                records.iter().fold((0u16, 0u16), |vr, pair|
+                    (vr.0 | pair.records.0.smallest_possible_format(),
+                        vr.1 | pair.records.1.smallest_possible_format()))
+            })
+            .fold((0u16, 0u16), |vr, smallest| {
+                    (vr.0 | smallest.0,
+                        vr.1 | smallest.1)
+            });
+
+        let header = PairPosFormat1Header {
+            format: 1,
+            coverage_offset: 42440,
+            value_format_1: value_records.0,
+            value_format_2: value_records.1,
+            pair_set_count: glyphs.len() as u16
+        };
+
+        buf.encode_at(&header, start)?;
+
+        Ok(start)
+    }
+
+    #[inline]
     fn decode_from_format(bytes: &[u8], format: u16) -> DecodeResult<Self> {
         Ok(match format {
             1 => Self::PairGlyphs(Self::decode_pairs(bytes)),
@@ -83,10 +113,20 @@ impl GPOSLookup {
                     "GPOS subtable".into()))
         })
     }
+
+    #[inline]
+    fn encode_with_coverage(&self, buf: &mut EncodeBuf, coverage: &Coverage) -> EncodeResult<usize> {
+        match self {
+            Self::PairGlyphs(value_records) =>
+                Self::encode_pair_glyphs(value_records.as_slice(), buf, coverage)
+        }
+    }
 }
 
 impl TTFDecode for GPOSSubtable {
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
+        // FIXME: need to pass through lookup_type
+
         let format = decode_u16_be(bytes, 0);
         let coverage = {
             let offset = decode_u16_be(bytes, 2) as usize;
@@ -104,6 +144,6 @@ impl TTFDecode for GPOSSubtable {
 
 impl TTFEncode for GPOSSubtable {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        Ok(buf.bytes.len())
+        self.lookup.encode_with_coverage(buf, &self.coverage)
     }
 }

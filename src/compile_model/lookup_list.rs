@@ -134,17 +134,18 @@ impl<T: TTFEncode> TTFEncode for Lookup<T> {
 
         buf.append(&header)?;
 
-        let mut offset = buf.bytes.len();
-        buf.bytes.resize(start + (u16::PACKED_LEN * self.subtables.len()), 0u8);
+        let mut subtable_offset_start = buf.bytes.len();
+        buf.bytes.resize(subtable_offset_start + (u16::PACKED_LEN * self.subtables.len()), 0u8);
 
         if let Some(mfs) = self.mark_filtering_set {
             buf.append(&mfs)?;
         }
 
         for subtable in &self.subtables {
-            let st_offset = buf.append(subtable)? as u16;
-            buf.encode_at(&st_offset, offset)?;
-            offset += u16::PACKED_LEN;
+            let offset = (buf.append(subtable)? - start) as u16;
+            buf.encode_at(&offset, subtable_offset_start)?;
+
+            subtable_offset_start += u16::PACKED_LEN;
         }
 
         Ok(start)

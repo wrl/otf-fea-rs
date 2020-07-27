@@ -1,3 +1,5 @@
+use std::any;
+
 use endian_codec::EncodeBE;
 
 pub use crate::compile_model::error::{
@@ -32,9 +34,7 @@ impl EncodeBuf {
         let end = start + T::PACKED_LEN;
 
         if end > self.bytes.len() {
-            // FIXME: does this correctly stringify the type name,
-            // or do we just get a string of "T"?
-            return Err(EncodeError::BufferTooSmallForType(stringify!(T)));
+            return Err(EncodeError::BufferTooSmallForType(any::type_name::<T>()));
         }
 
         val.encode_as_be_bytes(&mut self.bytes[start..end]);
