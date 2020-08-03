@@ -16,6 +16,31 @@ pub struct GlyphRange {
     pub start_coverage_index: u16
 }
 
+fn decode_coverage<'a>(bytes: &'a [u8]) -> DecodeResult<impl Iterator<Item = u16> + 'a> {
+    let format = decode_u16_be(bytes, 0);
+    let count = decode_u16_be(bytes, 2);
+
+    let list_slice = &bytes[4..];
+
+    let glyphs_iter = match format {
+        1 => Either2::A(decode_from_pool(count, list_slice)),
+
+        2 => {
+            let glyphs = decode_from_pool(count, list_slice)
+                .flat_map(|r: GlyphRange| {
+                    r.start..(r.end + 1)
+                });
+
+            Either2::B(glyphs)
+        },
+
+        _ => return Err(
+            DecodeError::InvalidValue("format", "Coverage".into()))
+    };
+
+    Ok(glyphs_iter)
+}
+
 #[derive(Debug)]
 pub struct CoverageLookup<T>(pub BTreeMap<u16, T>);
 
@@ -29,17 +54,23 @@ impl<T> CoverageLookup<T> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    #[inline]
+    pub fn decode_with_lookup<I>(coverage_bytes: &[u8], lookup_iter: I) -> DecodeResult<Self>
+        where I: Iterator<Item = T>
+    {
+        let decode_iter = decode_coverage(coverage_bytes)?;
+
+        Ok(CoverageLookup(
+            decode_iter.zip(lookup_iter)
+                .collect()
+        ))
+    }
 }
 
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Coverage(pub Vec<u16>);
-
-impl Coverage {
-    pub(crate) fn into_glyphs(self) -> Vec<u16> {
-        self.0
-    }
-}
 
 impl<A, B, T> Iterator for Either2<A, B>
     where A: Iterator<Item = T>,
@@ -52,33 +83,6 @@ impl<A, B, T> Iterator for Either2<A, B>
             Either2::A(inner) => inner.next(),
             Either2::B(inner) => inner.next()
         }
-    }
-}
-
-impl TTFDecode for Coverage {
-    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
-        let format = decode_u16_be(bytes, 0);
-        let count = decode_u16_be(bytes, 2);
-
-        let list_slice = &bytes[4..];
-
-        let glyphs = match format {
-            1 => Either2::A(decode_from_pool(count, list_slice)),
-
-            2 => {
-                let glyphs = decode_from_pool(count, list_slice)
-                    .flat_map(|r: GlyphRange| {
-                        r.start..(r.end + 1)
-                    });
-
-                Either2::B(glyphs)
-            },
-
-            _ => return Err(
-                DecodeError::InvalidValue("format", "Coverage".into()))
-        };
-
-        Ok(Coverage(glyphs.collect()))
     }
 }
 

@@ -55,7 +55,7 @@ pub struct GPOSSubtable {
 
 impl GPOSLookup {
     #[inline]
-    fn decode_pairs(bytes: &[u8], coverage: Coverage) -> CoverageLookup<PairSet> {
+    fn decode_pairs(bytes: &[u8], coverage_bytes: &[u8]) -> DecodeResult<CoverageLookup<PairSet>> {
         let header: PairPosFormat1Header = decode_from_slice(bytes);
 
         let value_formats =
@@ -85,11 +85,7 @@ impl GPOSLookup {
                 .collect()
             });
 
-        CoverageLookup(
-            coverage.into_glyphs().into_iter()
-            .zip(sets)
-            .collect()
-        )
+        CoverageLookup::decode_with_lookup(coverage_bytes, sets)
     }
 
     #[inline]
@@ -138,12 +134,12 @@ impl GPOSLookup {
     }
 
     #[inline]
-    fn decode_from_format(bytes: &[u8], coverage: Coverage, format: u16) -> DecodeResult<Self> {
-        Ok(match format {
-            1 => Self::PairGlyphs(Self::decode_pairs(bytes, coverage)),
+    fn decode_from_format(bytes: &[u8], coverage_bytes: &[u8], format: u16) -> DecodeResult<Self> {
+        match format {
+            1 => Self::decode_pairs(bytes, coverage_bytes).map(Self::PairGlyphs),
             _ => return Err(DecodeError::InvalidValue("format",
                     "GPOS subtable".into()))
-        })
+        }
     }
 
     #[inline]
@@ -159,12 +155,12 @@ impl TTFDecode for GPOSSubtable {
         // FIXME: need to pass through lookup_type
 
         let format = decode_u16_be(bytes, 0);
-        let coverage = {
+        let coverage_bytes = {
             let offset = decode_u16_be(bytes, 2) as usize;
-            Coverage::ttf_decode(&bytes[offset..])?
+            &bytes[offset..]
         };
 
-        let lookup = GPOSLookup::decode_from_format(bytes, coverage, format)?;
+        let lookup = GPOSLookup::decode_from_format(bytes, coverage_bytes, format)?;
 
         Ok(GPOSSubtable {
             lookup
