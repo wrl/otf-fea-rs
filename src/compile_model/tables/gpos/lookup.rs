@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
@@ -14,7 +16,7 @@ struct PairPosFormat1Header {
     pub pair_set_count: u16
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct PairValueRecord {
     pub second_glyph: u16,
     pub records: (ValueRecord, ValueRecord)
@@ -74,8 +76,6 @@ impl GPOSLookup {
                 let table = &bytes[offset as usize..];
                 let count = decode_u16_be(table, 0);
 
-                println!("{}", offset);
-
                 (0..count)
                     .map(|i| {
                         let start = 2 + (i as usize * encoded_table_len);
@@ -108,10 +108,21 @@ impl GPOSLookup {
         let mut record_start = buf.bytes.len();
         buf.bytes.resize(record_start + (u16::PACKED_LEN * sets.len()), 0u8);
 
+        let mut dedup = HashMap::new();
+
         for set in sets.values() {
+            if let Some(offset) = dedup.get(&set) {
+                buf.encode_at(offset, record_start)?;
+                record_start += u16::PACKED_LEN;
+
+                continue;
+            }
+
             let offset = (buf.bytes.len() - start) as u16;
             buf.encode_at(&offset, record_start)?;
             record_start += u16::PACKED_LEN;
+
+            dedup.insert(set, offset);
 
             buf.append(&(set.len() as u16))?;
 

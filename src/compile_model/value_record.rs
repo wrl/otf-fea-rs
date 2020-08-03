@@ -2,6 +2,7 @@ use std::fmt;
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct ValueRecord {
     pub x_placement: i16,
     pub y_placement: i16,

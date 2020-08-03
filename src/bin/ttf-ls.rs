@@ -65,6 +65,8 @@ fn display_gpos(table_data: &[u8]) {
     let bytes = buf.as_bytes();
     println!("ours: {:?}", &bytes[44..80]);
     println!("src:  {:?}", &table_data[44..bytes.len().min(80)]);
+
+    println!("\n{}", &bytes[44..] == &table_data[44..bytes.len()]);
 }
 
 ////
