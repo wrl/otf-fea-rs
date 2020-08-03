@@ -24,6 +24,8 @@ pub use lookup_list::{
     Lookup
 };
 
+mod coverage;
+
 mod error;
 pub use error::*;
 
