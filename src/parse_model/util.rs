@@ -39,6 +39,11 @@ use combine::parser::byte::{
     digit
 };
 
+pub(crate) use crate::util::{
+    Either2,
+    Either3
+};
+
 use crate::parser::FeaRsStream;
 
 pub use combine::stream::StreamErrorFor;
@@ -189,17 +194,6 @@ pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output 
                         StreamErrorFor::<Input>::expected_static_message(
                             "couldn't parse digits as f64")).into())
         })
-}
-
-pub(crate) enum Either2<A,B> {
-    A(A),
-    B(B)
-}
-
-pub(crate) enum Either3<A,B,C> {
-    A(A),
-    B(B),
-    C(C)
 }
 
 #[inline]

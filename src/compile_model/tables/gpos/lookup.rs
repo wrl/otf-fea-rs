@@ -85,23 +85,11 @@ impl GPOSLookup {
                 .collect()
             });
 
-        match coverage {
-            Coverage::Glyphs(glyphs) => {
-                CoverageLookup::Glyphs(
-                    glyphs.into_iter()
-                        .zip(sets)
-                        .collect()
-                )
-            },
-
-            Coverage::GlyphRanges(ranges) => {
-                CoverageLookup::GlyphRanges(
-                    ranges.into_iter()
-                        .zip(sets)
-                        .collect()
-                )
-            }
-        }
+        CoverageLookup(
+            coverage.into_glyphs().into_iter()
+            .zip(sets)
+            .collect()
+        )
     }
 
     #[inline]

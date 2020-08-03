@@ -5,5 +5,7 @@ pub mod parse_model;
 
 pub mod compiler;
 
+mod util;
+
 #[macro_use]
 pub mod compile_model;

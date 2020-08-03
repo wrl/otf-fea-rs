@@ -1,80 +1,58 @@
-use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::collections::BTreeMap;
-use std::collections::btree_map::Values;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
+
+use crate::util::Either2;
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
 
-#[derive(Eq, PartialOrd, Debug, PackedSize, DecodeBE, EncodeBE)]
+#[derive(Debug, PackedSize, DecodeBE, EncodeBE)]
 pub struct GlyphRange {
     pub start: u16,
     pub end: u16,
     pub start_coverage_index: u16
 }
 
-impl Ord for GlyphRange {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.start.cmp(&other.start)
-    }
-}
-
-impl PartialEq for GlyphRange {
-    fn eq(&self, other: &Self) -> bool {
-        self.start == other.start
-    }
-}
-
 #[derive(Debug)]
-pub enum CoverageLookup<T> {
-    Glyphs(BTreeMap<u16, T>),
-    GlyphRanges(BTreeMap<GlyphRange, T>)
-}
-
-#[derive(Debug)]
-pub enum CoverageValues<'a, T> {
-    OfGlyphs(Values<'a, u16, T>),
-    OfGlyphRanges(Values<'a, GlyphRange, T>)
-}
-
-impl<'a, T> Iterator for CoverageValues<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<&'a T> {
-        match self {
-            CoverageValues::OfGlyphs(g) => g.next(),
-            CoverageValues::OfGlyphRanges(r) => r.next()
-        }
-    }
-}
+pub struct CoverageLookup<T>(pub BTreeMap<u16, T>);
 
 impl<T> CoverageLookup<T> {
     #[inline]
     pub fn values(&self) -> impl Iterator<Item = &T> {
-        match self {
-            CoverageLookup::Glyphs(g) =>
-                CoverageValues::OfGlyphs(g.values()),
-            CoverageLookup::GlyphRanges(r) =>
-                CoverageValues::OfGlyphRanges(r.values())
-        }
+        self.0.values()
     }
 
     #[inline]
     pub fn len(&self) -> usize {
-        match self {
-            CoverageLookup::Glyphs(g) => g.len(),
-            CoverageLookup::GlyphRanges(r) => r.len()
-        }
+        self.0.len()
     }
 }
 
 #[derive(Debug)]
-pub enum Coverage {
-    Glyphs(Vec<u16>),
-    GlyphRanges(Vec<GlyphRange>)
+#[allow(dead_code)]
+pub struct Coverage(pub Vec<u16>);
+
+impl Coverage {
+    pub(crate) fn into_glyphs(self) -> Vec<u16> {
+        self.0
+    }
+}
+
+impl<A, B, T> Iterator for Either2<A, B>
+    where A: Iterator<Item = T>,
+          B: Iterator<Item = T>
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        match self {
+            Either2::A(inner) => inner.next(),
+            Either2::B(inner) => inner.next()
+        }
+    }
 }
 
 impl TTFDecode for Coverage {
@@ -84,16 +62,23 @@ impl TTFDecode for Coverage {
 
         let list_slice = &bytes[4..];
 
-        Ok(match format {
-            1 => Self::Glyphs(
-                decode_from_pool(count, list_slice).collect()),
+        let glyphs = match format {
+            1 => Either2::A(decode_from_pool(count, list_slice)),
 
-            2 => Self::GlyphRanges(
-                decode_from_pool(count, list_slice).collect()),
+            2 => {
+                let glyphs = decode_from_pool(count, list_slice)
+                    .flat_map(|r: GlyphRange| {
+                        r.start..(r.end + 1)
+                    });
+
+                Either2::B(glyphs)
+            },
 
             _ => return Err(
                 DecodeError::InvalidValue("format", "Coverage".into()))
-        })
+        };
+
+        Ok(Coverage(glyphs.collect()))
     }
 }
 
@@ -123,10 +108,6 @@ fn encode_coverage<T: EncodeBE>(buf: &mut EncodeBuf, format: u16, data: &[T])
 
 impl TTFEncode for Coverage {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        match self {
-            Self::Glyphs(ref glyphs) => encode_coverage(buf, 1, glyphs),
-            Self::GlyphRanges(ref ranges) => encode_coverage(buf, 2, ranges)
-        }
+        encode_coverage(buf, 1, &self.0)
     }
 }
-
