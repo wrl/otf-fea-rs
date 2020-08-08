@@ -56,17 +56,12 @@ fn display_name(table_data: &[u8]) {
 fn display_gpos(table_data: &[u8]) {
     let table = tables::GPOS::ttf_decode(table_data).unwrap();
 
-    println!("\n{:#?}\n", table.script_list);
-
-    // println!("{:#?}", table);
     let mut buf = EncodeBuf::new();
     table.ttf_encode(&mut buf).unwrap();
 
     let bytes = buf.as_bytes();
-    println!("ours: {:?}", &bytes[44..]);
-    println!("src:  {:?}", &table_data[44..bytes.len()]);
-
-    println!("\n{}", &bytes[44..] == &table_data[44..bytes.len()]);
+    println!("\nround-trip de/encode match: {}",
+        &bytes[..] == &table_data[..bytes.len()]);
 }
 
 ////
