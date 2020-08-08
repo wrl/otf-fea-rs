@@ -29,8 +29,7 @@ impl TTFDecode for GPOS {
             (1, 0) => Header_1_0::decode_from_be_bytes(bytes).into(),
             (1, 1) => Header_1_1::decode_from_be_bytes(bytes).into(),
 
-            // FIXME: extend TTFDecode to return a result
-            _ => panic!()
+            _ => return Err(DecodeError::InvalidValue("version", "GPOS".into()))
         };
 
         Ok(GPOS {
