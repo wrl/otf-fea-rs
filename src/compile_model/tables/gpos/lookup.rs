@@ -133,7 +133,7 @@ impl GPOSLookup {
 
         let header = PairPosFormat1Header {
             format: 1,
-            coverage_offset: 42440,
+            coverage_offset: (sets.ttf_encode(buf)? - start) as u16,
             value_format_1: value_formats.0,
             value_format_2: value_formats.1,
             pair_set_count: sets.len() as u16
