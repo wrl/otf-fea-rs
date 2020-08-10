@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
@@ -5,18 +7,14 @@ use crate::compile_model::util::encode::*;
 
 use crate::parse_model as pm;
 
-#[derive(Debug)]
-pub struct FeatureList(Vec<Feature>);
+type LookupIndices = Vec<u16>;
 
 #[derive(Debug)]
-pub struct Feature {
-    pub tag: pm::Tag,
-    pub lookup_indices: Vec<u16>
-}
+pub struct FeatureList(pub BTreeMap<pm::Tag, LookupIndices>);
 
 impl FeatureList {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self(BTreeMap::new())
     }
 }
 
@@ -30,30 +28,27 @@ impl TTFDecode for FeatureList {
             let table = &bytes[r.feature_offset as usize..];
             let lookup_index_count = decode_u16_be(table, 2);
 
-            Feature {
-                tag: r.tag,
-                lookup_indices:
-                    decode_from_pool(lookup_index_count, &table[4..])
-                        .collect()
-            }
+            (r.tag,
+             decode_from_pool(lookup_index_count, &table[4..])
+                .collect())
         });
 
         Ok(Self(features.collect()))
     }
 }
 
-fn encode_feature_table(buf: &mut EncodeBuf, feature: &Feature) -> EncodeResult<usize>
+fn encode_feature_table(buf: &mut EncodeBuf, lookup_indices: &[u16]) -> EncodeResult<usize>
 {
     let start = buf.bytes.len();
 
     let header = FeatureTable {
         params: 0,
-        lookup_index_count: feature.lookup_indices.len() as u16
+        lookup_index_count: lookup_indices.len() as u16
     };
 
     buf.append(&header)?;
 
-    for lookup_index in feature.lookup_indices.iter() {
+    for lookup_index in lookup_indices.iter() {
         buf.append(lookup_index)?;
     }
 
@@ -71,11 +66,11 @@ impl TTFEncode for FeatureList {
 
         buf.bytes.resize(record_start + (len * FeatureRecord::PACKED_LEN), 0u8);
 
-        for feature in self.0.iter() {
+        for (tag, lookup_indices) in self.0.iter() {
             let record = FeatureRecord {
-                tag: feature.tag,
+                tag: *tag,
                 feature_offset:
-                    (encode_feature_table(buf, feature)? - start) as u16
+                    (encode_feature_table(buf, lookup_indices)? - start) as u16
             };
 
             buf.encode_at(&record, record_start)?;

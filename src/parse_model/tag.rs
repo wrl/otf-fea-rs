@@ -21,7 +21,7 @@ use combine::{
 use crate::parser::FeaRsStream;
 use super::glyph::*;
 
-#[derive(Eq, Copy, Clone)]
+#[derive(Eq, Ord, PartialOrd, Hash, Copy, Clone)]
 pub struct Tag(pub [AsciiChar; 4]);
 
 impl Tag {
