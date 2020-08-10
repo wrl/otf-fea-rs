@@ -21,13 +21,11 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
-use super::glyph_pattern::*;
 use super::value_record::*;
 use super::glyph_class::*;
 use super::class_name::*;
 use super::mark_class::*;
 use super::anchor::*;
-use super::metric::*;
 use super::util::*;
 
 #[derive(Debug)]
@@ -212,32 +210,44 @@ fn mark_to_mark<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         })
 }
 
-#[allow(dead_code)]
-fn single_adjustment<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
+fn single_or_pair<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_class_or_glyph()
         .skip(required_whitespace())
         .and(choice((
-            value_record().map(Either2::A),
+            value_record()
+                .and(optional(
+                    required_whitespace()
+                        .with(glyph_class_or_glyph())
+                        .skip(required_whitespace())
+                        .and(value_record())
+                ))
+                .map(|(vr1, second_glyph)| {
+                    match second_glyph {
+                        None => Either2::A(vr1),
+                        Some((second_glyph_class, vr2)) =>
+                            Either2::B((second_glyph_class, (vr1, Some(vr2))))
+                    }
+                }),
 
             glyph_class_or_glyph()
                 .skip(required_whitespace())
                 .and(value_record())
-                .and(optional(required_whitespace()
-                    .with(value_record())))
-                .map(|((glyph_class, vr1), vr2)|
-                    Either2::B((glyph_class, (vr1, vr2))))
+                .map(|(second_glyph_class, vr)|
+                    Either2::B((second_glyph_class, (vr, None))))
         )))
 
         .map(|(glyph_class, rest)| {
             match rest {
-                Either2::A(value_record) =>
+                Either2::A(value_record) => {
+                    println!(" yo {:?}", &glyph_class);
                     Position::SingleAdjustment {
                         glyph_class,
                         value_record
-                    },
+                    }
+                },
 
                 Either2::B((second_glyph_class, value_records)) =>
                     Position::Pair {
@@ -284,12 +294,6 @@ pub(crate) fn position<Input>() -> impl Parser<FeaRsStream<Input>, Output = Posi
                 b"cursive" => cursive(),
                 b"ligature" => ligature(),
                 b"mark" => mark_to_mark(),
-                _ => glyph_pattern()
-                    .map(|_|
-                        Position::SingleAdjustment {
-                            glyph_class: GlyphClass(vec![]),
-                            value_record: ValueRecord::Advance(Metric(0.0f64))
-                        })
-                )
+                _ => single_or_pair())
         })
 }
