@@ -16,6 +16,18 @@ impl FeatureList {
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }
+
+    pub fn indices_for_tag(&self, tag: &pm::Tag) -> &[u16] {
+        match self.0.get(tag) {
+            Some(i) => i,
+            None => &[]
+        }
+    }
+
+    pub fn indices_for_tag_mut(&mut self, tag: &pm::Tag) -> &mut LookupIndices {
+        self.0.entry(*tag)
+            .or_default()
+    }
 }
 
 impl TTFDecode for FeatureList {
@@ -67,6 +79,10 @@ impl TTFEncode for FeatureList {
         buf.bytes.resize(record_start + (len * FeatureRecord::PACKED_LEN), 0u8);
 
         for (tag, lookup_indices) in self.0.iter() {
+            if lookup_indices.len() == 0 {
+                continue
+            }
+
             let record = FeatureRecord {
                 tag: *tag,
                 feature_offset:

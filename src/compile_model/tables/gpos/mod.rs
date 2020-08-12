@@ -6,11 +6,11 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 
-mod header;
+pub mod header;
 use header::*;
 
-mod lookup;
-use lookup::*;
+pub mod lookup;
+pub use lookup::*;
 
 #[derive(Debug)]
 pub struct GPOS {
@@ -18,6 +18,17 @@ pub struct GPOS {
     pub feature_list: FeatureList,
     pub lookup_list: LookupList<GPOSSubtable>,
     pub feature_variations: Option<usize>
+}
+
+impl GPOS {
+    pub fn new() -> Self {
+        Self {
+            script_list: ScriptList::new(),
+            feature_list: FeatureList::new(),
+            lookup_list: LookupList::new(),
+            feature_variations: None
+        }
+    }
 }
 
 impl TTFDecode for GPOS {

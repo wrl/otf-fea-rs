@@ -6,7 +6,7 @@ use crate::compile_model::util::encode::*;
 
 
 #[derive(Debug)]
-pub struct LookupList<T>(Vec<Lookup<T>>);
+pub struct LookupList<T>(pub Vec<Lookup<T>>);
 
 impl<T> LookupList<T> {
     pub fn new() -> Self {
@@ -72,6 +72,18 @@ pub struct Lookup<T> {
     pub mark_filtering_set: Option<u16>,
 
     pub subtables: Vec<T>,
+}
+
+impl<T> Lookup<T> {
+    pub fn new(lookup_type: u16) -> Self {
+        Self {
+            lookup_type,
+            lookup_flags: LookupFlags::empty(),
+            mark_filtering_set: None,
+
+            subtables: Vec::new()
+        }
+    }
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]

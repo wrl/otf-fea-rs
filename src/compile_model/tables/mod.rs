@@ -1,4 +1,4 @@
-mod gpos;
+pub mod gpos;
 pub use gpos::GPOS;
 
 mod gdef;

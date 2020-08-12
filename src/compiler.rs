@@ -8,6 +8,7 @@ use crate::tag;
 
 struct CompilerState {
     pub head_table: Option<tables::Head>,
+    pub gpos_table: Option<tables::GPOS>,
     tables: Vec<(pm::Tag, Vec<u8>)>
 }
 
@@ -15,10 +16,93 @@ impl CompilerState {
     fn new() -> Self {
         Self {
             head_table: None,
+            gpos_table: None,
             tables: Vec::new(),
         }
     }
+
+    fn get_gpos(&mut self) -> &mut tables::GPOS {
+        self.gpos_table
+            .get_or_insert_with(|| tables::GPOS::new())
+    }
 }
+
+/**
+ * feature definitions
+ */
+
+use tables::gpos::GPOSSubtable;
+
+fn find_lookup<'a>(gpos: &'a tables::GPOS, feature_tag: &pm::Tag, lookup_type: u16) -> Option<usize>
+{
+    let indices = gpos.feature_list.indices_for_tag(feature_tag);
+
+    for i in indices {
+        let i = *i as usize;
+
+        match gpos.lookup_list.0.get(i) {
+            Some(Lookup { lookup_type: lt, .. })
+                if *lt == lookup_type =>
+                    return Some(i),
+
+            _ => continue
+        }
+    }
+
+    None
+}
+
+fn find_or_insert_lookup<'a>(ctx: &'a mut CompilerState, feature_tag: &pm::Tag, lookup_type: u16)
+        -> &'a mut Lookup<GPOSSubtable> {
+    let gpos = ctx.get_gpos();
+
+    let idx = match find_lookup(gpos, feature_tag, lookup_type) {
+        Some(idx) => idx,
+        None => {
+            let indices = gpos.feature_list.indices_for_tag_mut(feature_tag);
+            let idx = gpos.lookup_list.0.len();
+
+            indices.push(idx as u16);
+            gpos.lookup_list.0.push(Lookup::new(lookup_type));
+
+            idx
+        }
+    };
+
+    &mut gpos.lookup_list.0[idx]
+}
+
+fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: &pm::Position) {
+    use pm::Position::*;
+
+    match p {
+        Pair { glyph_classes, value_records } => {
+            // FIXME: type 2 is pairpos
+            let _lookup = find_or_insert_lookup(ctx, feature_tag, 2);
+        },
+
+        _ => (),
+    };
+}
+
+fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinition) {
+    use pm::BlockStatement::*;
+
+    let tag = &def.tag;
+
+    println!("feature {}:", tag);
+
+    for s in &def.statements {
+        match s {
+            Position(pos) => handle_position_statement(ctx, tag, pos),
+            _ => ()
+        }
+    }
+}
+
+/**
+ * simple top level
+ */
 
 fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
     let pm::Table { tag, statements } = table;
@@ -40,6 +124,7 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
 
     match statement {
         Table(ref t) => handle_table(ctx, t),
+        FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd),
 
         s => println!("unhandled {:#?}\n", s),
     }
@@ -110,8 +195,13 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     buf.resize(util::align_len(buf.len()), 0u8);
 
     if let Some(ref mut head) = ctx.head_table {
-        head.checksum_adjustment = 0xB1B0AFBAu32.overflowing_sub(
-            util::checksum(&buf).overflowing_add(running_checksum).0).0;
+        head.checksum_adjustment = {
+            let whole_file_checksum = util::checksum(&buf);
+
+            0xB1B0AFBAu32
+                .overflowing_sub(whole_file_checksum).0
+                .overflowing_add(running_checksum).0
+        };
 
         head.encode_as_be_bytes(&mut ctx.tables[0].1);
     }
@@ -132,6 +222,10 @@ pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
     }
 
     actually_compile(&mut ctx, out);
+
+    if let Some(gpos) = ctx.gpos_table.as_ref() {
+        println!("{:#?}", gpos);
+    }
 }
 
 pub fn compile(statements: &[pm::TopLevelStatement], out: &mut Vec<u8>) {

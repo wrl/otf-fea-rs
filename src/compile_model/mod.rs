@@ -21,6 +21,7 @@ pub use feature_list::{
 mod lookup_list;
 pub use lookup_list::{
     LookupList,
+    LookupFlags,
     Lookup
 };
 
