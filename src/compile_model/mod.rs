@@ -26,11 +26,13 @@ pub use lookup_list::{
 };
 
 mod coverage;
+pub use coverage::CoverageLookup;
 
 mod error;
 pub use error::*;
 
-pub mod value_record;
+mod value_record;
+pub use value_record::ValueRecord;
 
 #[macro_use]
 pub mod util;

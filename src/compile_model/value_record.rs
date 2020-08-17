@@ -3,7 +3,9 @@ use std::fmt;
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
-#[derive(Hash, PartialEq, Eq)]
+use crate::parse_model as pm;
+
+#[derive(Hash, PartialEq, Eq, Clone)]
 pub struct ValueRecord {
     pub x_placement: i16,
     pub y_placement: i16,
@@ -42,7 +44,61 @@ impl fmt::Debug for ValueRecord {
     }
 }
 
+// FIXME: actually check
+#[inline]
+fn metric_to_i16_checked(x: &pm::Metric) -> i16 {
+    x.0.trunc() as i16
+}
+
 impl ValueRecord {
+    #[inline]
+    pub fn zero() -> Self {
+        Self {
+            x_placement: 0,
+            y_placement: 0,
+            x_advance: 0,
+            y_advance: 0,
+
+            x_placement_device_offset: 0,
+            y_placement_device_offset: 0,
+            x_advance_device_offset: 0,
+            y_advance_device_offset: 0
+        }
+    }
+
+    // FIXME: return a result if the f64 -> i16 fails
+    pub fn from_parsed(parsed: &pm::ValueRecord, vertical: bool) -> Self {
+        use pm::ValueRecord::*;
+
+        match parsed {
+            Advance(metric) if vertical => Self {
+                y_advance: metric_to_i16_checked(metric),
+                ..Self::zero()
+            },
+
+            Advance(metric) => Self {
+                x_advance: metric_to_i16_checked(metric),
+                ..Self::zero()
+            },
+
+            PlacementAdvance {
+                x_placement, y_placement,
+                x_advance, y_advance
+            } => Self {
+                x_placement: metric_to_i16_checked(x_placement),
+                y_placement: metric_to_i16_checked(y_placement),
+                x_advance: metric_to_i16_checked(x_advance),
+                y_advance: metric_to_i16_checked(y_advance),
+
+                ..Self::zero()
+            },
+
+            DeviceAdjusted { .. } => panic!(),
+
+            Null => Self::zero(),
+        }
+    }
+
     // to keep encoded data size as small as possible, ValueRecords can be encoded to just a subset
     // of their fields - down to and including 0 fields in some cases. the presence of each field
     // in the encoded representation is indicated by a set bit flag in the `format` variable.

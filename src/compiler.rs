@@ -31,7 +31,11 @@ impl CompilerState {
  * feature definitions
  */
 
-use tables::gpos::GPOSSubtable;
+use tables::gpos::{
+    GPOSSubtable,
+    GPOSLookup,
+    PairValueRecord,
+};
 
 fn find_lookup<'a>(gpos: &'a tables::GPOS, feature_tag: &pm::Tag, lookup_type: u16) -> Option<usize>
 {
@@ -72,13 +76,67 @@ fn find_or_insert_lookup<'a>(ctx: &'a mut CompilerState, feature_tag: &pm::Tag, 
     &mut gpos.lookup_list.0[idx]
 }
 
+fn glyph_ref_as_u16(gr: &pm::GlyphRef) -> u16 {
+    use pm::GlyphRef::*;
+
+    match gr {
+        Name(gn) => gn.0[0] as u16,
+        CID(cid) => cid.0 as u16
+    }
+}
+
+fn glyph_class_iter<'a>(gc: &'a pm::GlyphClass) -> impl Iterator<Item = u16> + 'a {
+    use pm::GlyphClassItem::*;
+
+    gc.0.iter()
+        .map(|i: &pm::GlyphClassItem|
+            match i {
+                Single(glyph) => glyph_ref_as_u16(glyph),
+                Range { .. } => panic!(),
+                ClassRef(_) => panic!()
+            }
+        )
+}
+
 fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: &pm::Position) {
     use pm::Position::*;
 
     match p {
         Pair { glyph_classes, value_records } => {
-            // FIXME: type 2 is pairpos
-            let _lookup = find_or_insert_lookup(ctx, feature_tag, 2);
+            let lookup = find_or_insert_lookup(ctx, feature_tag, 2);
+
+            if lookup.subtables.len() == 0 {
+                lookup.subtables.push(GPOSSubtable {
+                    lookup: GPOSLookup::PairGlyphs(CoverageLookup::new())
+                });
+            }
+
+            let pair_lookup = {
+                let subtable = &mut lookup.subtables[0];
+
+                match subtable.lookup {
+                    GPOSLookup::PairGlyphs(ref mut cl) => cl
+                }
+            };
+
+            for first_glyph in glyph_class_iter(&glyph_classes.0) {
+                let pairs = pair_lookup.0.entry(first_glyph)
+                    .or_default();
+
+                let vr1 = ValueRecord::from_parsed(&value_records.0, false);
+                let vr2 = value_records.1.as_ref()
+                    .map(|vr| ValueRecord::from_parsed(vr, false))
+                    .unwrap_or_else(|| ValueRecord::zero());
+
+                for second_glyph in glyph_class_iter(&glyph_classes.1) {
+                    let pvr = PairValueRecord {
+                        second_glyph,
+                        records: (vr1.clone(), vr2.clone())
+                    };
+
+                    pairs.push(pvr);
+                }
+            }
         },
 
         _ => (),

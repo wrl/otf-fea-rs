@@ -118,6 +118,11 @@ fn contiguous_ranges<T, I>(inner: I) -> ContiguousRanges<T, I>
 
 impl<T> CoverageLookup<T> {
     #[inline]
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    #[inline]
     pub fn values(&self) -> impl Iterator<Item = &T> {
         self.0.values()
     }

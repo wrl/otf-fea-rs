@@ -43,7 +43,7 @@ pub enum Position {
 
     // GPOS type 2
     Pair {
-        glyph_classes: [GlyphClass; 2],
+        glyph_classes: (GlyphClass, GlyphClass),
         value_records: (ValueRecord, Option<ValueRecord>)
     },
 
@@ -251,7 +251,7 @@ fn single_or_pair<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 
                 Either2::B((second_glyph_class, value_records)) =>
                     Position::Pair {
-                        glyph_classes: [glyph_class, second_glyph_class],
+                        glyph_classes: (glyph_class, second_glyph_class),
                         value_records
                     }
             }
