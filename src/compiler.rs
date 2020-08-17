@@ -1,7 +1,9 @@
 use crate::parse_model as pm;
 
 use endian_codec::{PackedSize, EncodeBE};
+
 use crate::compile_model::*;
+use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
 
 use crate::tag;
@@ -277,6 +279,20 @@ pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
 
     for s in statements {
         handle_top_level(&mut ctx, &s);
+    }
+
+    if ctx.head_table.is_none() {
+        ctx.head_table = Some(tables::Head::new());
+    }
+
+    if let Some(gpos) = ctx.gpos_table.as_ref() {
+        let mut buf = EncodeBuf::new();
+        gpos.ttf_encode(&mut buf).unwrap();
+
+        ctx.tables.push((
+            tag!(G,P,O,S),
+            buf.bytes
+        ));
     }
 
     actually_compile(&mut ctx, out);
