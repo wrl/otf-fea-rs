@@ -259,8 +259,10 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
             let whole_file_checksum = util::checksum(&buf);
 
             0xB1B0AFBAu32
-                .overflowing_sub(whole_file_checksum).0
-                .overflowing_add(running_checksum).0
+                .overflowing_sub(
+                    whole_file_checksum
+                        .overflowing_add(running_checksum).0)
+                .0
         };
 
         head.encode_as_be_bytes(&mut ctx.tables[0].1);
