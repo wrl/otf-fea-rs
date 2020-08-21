@@ -2,6 +2,7 @@ use crate::parse_model as pm;
 
 use endian_codec::{PackedSize, EncodeBE};
 
+use crate::GlyphOrder;
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
@@ -9,6 +10,8 @@ use crate::compile_model::util;
 use crate::tag;
 
 struct CompilerState {
+    pub glyph_order: GlyphOrder,
+
     pub head_table: Option<tables::Head>,
     pub gpos_table: Option<tables::GPOS>,
     tables: Vec<(pm::Tag, Vec<u8>)>
@@ -17,8 +20,11 @@ struct CompilerState {
 impl CompilerState {
     fn new() -> Self {
         Self {
+            glyph_order: GlyphOrder::new(),
+
             head_table: None,
             gpos_table: None,
+
             tables: Vec::new(),
         }
     }
@@ -274,10 +280,12 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     }
 }
 
-pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
+pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec<u8>)
     where I: Iterator<Item = &'a pm::TopLevelStatement>
 {
     let mut ctx = CompilerState::new();
+
+    ctx.glyph_order = glyph_order;
 
     for s in statements {
         handle_top_level(&mut ctx, &s);
@@ -304,6 +312,7 @@ pub fn compile_iter<'a, I>(statements: I, out: &mut Vec<u8>)
     }
 }
 
-pub fn compile(statements: &[pm::TopLevelStatement], out: &mut Vec<u8>) {
-    compile_iter(statements.iter(), out)
+pub fn compile(glyph_order: GlyphOrder, statements: &[pm::TopLevelStatement],
+        out: &mut Vec<u8>) {
+    compile_iter(glyph_order, statements.iter(), out)
 }

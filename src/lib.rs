@@ -1,5 +1,8 @@
 mod glyph_order;
-pub use glyph_order::GlyphOrder;
+pub use glyph_order::{
+    GlyphOrder,
+    IntoGlyphOrder
+};
 
 pub mod parser;
 pub mod parse_model;

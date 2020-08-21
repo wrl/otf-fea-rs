@@ -1,10 +1,17 @@
 use std::collections::HashMap;
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct TooManyGlyphs;
 pub struct GlyphOrder(HashMap<String, u16>);
 
-pub trait GlyphOrderExt<T>: Iterator<Item = T>
+impl GlyphOrder {
+    pub(crate) fn new() -> Self {
+        Self(HashMap::new())
+    }
+}
+
+pub trait IntoGlyphOrder<T>: Iterator<Item = T>
     where T: ToString,
           Self: Sized
 {
@@ -23,7 +30,7 @@ pub trait GlyphOrderExt<T>: Iterator<Item = T>
     }
 }
 
-impl<T, I> GlyphOrderExt<T> for I
+impl<T, I> IntoGlyphOrder<T> for I
     where T: ToString,
           I: Iterator<Item = T> + Sized
 {}
