@@ -1,3 +1,6 @@
+// just to silence a warning
+#![allow(bindings_with_variant_name)]
+
 mod anchor;
 pub use anchor::*;
 

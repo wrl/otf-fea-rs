@@ -1,4 +1,5 @@
-#![allow(bindings_with_variant_name)]
+mod glyph_order;
+pub use glyph_order::GlyphOrder;
 
 pub mod parser;
 pub mod parse_model;
