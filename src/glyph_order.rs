@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use ascii::AsAsciiStr;
+
+use crate::parse_model::GlyphRef;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -8,6 +11,18 @@ pub struct GlyphOrder(HashMap<String, u16>);
 impl GlyphOrder {
     pub(crate) fn new() -> Self {
         Self(HashMap::new())
+    }
+
+    pub(crate) fn id_for_glyph(&self, glyph: &GlyphRef) -> Option<u16> {
+        match glyph {
+            GlyphRef::Name(name) => {
+                let s = name.0.as_ascii_str().unwrap().as_str();
+                self.0.get(s)
+                    .map(|x| *x)
+            },
+
+            GlyphRef::CID(_) => None
+        }
     }
 }
 

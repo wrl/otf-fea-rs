@@ -28,11 +28,6 @@ impl CompilerState {
             tables: Vec::new(),
         }
     }
-
-    fn get_gpos(&mut self) -> &mut tables::GPOS {
-        self.gpos_table
-            .get_or_insert_with(|| tables::GPOS::new())
-    }
 }
 
 /**
@@ -64,9 +59,9 @@ fn find_lookup<'a>(gpos: &'a tables::GPOS, feature_tag: &pm::Tag, lookup_type: u
     None
 }
 
-fn find_or_insert_lookup<'a>(ctx: &'a mut CompilerState, feature_tag: &pm::Tag, lookup_type: u16)
+fn find_or_insert_lookup<'a>(gpos: &'a mut Option<tables::GPOS>, feature_tag: &pm::Tag, lookup_type: u16)
         -> &'a mut Lookup<GPOSSubtable> {
-    let gpos = ctx.get_gpos();
+    let gpos = gpos.get_or_insert_with(|| tables::GPOS::new());
 
     let idx = match find_lookup(gpos, feature_tag, lookup_type) {
         Some(idx) => idx,
@@ -84,22 +79,20 @@ fn find_or_insert_lookup<'a>(ctx: &'a mut CompilerState, feature_tag: &pm::Tag, 
     &mut gpos.lookup_list.0[idx]
 }
 
-fn glyph_ref_as_u16(gr: &pm::GlyphRef) -> u16 {
-    use pm::GlyphRef::*;
-
-    match gr {
-        Name(gn) => gn.0[0] as u16,
-        CID(cid) => cid.0 as u16
+fn glyph_ref_as_u16(glyph_order: &GlyphOrder, gr: &pm::GlyphRef) -> u16 {
+    match glyph_order.id_for_glyph(gr) {
+        Some(id) => id,
+        None => panic!()
     }
 }
 
-fn glyph_class_iter<'a>(gc: &'a pm::GlyphClass) -> impl Iterator<Item = u16> + 'a {
+fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> impl Iterator<Item = u16> + 'a {
     use pm::GlyphClassItem::*;
 
     gc.0.iter()
-        .map(|i: &pm::GlyphClassItem|
+        .map(move |i: &pm::GlyphClassItem|
             match i {
-                Single(glyph) => glyph_ref_as_u16(glyph),
+                Single(glyph) => glyph_ref_as_u16(glyph_order, glyph),
                 Range { .. } => panic!(),
                 ClassRef(_) => panic!()
             }
@@ -111,7 +104,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: 
 
     match p {
         Pair { glyph_classes, value_records } => {
-            let lookup = find_or_insert_lookup(ctx, feature_tag, 2);
+            let lookup = find_or_insert_lookup(&mut ctx.gpos_table, feature_tag, 2);
 
             if lookup.subtables.len() == 0 {
                 lookup.subtables.push(GPOSSubtable {
@@ -127,7 +120,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: 
                 }
             };
 
-            for first_glyph in glyph_class_iter(&glyph_classes.0) {
+            for first_glyph in glyph_class_iter(&ctx.glyph_order, &glyph_classes.0) {
                 let pairs = pair_lookup.0.entry(first_glyph)
                     .or_default();
 
@@ -136,7 +129,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: 
                     .map(|vr| ValueRecord::from_parsed(vr, false))
                     .unwrap_or_else(|| ValueRecord::zero());
 
-                for second_glyph in glyph_class_iter(&glyph_classes.1) {
+                for second_glyph in glyph_class_iter(&ctx.glyph_order, &glyph_classes.1) {
                     let pvr = PairValueRecord {
                         second_glyph,
                         records: (vr1.clone(), vr2.clone())
