@@ -13,10 +13,9 @@ use combine::{
 };
 
 use crate::tag::*;
+use crate::glyph::*;
 
 use crate::parser::FeaRsStream;
-
-use super::glyph::*;
 
 
 pub(crate) fn tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = Tag>

@@ -10,6 +10,8 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph::*;
+
 use super::block::*;
 use super::glyph::*;
 use super::util::*;

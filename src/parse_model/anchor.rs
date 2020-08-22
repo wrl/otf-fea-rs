@@ -10,6 +10,8 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph::*;
+
 use super::contour_point::*;
 use super::metric::*;
 use super::device::*;

@@ -26,7 +26,6 @@ mod feature_names;
 pub use feature_names::*;
 
 mod glyph;
-pub use glyph::*;
 
 mod glyph_class;
 pub use glyph_class::*;

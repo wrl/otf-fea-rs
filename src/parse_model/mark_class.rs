@@ -7,10 +7,11 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph::*;
+
 use super::glyph_class::*;
 use super::class_name::*;
 use super::anchor::*;
-use super::glyph::*;
 use super::util::*;
 
 pub struct MarkClassName(pub GlyphNameStorage);

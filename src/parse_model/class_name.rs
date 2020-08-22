@@ -9,6 +9,8 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph::*;
+
 use super::glyph::*;
 
 pub struct ClassName(pub GlyphNameStorage);

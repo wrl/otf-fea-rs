@@ -2,15 +2,17 @@ use crate::parse_model as pm;
 
 use endian_codec::{PackedSize, EncodeBE};
 
-use crate::GlyphOrder;
-use crate::compile_model::*;
-use crate::compile_model::util::encode::*;
-use crate::compile_model::util;
-
 use crate::{
+    GlyphOrder,
     tag,
     Tag
 };
+
+use crate::glyph::*;
+
+use crate::compile_model::*;
+use crate::compile_model::util::encode::*;
+use crate::compile_model::util;
 
 struct CompilerState {
     pub glyph_order: GlyphOrder,
@@ -43,7 +45,7 @@ use tables::gpos::{
     PairValueRecord,
 };
 
-fn glyph_ref_as_u16(glyph_order: &GlyphOrder, gr: &pm::GlyphRef) -> u16 {
+fn glyph_ref_as_u16(glyph_order: &GlyphOrder, gr: &GlyphRef) -> u16 {
     match glyph_order.id_for_glyph(gr) {
         Some(id) => id,
         None => panic!()

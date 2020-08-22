@@ -11,11 +11,11 @@ use combine::{
     token
 };
 
-pub use crate::glyph::*;
-
 use arrayvec::ArrayVec;
 
+use crate::glyph::*;
 use crate::parser::FeaRsStream;
+
 use super::util::*;
 
 pub(crate) fn glyph_name_unwrapped<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphNameStorage>

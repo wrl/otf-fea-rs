@@ -14,9 +14,10 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph::*;
+
 use super::glyph_pattern::*;
 use super::glyph_class::*;
-use super::glyph::*;
 use super::util::*;
 
 #[allow(dead_code)]
