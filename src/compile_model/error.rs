@@ -1,5 +1,15 @@
 use thiserror::Error;
 
+use crate::glyph::*;
+
+pub type CompileResult<T> = Result<T, CompileError>;
+
+#[derive(Debug, Error)]
+pub enum CompileError {
+    #[error("glyph reference {0:?} not present in provided GlyphOrder")]
+    UnknownGlyphRef(GlyphRef)
+}
+
 pub type DecodeResult<T> = Result<T, DecodeError>;
 
 #[derive(Debug, Error)]

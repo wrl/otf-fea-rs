@@ -47,27 +47,35 @@ use tables::gpos::{
     PairValueRecord,
 };
 
-fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> impl Iterator<Item = u16> + 'a {
+fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> impl Iterator<Item = CompileResult<u16>> + 'a {
     use pm::GlyphClassItem::*;
 
     gc.0.iter()
         .flat_map(move |i: &pm::GlyphClassItem|
             match i {
                 Single(glyph) => {
-                    let id = glyph_order.id_for_glyph(glyph).unwrap();
-
-                    Either2::A(iter::once(id))
+                    Either2::A(iter::once(
+                        glyph_order.id_for_glyph(glyph)
+                            .ok_or_else(|| CompileError::UnknownGlyphRef(glyph.clone()))
+                    ))
                 },
 
                 Range { start, end } => {
-                    let (start, end) = match
-                        (glyph_order.id_for_glyph(start),
-                         glyph_order.id_for_glyph(end)) {
-                            (Some(start), Some(end)) => (start, end),
-                            _ => panic!()
-                        };
+                    let start = match glyph_order.id_for_glyph(start) {
+                        Some(id) => id,
+                        None => return Either2::A(iter::once(
+                                Err(CompileError::UnknownGlyphRef(start.clone()))
+                        ))
+                    };
 
-                    Either2::B(start..end+1)
+                    let end = match glyph_order.id_for_glyph(end) {
+                        Some(id) => id,
+                        None => return Either2::A(iter::once(
+                                Err(CompileError::UnknownGlyphRef(end.clone()))
+                        ))
+                    };
+
+                    Either2::B((start..end+1).map(Ok))
                 },
 
                 ClassRef(_) => panic!()
@@ -75,7 +83,7 @@ fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> 
         )
 }
 
-fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm::Position) {
+fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
     match p {
@@ -98,7 +106,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
             };
 
             for first_glyph in glyph_class_iter(&ctx.glyph_order, &glyph_classes.0) {
-                let pairs = pair_lookup.0.entry(first_glyph)
+                let pairs = pair_lookup.0.entry(first_glyph?)
                     .or_default();
 
                 let vr1 = ValueRecord::from_parsed(&value_records.0, false);
@@ -107,6 +115,8 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
                     .unwrap_or_else(|| ValueRecord::zero());
 
                 for second_glyph in glyph_class_iter(&ctx.glyph_order, &glyph_classes.1) {
+                    let second_glyph = second_glyph?;
+
                     let pvr = PairValueRecord {
                         second_glyph,
                         records: (vr1.clone(), vr2.clone())
@@ -119,9 +129,11 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
 
         _ => (),
     };
+
+    Ok(())
 }
 
-fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinition) {
+fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinition) -> CompileResult<()> {
     use pm::BlockStatement::*;
 
     let tag = &def.tag;
@@ -130,10 +142,12 @@ fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinitio
 
     for s in &def.statements {
         match s {
-            Position(pos) => handle_position_statement(ctx, tag, pos),
+            Position(pos) => handle_position_statement(ctx, tag, pos)?,
             _ => ()
         }
     }
+
+    Ok(())
 }
 
 /**
@@ -155,15 +169,17 @@ fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
     }
 }
 
-fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) {
+fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) -> CompileResult<()> {
     use pm::TopLevelStatement::*;
 
     match statement {
         Table(ref t) => handle_table(ctx, t),
-        FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd),
+        FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
 
         s => println!("unhandled {:#?}\n", s),
     }
+
+    Ok(())
 }
 
 /**
@@ -250,7 +266,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     }
 }
 
-pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec<u8>)
+pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec<u8>) -> CompileResult<()>
     where I: Iterator<Item = &'a pm::TopLevelStatement>
 {
     let mut ctx = CompilerState::new();
@@ -258,7 +274,7 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
     ctx.glyph_order = glyph_order;
 
     for s in statements {
-        handle_top_level(&mut ctx, &s);
+        handle_top_level(&mut ctx, &s)?;
     }
 
     if ctx.head_table.is_none() {
@@ -280,9 +296,11 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
     if let Some(gpos) = ctx.gpos_table.as_ref() {
         println!("{:#?}", gpos);
     }
+
+    Ok(())
 }
 
 pub fn compile(glyph_order: GlyphOrder, statements: &[pm::TopLevelStatement],
         out: &mut Vec<u8>) {
-    compile_iter(glyph_order, statements.iter(), out)
+    compile_iter(glyph_order, statements.iter(), out).unwrap()
 }
