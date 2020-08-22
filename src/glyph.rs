@@ -13,8 +13,8 @@ use arrayvec::ArrayVec;
 
 #[derive(Debug, Error)]
 pub enum GlyphError {
-    #[error("glyph name cannot start with a period or number")]
-    InvalidStartingCharacter,
+    #[error("glyph name {0} starts with an invalid character")]
+    InvalidStartingCharacter(GlyphName),
 
     #[error("glyph name can be a maximum of 63 characters long")]
     GlyphNameTooLong,
@@ -37,6 +37,16 @@ impl fmt::Debug for GlyphName {
         }
 
         write!(f, "\")")
+    }
+}
+
+impl fmt::Display for GlyphName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for ch in &self.0 {
+            write!(f, "{}", ch)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -77,15 +87,15 @@ impl GlyphRef {
     pub fn from_name(name: &str) -> Result<Self, GlyphError> {
         let astr = AsciiStr::from_ascii(name)?;
 
-        // FIXME: development names??
-        if !glyph_character_valid(astr[0].as_byte(), true, true) {
-            return Err(GlyphError::InvalidStartingCharacter);
-        }
-
         let mut n = GlyphNameStorage::new();
 
         n.try_extend_from_slice(astr.as_slice())
             .map_err(|_| GlyphError::GlyphNameTooLong)?;
+
+        // FIXME: development names??
+        if !glyph_character_valid(astr[0].as_byte(), true, true) {
+            return Err(GlyphError::InvalidStartingCharacter(GlyphName(n)));
+        }
 
         Ok(Self::Name(GlyphName(n)))
     }
