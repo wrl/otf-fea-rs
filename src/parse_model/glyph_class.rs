@@ -1,5 +1,3 @@
-use std::fmt;
-
 use combine::{
     Parser,
     Stream,
@@ -11,36 +9,12 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
-use crate::glyph::*;
+pub use crate::glyph_class::*;
 
 use super::class_name::*;
 use super::glyph::*;
 use super::util::*;
 
-#[derive(Debug, Clone)]
-pub enum GlyphClassItem {
-    Single(GlyphRef),
-    Range {
-        start: GlyphRef,
-        end: GlyphRef
-    },
-    ClassRef(GlyphClassName)
-}
-
-impl From<GlyphRef> for GlyphClassItem {
-    fn from(glyph: GlyphRef) -> GlyphClassItem {
-        GlyphClassItem::Single(glyph)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GlyphClass(pub Vec<GlyphClassItem>);
-
-impl GlyphClass {
-    pub fn from_single(glyph: GlyphRef) -> GlyphClass {
-        GlyphClass(vec![glyph.into()])
-    }
-}
 
 pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClass>
     where Input: Stream<Token = u8>,
@@ -169,33 +143,12 @@ pub(crate) fn glyph_class_or_glyph<Input>() -> impl Parser<FeaRsStream<Input>, O
 // named glyph classes
 /////////////////////////
 
-#[derive(Clone)]
-pub struct GlyphClassName(pub GlyphNameStorage);
-
-impl fmt::Debug for GlyphClassName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "GlyphClassName(\"@")?;
-
-        for c in &self.0 {
-            write!(f, "{}", c)?;
-        }
-
-        write!(f, "\")")
-    }
-}
-
 pub(crate) fn glyph_class_name<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClassName>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     class_name()
         .map(|cn| GlyphClassName(cn.0))
-}
-
-#[derive(Debug)]
-pub struct NamedGlyphClass {
-    name: GlyphClassName,
-    glyph_class: GlyphClass
 }
 
 pub(crate) fn named_glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = NamedGlyphClass>

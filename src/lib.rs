@@ -11,6 +11,8 @@ pub mod compiler;
 pub mod compile_model;
 
 pub mod glyph;
+pub mod glyph_class;
+
 #[macro_use]
 mod tag;
 pub use tag::Tag;
