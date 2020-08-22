@@ -5,10 +5,11 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::Tag;
 
 use super::util::*;
-use super::tag::*;
 use super::block::*;
+use super::tag::*;
 
 #[derive(Debug)]
 pub struct FeatureDefinition {

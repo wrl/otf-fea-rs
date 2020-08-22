@@ -49,7 +49,7 @@ impl cmp::PartialEq for Tag {
 #[macro_export]
 macro_rules! tag {
     ($a:ident, $b:ident, $c:ident, $d:ident) => {
-        $crate::parse_model::Tag([
+        $crate::Tag([
             ascii::AsciiChar::$a,
             ascii::AsciiChar::$b,
             ascii::AsciiChar::$c,
@@ -58,7 +58,7 @@ macro_rules! tag {
     };
 
     ($a:ident, $b:ident, $c:ident) => {
-        $crate::parse_model::Tag([
+        $crate::Tag([
             ascii::AsciiChar::$a,
             ascii::AsciiChar::$b,
             ascii::AsciiChar::$c,
@@ -67,7 +67,7 @@ macro_rules! tag {
     };
 
     ($a:ident, $b:ident) => {
-        $crate::parse_model::Tag([
+        $crate::Tag([
             ascii::AsciiChar::$a,
             ascii::AsciiChar::$b,
             ascii::AsciiChar::Space,
@@ -76,7 +76,7 @@ macro_rules! tag {
     };
 
     ($a:ident) => {
-        $crate::parse_model::Tag([
+        $crate::Tag([
             ascii::AsciiChar::$a,
             ascii::AsciiChar::Space,
             ascii::AsciiChar::Space,

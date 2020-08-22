@@ -5,26 +5,26 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
-use crate::parse_model as pm;
+use crate::Tag;
 
 type LookupIndices = Vec<u16>;
 
 #[derive(Debug)]
-pub struct FeatureList(pub BTreeMap<pm::Tag, LookupIndices>);
+pub struct FeatureList(pub BTreeMap<Tag, LookupIndices>);
 
 impl FeatureList {
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }
 
-    pub fn indices_for_tag(&self, tag: &pm::Tag) -> &[u16] {
+    pub fn indices_for_tag(&self, tag: &Tag) -> &[u16] {
         match self.0.get(tag) {
             Some(i) => i,
             None => &[]
         }
     }
 
-    pub fn indices_for_tag_mut(&mut self, tag: &pm::Tag) -> &mut LookupIndices {
+    pub fn indices_for_tag_mut(&mut self, tag: &Tag) -> &mut LookupIndices {
         self.0.entry(*tag)
             .or_default()
     }
@@ -99,7 +99,7 @@ impl TTFEncode for FeatureList {
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 pub struct FeatureRecord {
-    pub tag: pm::Tag,
+    pub tag: Tag,
     pub feature_offset: u16
 }
 

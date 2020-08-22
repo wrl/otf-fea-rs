@@ -6,7 +6,7 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 
-use crate::parse_model::Tag;
+use crate::Tag;
 
 pub mod header;
 use header::*;

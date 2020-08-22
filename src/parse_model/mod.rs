@@ -76,7 +76,6 @@ pub mod tables;
 pub use tables::*;
 
 mod tag;
-pub use tag::*;
 
 mod top_level;
 pub use top_level::*;

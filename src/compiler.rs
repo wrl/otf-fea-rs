@@ -7,14 +7,17 @@ use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
 
-use crate::tag;
+use crate::{
+    tag,
+    Tag
+};
 
 struct CompilerState {
     pub glyph_order: GlyphOrder,
 
     pub head_table: Option<tables::Head>,
     pub gpos_table: Option<tables::GPOS>,
-    tables: Vec<(pm::Tag, Vec<u8>)>
+    tables: Vec<(Tag, Vec<u8>)>
 }
 
 impl CompilerState {
@@ -60,7 +63,7 @@ fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> 
         )
 }
 
-fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: &pm::Position) {
+fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm::Position) {
     use pm::Position::*;
 
     match p {

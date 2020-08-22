@@ -6,7 +6,7 @@ use crate::compile_model::{
     TTFTagged,
 };
 
-use crate::parse_model as pm;
+use crate::Tag;
 
 #[derive(Debug)]
 pub struct ScriptList(Vec<TTFTagged<Script>>);
@@ -26,7 +26,7 @@ pub struct LangSys {
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct ScriptRecord {
-    tag: pm::Tag,
+    tag: Tag,
     script_offset: u16
 }
 
@@ -38,7 +38,7 @@ struct ScriptTable {
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct LangSysRecord {
-    tag: pm::Tag,
+    tag: Tag,
     lang_sys_offset: u16
 }
 

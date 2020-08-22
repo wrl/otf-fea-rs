@@ -2,7 +2,7 @@
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
-use crate::parse_model::Tag;
+use crate::Tag;
 
 pub mod tables;
 

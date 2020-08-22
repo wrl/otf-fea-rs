@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use otf_fea_rs::compile_model::*;
-use otf_fea_rs::parse_model::Tag;
+use otf_fea_rs::Tag;
 
 fn read_header(path: &str) -> io::Result<()> {
     let mut f = File::open(path)?;

@@ -12,10 +12,11 @@ use combine::{
     satisfy
 };
 
-use crate::parser::FeaRsStream;
-use super::glyph::*;
+use crate::tag::*;
 
-pub use crate::tag::*;
+use crate::parser::FeaRsStream;
+
+use super::glyph::*;
 
 
 pub(crate) fn tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = Tag>

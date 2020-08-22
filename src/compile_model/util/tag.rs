@@ -1,6 +1,6 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
-use crate::parse_model::Tag;
+use crate::Tag;
 
 impl PackedSize for Tag {
     const PACKED_LEN: usize = 4;

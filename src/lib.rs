@@ -12,6 +12,7 @@ pub mod compile_model;
 
 pub mod glyph;
 #[macro_use]
-pub mod tag;
+mod tag;
+pub use tag::Tag;
 
 mod util;
