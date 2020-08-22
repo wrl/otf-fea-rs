@@ -6,7 +6,10 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 
-use crate::Tag;
+use crate::{
+    Tag,
+    tag
+};
 
 pub mod header;
 use header::*;
@@ -56,6 +59,9 @@ impl GPOS {
             None => {
                 let indices = self.feature_list.indices_for_tag_mut(feature_tag);
                 let idx = self.lookup_list.0.len();
+
+                self.script_list.script_for_tag_mut(&tag!(D,F,L,T))
+                    .default_lang_sys.feature_indices.push(0u16);
 
                 indices.push(idx as u16);
                 self.lookup_list.0.push(Lookup::new(lookup_type));

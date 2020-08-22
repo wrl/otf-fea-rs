@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::decode::*;
@@ -6,14 +8,40 @@ use crate::compile_model::{
     TTFTagged,
 };
 
-use crate::Tag;
+use crate::{
+    Tag,
+    tag
+};
 
 #[derive(Debug)]
-pub struct ScriptList(Vec<TTFTagged<Script>>);
+pub struct ScriptList(HashMap<Tag, Script>);
+
+impl ScriptList {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    #[inline]
+    pub fn script_for_tag(&self, tag: &Tag) -> Option<&Script> {
+        self.0.get(tag)
+    }
+
+    #[inline]
+    pub fn script_for_tag_mut(&mut self, tag: &Tag) -> &mut Script {
+        self.0.entry(*tag)
+            .or_insert_with(|| Script {
+                default_lang_sys: LangSys {
+                    required_feature_index: None,
+                    feature_indices: Vec::new()
+                },
+
+                lang_sys: Vec::new()
+            })
+    }
+}
 
 #[derive(Debug)]
 pub struct Script {
-    // FIXME: different types for untagged (default) and tagged language systems?
     pub default_lang_sys: LangSys,
     pub lang_sys: Vec<TTFTagged<LangSys>>
 }
@@ -158,13 +186,6 @@ impl TTFEncode for Script {
     }
 }
 
-impl ScriptList {
-    pub fn new() -> Self {
-        Self(Vec::new())
-    }
-}
-
-
 impl TTFDecode for ScriptList {
     #[inline]
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
@@ -175,9 +196,9 @@ impl TTFDecode for ScriptList {
                 let table_data = &bytes[sr.script_offset as usize..];
 
                 Script::ttf_decode(table_data)
-                    .map(|script| TTFTagged::new(sr.tag, script))
+                    .map(|script| (sr.tag, script))
             })
-            .collect::<DecodeResult<Vec<_>>>()
+            .collect::<DecodeResult<HashMap<_, _>>>()
             .map(Self)
     }
 }
@@ -193,15 +214,32 @@ impl TTFEncode for ScriptList {
         buf.bytes.resize(record_offset +
             (self.0.len() * ScriptRecord::PACKED_LEN), 0u8);
 
-        for TTFTagged(tag, script) in &self.0 {
+        let dflt = tag!(D,F,L,T);
+
+        if let Some(script) = self.0.get(&dflt) {
+            let record = ScriptRecord {
+                tag: dflt,
+                script_offset: try_as_u16!(buf.append(script)? - start,
+                format!("ScriptList[{}]", dflt), "script_offset")?
+            };
+
+            buf.encode_at(&record, record_offset)?;
+            record_offset += ScriptRecord::PACKED_LEN;
+        }
+
+        for (tag, script) in &self.0 {
+            if *tag == tag!(D,F,L,T) {
+                continue
+            }
+
             let record = ScriptRecord {
                 tag: *tag,
                 script_offset: try_as_u16!(buf.append(script)? - start,
-                    format!("ScriptList[{}]", tag), "script_offset")?
+                format!("ScriptList[{}]", tag), "script_offset")?
             };
 
-           buf.encode_at(&record, record_offset)?;
-           record_offset += ScriptRecord::PACKED_LEN;
+            buf.encode_at(&record, record_offset)?;
+            record_offset += ScriptRecord::PACKED_LEN;
         }
 
         Ok(start)
