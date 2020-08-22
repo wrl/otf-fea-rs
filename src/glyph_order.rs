@@ -10,6 +10,9 @@ pub enum GlyphOrderError {
     #[error("tried to create a GlyphOrder with more than 65536 glyphs")]
     TooManyGlyphs,
 
+    #[error("glyph reference {0:?} not present in order")]
+    UnknownGlyph(GlyphRef),
+
     #[error(transparent)]
     GlyphError(#[from] GlyphError)
 }

@@ -1,5 +1,3 @@
-use std::iter;
-
 use endian_codec::{PackedSize, EncodeBE};
 
 use crate::parse_model as pm;
@@ -10,13 +8,10 @@ use crate::{
     Tag
 };
 
-use crate::glyph_class::*;
-
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
 
-use crate::util::*;
 
 struct CompilerState {
     pub glyph_order: GlyphOrder,
@@ -49,42 +44,6 @@ use tables::gpos::{
     PairValueRecord,
 };
 
-fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a GlyphClass) -> impl Iterator<Item = CompileResult<u16>> + 'a {
-    use GlyphClassItem::*;
-
-    gc.0.iter()
-        .flat_map(move |i: &GlyphClassItem|
-            match i {
-                Single(glyph) => {
-                    Either2::A(iter::once(
-                        glyph_order.id_for_glyph(glyph)
-                            .ok_or_else(|| CompileError::UnknownGlyphRef(glyph.clone()))
-                    ))
-                },
-
-                Range { start, end } => {
-                    let start = match glyph_order.id_for_glyph(start) {
-                        Some(id) => id,
-                        None => return Either2::A(iter::once(
-                                Err(CompileError::UnknownGlyphRef(start.clone()))
-                        ))
-                    };
-
-                    let end = match glyph_order.id_for_glyph(end) {
-                        Some(id) => id,
-                        None => return Either2::A(iter::once(
-                                Err(CompileError::UnknownGlyphRef(end.clone()))
-                        ))
-                    };
-
-                    Either2::B((start..end+1).map(Ok))
-                },
-
-                ClassRef(_) => panic!()
-            }
-        )
-}
-
 fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
@@ -107,7 +66,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
                 }
             };
 
-            for first_glyph in glyph_class_iter(&ctx.glyph_order, &glyph_classes.0) {
+            for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
                 let pairs = pair_lookup.0.entry(first_glyph?)
                     .or_default();
 
@@ -116,7 +75,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
                     .map(|vr| ValueRecord::from_parsed(vr, false))
                     .unwrap_or_else(|| ValueRecord::zero());
 
-                for second_glyph in glyph_class_iter(&ctx.glyph_order, &glyph_classes.1) {
+                for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
                     let second_glyph = second_glyph?;
 
                     let pvr = PairValueRecord {
