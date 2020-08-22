@@ -8,20 +8,6 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
 
-impl<A, B, T> Iterator for Either2<A, B>
-    where A: Iterator<Item = T>,
-          B: Iterator<Item = T>
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        match self {
-            Either2::A(inner) => inner.next(),
-            Either2::B(inner) => inner.next()
-        }
-    }
-}
-
 #[derive(Debug, PackedSize, DecodeBE, EncodeBE)]
 pub struct GlyphRange {
     pub start: u16,

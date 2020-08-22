@@ -1,6 +1,8 @@
-use crate::parse_model as pm;
+use std::iter;
 
 use endian_codec::{PackedSize, EncodeBE};
+
+use crate::parse_model as pm;
 
 use crate::{
     GlyphOrder,
@@ -8,11 +10,11 @@ use crate::{
     Tag
 };
 
-use crate::glyph::*;
-
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
+
+use crate::util::*;
 
 struct CompilerState {
     pub glyph_order: GlyphOrder,
@@ -45,21 +47,29 @@ use tables::gpos::{
     PairValueRecord,
 };
 
-fn glyph_ref_as_u16(glyph_order: &GlyphOrder, gr: &GlyphRef) -> u16 {
-    match glyph_order.id_for_glyph(gr) {
-        Some(id) => id,
-        None => panic!()
-    }
-}
-
 fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> impl Iterator<Item = u16> + 'a {
     use pm::GlyphClassItem::*;
 
     gc.0.iter()
-        .map(move |i: &pm::GlyphClassItem|
+        .flat_map(move |i: &pm::GlyphClassItem|
             match i {
-                Single(glyph) => glyph_ref_as_u16(glyph_order, glyph),
-                Range { .. } => panic!(),
+                Single(glyph) => {
+                    let id = glyph_order.id_for_glyph(glyph).unwrap();
+
+                    Either2::A(iter::once(id))
+                },
+
+                Range { start, end } => {
+                    let (start, end) = match
+                        (glyph_order.id_for_glyph(start),
+                         glyph_order.id_for_glyph(end)) {
+                            (Some(start), Some(end)) => (start, end),
+                            _ => panic!()
+                        };
+
+                    Either2::B(start..end+1)
+                },
+
                 ClassRef(_) => panic!()
             }
         )

@@ -40,7 +40,7 @@ fn fealib_builder_glyph_order() -> GlyphOrder {
         by feature lookup sub table uni0327 uni0328 e.fina
     ";
 
-    let cids = 800..1001usize;
+    let cids = 800..1002usize;
 
     glyphs
         .split_whitespace().map(GlyphRef::from_name)
