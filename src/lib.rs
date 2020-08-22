@@ -9,6 +9,8 @@ pub mod parse_model;
 
 pub mod compiler;
 
+pub(crate) mod glyph;
+
 mod util;
 
 #[macro_use]
