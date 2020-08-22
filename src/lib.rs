@@ -9,7 +9,7 @@ pub mod parse_model;
 
 pub mod compiler;
 
-pub(crate) mod glyph;
+pub mod glyph;
 
 mod util;
 

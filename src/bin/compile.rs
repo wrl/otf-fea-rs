@@ -1,5 +1,4 @@
 use std::io::prelude::*;
-use std::borrow::Cow;
 use std::fs::File;
 use std::env;
 
@@ -11,9 +10,11 @@ use otf_fea_rs::{
     compiler
 };
 
+use otf_fea_rs::glyph::GlyphRef;
+
 fn fealib_builder_glyph_order() -> GlyphOrder {
     let glyphs = "
-        .notdef space slash fraction semicolon period comma ampersand
+        _notdef space slash fraction semicolon period comma ampersand
         quotedblleft quotedblright quoteleft quoteright
         zero one two three four five six seven eight nine
         zero.oldstyle one.oldstyle two.oldstyle three.oldstyle
@@ -39,12 +40,11 @@ fn fealib_builder_glyph_order() -> GlyphOrder {
         by feature lookup sub table uni0327 uni0328 e.fina
     ";
 
-    let cids = (800..1001usize)
-        .map(|cid| Cow::Owned(format!("cid{:05}", cid)));
+    let cids = 800..1001usize;
 
     glyphs
-        .split_whitespace().map(Cow::Borrowed)
-        .chain(cids)
+        .split_whitespace().map(|n| GlyphRef::from_name(n).unwrap())
+        .chain(cids.map(GlyphRef::from_cid))
         .collect_into_glyph_order()
         .unwrap()
 }
