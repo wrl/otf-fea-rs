@@ -9,7 +9,7 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
-pub use crate::glyph_class::*;
+use crate::glyph_class::*;
 
 use super::class_name::*;
 use super::glyph::*;

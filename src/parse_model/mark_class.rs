@@ -7,6 +7,7 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph_class::*;
 use crate::glyph::*;
 
 use super::glyph_class::*;

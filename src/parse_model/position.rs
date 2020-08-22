@@ -21,6 +21,8 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph_class::*;
+
 use super::value_record::*;
 use super::glyph_class::*;
 use super::class_name::*;

@@ -14,6 +14,7 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph_class::*;
 
 use crate::parse_model::glyph_class::*;
 use crate::parse_model::table::*;

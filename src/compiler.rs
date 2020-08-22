@@ -10,6 +10,8 @@ use crate::{
     Tag
 };
 
+use crate::glyph_class::*;
+
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
@@ -47,11 +49,11 @@ use tables::gpos::{
     PairValueRecord,
 };
 
-fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a pm::GlyphClass) -> impl Iterator<Item = CompileResult<u16>> + 'a {
-    use pm::GlyphClassItem::*;
+fn glyph_class_iter<'a>(glyph_order: &'a GlyphOrder, gc: &'a GlyphClass) -> impl Iterator<Item = CompileResult<u16>> + 'a {
+    use GlyphClassItem::*;
 
     gc.0.iter()
-        .flat_map(move |i: &pm::GlyphClassItem|
+        .flat_map(move |i: &GlyphClassItem|
             match i {
                 Single(glyph) => {
                     Either2::A(iter::once(

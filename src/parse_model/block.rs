@@ -25,6 +25,7 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
+use crate::glyph_class::*;
 
 use super::util::*;
 use super::feature_names::*;

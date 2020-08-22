@@ -28,7 +28,6 @@ pub use feature_names::*;
 mod glyph;
 
 mod glyph_class;
-pub use glyph_class::*;
 
 mod glyph_pattern;
 pub use glyph_pattern::*;
