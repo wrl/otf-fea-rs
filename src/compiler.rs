@@ -40,45 +40,6 @@ use tables::gpos::{
     PairValueRecord,
 };
 
-fn find_lookup<'a>(gpos: &'a tables::GPOS, feature_tag: &pm::Tag, lookup_type: u16) -> Option<usize>
-{
-    let indices = gpos.feature_list.indices_for_tag(feature_tag);
-
-    for i in indices {
-        let i = *i as usize;
-
-        match gpos.lookup_list.0.get(i) {
-            Some(Lookup { lookup_type: lt, .. })
-                if *lt == lookup_type =>
-                    return Some(i),
-
-            _ => continue
-        }
-    }
-
-    None
-}
-
-fn find_or_insert_lookup<'a>(gpos: &'a mut Option<tables::GPOS>, feature_tag: &pm::Tag, lookup_type: u16)
-        -> &'a mut Lookup<GPOSSubtable> {
-    let gpos = gpos.get_or_insert_with(|| tables::GPOS::new());
-
-    let idx = match find_lookup(gpos, feature_tag, lookup_type) {
-        Some(idx) => idx,
-        None => {
-            let indices = gpos.feature_list.indices_for_tag_mut(feature_tag);
-            let idx = gpos.lookup_list.0.len();
-
-            indices.push(idx as u16);
-            gpos.lookup_list.0.push(Lookup::new(lookup_type));
-
-            idx
-        }
-    };
-
-    &mut gpos.lookup_list.0[idx]
-}
-
 fn glyph_ref_as_u16(glyph_order: &GlyphOrder, gr: &pm::GlyphRef) -> u16 {
     match glyph_order.id_for_glyph(gr) {
         Some(id) => id,
@@ -104,7 +65,8 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &pm::Tag, p: 
 
     match p {
         Pair { glyph_classes, value_records } => {
-            let lookup = find_or_insert_lookup(&mut ctx.gpos_table, feature_tag, 2);
+            let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
+            let lookup = gpos.find_or_insert_lookup(feature_tag, 2);
 
             if lookup.subtables.len() == 0 {
                 lookup.subtables.push(GPOSSubtable {

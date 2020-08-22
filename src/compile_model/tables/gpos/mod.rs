@@ -6,6 +6,8 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 
+use crate::parse_model::Tag;
+
 pub mod header;
 use header::*;
 
@@ -28,6 +30,41 @@ impl GPOS {
             lookup_list: LookupList::new(),
             feature_variations: None
         }
+    }
+
+    pub fn find_lookup(&self, feature_tag: &Tag, lookup_type: u16) -> Option<usize> {
+        let indices = self.feature_list.indices_for_tag(feature_tag);
+
+        for i in indices {
+            let i = *i as usize;
+
+            match self.lookup_list.0.get(i) {
+                Some(Lookup { lookup_type: lt, .. })
+                    if *lt == lookup_type => return Some(i),
+
+                _ => continue
+            }
+        }
+
+        None
+    }
+
+    pub fn find_or_insert_lookup<'a>(&'a mut self, feature_tag: &Tag, lookup_type: u16)
+            -> &'a mut Lookup<GPOSSubtable> {
+        let idx = match self.find_lookup(feature_tag, lookup_type) {
+            Some(idx) => idx,
+            None => {
+                let indices = self.feature_list.indices_for_tag_mut(feature_tag);
+                let idx = self.lookup_list.0.len();
+
+                indices.push(idx as u16);
+                self.lookup_list.0.push(Lookup::new(lookup_type));
+
+                idx
+            }
+        };
+
+        &mut self.lookup_list.0[idx]
     }
 }
 
