@@ -2,6 +2,11 @@ use std::collections::HashMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
+use crate::compile_model::feature_list::{
+    FeatureRecord,
+    FeatureList
+};
+
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::{
@@ -31,8 +36,8 @@ impl ScriptList {
         self.0.entry(*tag)
             .or_insert_with(|| Script {
                 default_lang_sys: LangSys {
-                    required_feature_index: None,
-                    feature_indices: Vec::new()
+                    required_feature: None,
+                    features: Vec::new()
                 },
 
                 lang_sys: Vec::new()
@@ -48,8 +53,8 @@ pub struct Script {
 
 #[derive(Debug)]
 pub struct LangSys {
-    pub required_feature_index: Option<u16>,
-    pub feature_indices: Vec<u16>
+    pub required_feature: Option<Tag>,
+    pub features: Vec<Tag>
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -77,26 +82,8 @@ struct LangSysTable {
     feature_index_count: u16
 }
 
-impl TTFDecode for LangSys {
-    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
-        let table: LangSysTable = decode_from_slice(bytes);
-
-        let required_feature_index =
-            match table.required_feature_index {
-                0xFFFF => None,
-                otherwise => Some(otherwise)
-            };
-
-        let feature_indices = decode_from_pool(
-            table.feature_index_count,
-            &bytes[LangSysTable::PACKED_LEN..]);
-
-        Ok(LangSys {
-            required_feature_index,
-            feature_indices: feature_indices.collect()
-        })
-    }
-}
+type FeatureIndexToTag = HashMap<u16, Tag>;
+type TagToFeatureIndex = HashMap<Tag, u16>;
 
 macro_rules! try_as_u16 {
     ($val:expr, $scope:expr, $item:expr) => {{
@@ -112,20 +99,62 @@ macro_rules! try_as_u16 {
     }}
 }
 
-impl TTFEncode for LangSys {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+impl LangSys {
+    fn ttf_decode(bytes: &[u8], feature_index_to_tag: &FeatureIndexToTag) -> DecodeResult<Self> {
+        let table: LangSysTable = decode_from_slice(bytes);
+
+        let required_feature =
+            match table.required_feature_index {
+                0xFFFF => None,
+                idx => {
+                    let tag = feature_index_to_tag.get(&idx)
+                        .ok_or_else(||
+                            DecodeError::UndefinedFeature("LangSys.required_feature_index", idx))?;
+
+                    Some(tag.clone())
+                }
+            };
+
+        decode_from_pool(table.feature_index_count, &bytes[LangSysTable::PACKED_LEN..])
+            .map(|feature_index: u16| {
+                Ok(feature_index_to_tag.get(&feature_index)
+                    .ok_or_else(||
+                        DecodeError::UndefinedFeature("LangSys.features", feature_index))?
+                    .clone())
+            })
+            .collect::<DecodeResult<_>>()
+            .map(|features| LangSys {
+                required_feature,
+                features,
+            })
+    }
+}
+
+impl LangSys {
+    fn ttf_encode(&self, buf: &mut EncodeBuf, tag_to_feature_index: &TagToFeatureIndex) -> EncodeResult<usize> {
         let start = buf.bytes.len();
+
+        let required_feature_index = self.required_feature
+            .map(|tag| tag_to_feature_index.get(&tag)
+                .ok_or_else(||
+                    EncodeError::TagNotInFeatureList("LangSys.required_feature", tag.clone()))
+                .map(|idx| *idx))
+            .unwrap_or(Ok(0xFFFF))?;
 
         let table = LangSysTable {
             lookup_order: 0,
-            required_feature_index: self.required_feature_index.unwrap_or(0xFFFF),
-            feature_index_count: try_as_u16!(self.feature_indices.len(),
+            required_feature_index,
+            feature_index_count: try_as_u16!(self.features.len(),
                 "LangSys".into(), "feature_index_count")?
         };
 
         buf.append(&table)?;
 
-        for idx in &self.feature_indices {
+        for tag in &self.features {
+            let idx = tag_to_feature_index.get(&tag)
+                .ok_or_else(||
+                    EncodeError::TagNotInFeatureList("LangSys.features", tag.clone()))?;
+
             buf.append(idx)?;
         }
 
@@ -133,20 +162,20 @@ impl TTFEncode for LangSys {
     }
 }
 
-impl TTFDecode for Script {
-    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
+impl Script {
+    fn ttf_decode(bytes: &[u8], feature_index_to_tag: &FeatureIndexToTag) -> DecodeResult<Self> {
         let table: ScriptTable = decode_from_slice(bytes);
 
         let lang_sys_records = decode_from_pool(
             table.lang_sys_count,
             &bytes[ScriptTable::PACKED_LEN..]);
 
-        let default_lang_sys = LangSys::ttf_decode(
-            &bytes[table.default_lang_sys as usize..])?;
+        let default_lang_sys = LangSys::ttf_decode(&bytes[table.default_lang_sys as usize..],
+            feature_index_to_tag)?;
 
         let lang_sys = lang_sys_records
             .map(|lsr: LangSysRecord|
-                LangSys::ttf_decode(&bytes[lsr.lang_sys_offset as usize..])
+                LangSys::ttf_decode(&bytes[lsr.lang_sys_offset as usize..], feature_index_to_tag)
                     .map(|sys| TTFTagged::new(lsr.tag, sys)))
             .collect::<DecodeResult<_>>()?;
 
@@ -157,14 +186,14 @@ impl TTFDecode for Script {
     }
 }
 
-impl TTFEncode for Script {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+impl Script {
+    fn ttf_encode(&self, buf: &mut EncodeBuf, tag_to_feature_index: &TagToFeatureIndex) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         buf.bytes.resize(start + ScriptTable::PACKED_LEN, 0u8);
 
         let table = ScriptTable {
-            default_lang_sys: try_as_u16!(buf.append(&self.default_lang_sys)? - start,
+            default_lang_sys: try_as_u16!(&self.default_lang_sys.ttf_encode(buf, tag_to_feature_index)? - start,
                 "ScriptTable".into(), "default_lang_sys")?,
             lang_sys_count: try_as_u16!(self.lang_sys.len(),
                 "ScriptTable".into(), "lang_sys_count")?
@@ -175,7 +204,7 @@ impl TTFEncode for Script {
         for TTFTagged(tag, lang_sys) in &self.lang_sys {
             let record = LangSysRecord {
                 tag: *tag,
-                lang_sys_offset: try_as_u16!(buf.append(lang_sys)? - start,
+                lang_sys_offset: try_as_u16!(lang_sys.ttf_encode(buf, tag_to_feature_index)? - start,
                     format!("LangSysRecord[{}]", tag), "lang_sys_offset")?
             };
 
@@ -186,16 +215,26 @@ impl TTFEncode for Script {
     }
 }
 
-impl TTFDecode for ScriptList {
+impl ScriptList {
     #[inline]
-    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
+    pub fn ttf_decode(bytes: &[u8], feature_list_bytes: &[u8]) -> DecodeResult<Self> {
         let records = decode_from_pool(decode_u16_be(bytes, 0), &bytes[2..]);
+
+        // we need this so we can map feature indices to tags
+        let feature_index_to_tag: FeatureIndexToTag = {
+            let feature_records_count = decode_u16_be(feature_list_bytes, 0);
+
+            decode_from_pool(feature_records_count, &feature_list_bytes[2..])
+                .enumerate()
+                .map(|(i, r): (_, FeatureRecord)| (i as u16, r.tag))
+                .collect()
+        };
 
         records
             .map(|sr: ScriptRecord| {
                 let table_data = &bytes[sr.script_offset as usize..];
 
-                Script::ttf_decode(table_data)
+                Script::ttf_decode(table_data, &feature_index_to_tag)
                     .map(|script| (sr.tag, script))
             })
             .collect::<DecodeResult<HashMap<_, _>>>()
@@ -203,8 +242,8 @@ impl TTFDecode for ScriptList {
     }
 }
 
-impl TTFEncode for ScriptList {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+impl ScriptList {
+    pub fn ttf_encode(&self, buf: &mut EncodeBuf, feature_list: &FeatureList) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         buf.append(
@@ -214,13 +253,18 @@ impl TTFEncode for ScriptList {
         buf.bytes.resize(record_offset +
             (self.0.len() * ScriptRecord::PACKED_LEN), 0u8);
 
+        let tag_to_feature_index: TagToFeatureIndex = 
+            feature_list.0.keys().enumerate()
+                .map(|(i, tag)| (tag.clone(), i as u16))
+                .collect();
+
         let dflt = tag!(D,F,L,T);
 
         if let Some(script) = self.0.get(&dflt) {
             let record = ScriptRecord {
                 tag: dflt,
-                script_offset: try_as_u16!(buf.append(script)? - start,
-                format!("ScriptList[{}]", dflt), "script_offset")?
+                script_offset: try_as_u16!(script.ttf_encode(buf, &tag_to_feature_index)? - start,
+                    format!("ScriptList[{}]", dflt), "script_offset")?
             };
 
             buf.encode_at(&record, record_offset)?;
@@ -234,8 +278,8 @@ impl TTFEncode for ScriptList {
 
             let record = ScriptRecord {
                 tag: *tag,
-                script_offset: try_as_u16!(buf.append(script)? - start,
-                format!("ScriptList[{}]", tag), "script_offset")?
+                script_offset: try_as_u16!(script.ttf_encode(buf, &tag_to_feature_index)? - start,
+                    format!("ScriptList[{}]", tag), "script_offset")?
             };
 
             buf.encode_at(&record, record_offset)?;

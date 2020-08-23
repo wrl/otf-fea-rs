@@ -61,7 +61,7 @@ impl GPOS {
                 let idx = self.lookup_list.0.len();
 
                 self.script_list.script_for_tag_mut(&tag!(D,F,L,T))
-                    .default_lang_sys.feature_indices.push(0u16);
+                    .default_lang_sys.features.push(*feature_tag);
 
                 indices.push(idx as u16);
                 self.lookup_list.0.push(Lookup::new(lookup_type));
@@ -86,10 +86,14 @@ impl TTFDecode for GPOS {
             _ => return Err(DecodeError::InvalidValue("version", "GPOS".into()))
         };
 
+        let script_bytes = &bytes[offsets.script..];
+        let feature_bytes = &bytes[offsets.feature..];
+        let lookup_bytes = &bytes[offsets.lookup..];
+
         Ok(GPOS {
-            script_list: ScriptList::ttf_decode(&bytes[offsets.script..])?,
-            feature_list: FeatureList::ttf_decode(&bytes[offsets.feature..])?,
-            lookup_list: LookupList::ttf_decode(&bytes[offsets.lookup..])?,
+            script_list: ScriptList::ttf_decode(script_bytes, feature_bytes)?,
+            feature_list: FeatureList::ttf_decode(feature_bytes)?,
+            lookup_list: LookupList::ttf_decode(lookup_bytes)?,
             feature_variations: offsets.feature_variations
         })
     }
@@ -106,9 +110,9 @@ impl TTFEncode for GPOS {
         buf.bytes.resize(header_size, 0u8);
 
         let offsets = Offsets {
-            script: buf.append(&self.script_list)?,
-            feature: buf.append(&self.feature_list)?,
-            lookup: buf.append(&self.lookup_list)?,
+            script: self.script_list.ttf_encode(buf, &self.feature_list)?,
+            feature: self.feature_list.ttf_encode(buf)?,
+            lookup: self.lookup_list.ttf_encode(buf)?,
             feature_variations: None
         };
 
