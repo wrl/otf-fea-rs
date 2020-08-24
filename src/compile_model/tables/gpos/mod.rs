@@ -36,7 +36,7 @@ impl GPOS {
     }
 
     pub fn find_lookup<T, G>(&mut self, feature_tag: &Tag, get_lookup_variant: G) -> Option<usize>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut T>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>
     {
         let indices = self.feature_list.indices_for_tag(feature_tag);
 
@@ -44,7 +44,7 @@ impl GPOS {
             let i = *i as usize;
 
             match self.lookup_list.0.get_mut(i) {
-                Some(ref mut l) =>
+                Some(l) =>
                     if get_lookup_variant(l).is_some() {
                         return Some(i)
                     },
@@ -56,12 +56,11 @@ impl GPOS {
         None
     }
 
-    pub fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I) -> &'a mut T
-        where G: Fn(&mut GPOSLookup) -> Option<&mut T> + Copy,
+    pub fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I) -> &'a mut Lookup<T>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
               I: Fn() -> GPOSLookup
     {
-        let idx = self.find_lookup(feature_tag, get_lookup_variant);
-        let idx = match idx {
+        let idx = match self.find_lookup(feature_tag, get_lookup_variant) {
             Some(idx) => idx,
             None => {
                 let indices = self.feature_list.indices_for_tag_mut(feature_tag);
@@ -77,6 +76,12 @@ impl GPOS {
             }
         };
 
+        // unwrap() is fine here since we've either already succeeded with get_lookup_variant() in
+        // find_lookup() or insert() has inserted a valid lookup.
+        //
+        // it's possible for insert() to create a lookup which is not then matched by
+        // get_lookup_variant(), but that's a programmer error that the panic from unwrap will
+        // direct the programmer to fix the issue.
         get_lookup_variant(&mut self.lookup_list.0[idx]).unwrap()
     }
 }

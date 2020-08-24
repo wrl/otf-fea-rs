@@ -50,7 +50,8 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
     match p {
         Pair { glyph_classes, value_records } => {
             let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
-            let lookup = gpos.find_or_insert_lookup(feature_tag,
+            let lookup = gpos.find_or_insert_lookup(
+                feature_tag,
                 |lookup| match lookup {
                     GPOSLookup::PairGlyphs(l) => Some(l)
                 },
