@@ -44,6 +44,15 @@ use tables::gpos::{
     PairValueRecord,
 };
 
+fn feature_is_vertical(tag: &Tag) -> bool {
+    match tag {
+        tag!(v,k,r,n) | tag!(v,p,a,l)
+            | tag!(v,h,a,l) | tag!(v,a,l,t) => true,
+
+        _ => false
+    }
+}
+
 fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
@@ -63,13 +72,15 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
 
             let pair_lookup = &mut lookup.subtables[0];
 
+            let vertical = feature_is_vertical(feature_tag);
+
             for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
                 let pairs = pair_lookup.entry(first_glyph?)
                     .or_default();
 
-                let vr1 = ValueRecord::from_parsed(&value_records.0, false);
+                let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
                 let vr2 = value_records.1.as_ref()
-                    .map(|vr| ValueRecord::from_parsed(vr, false))
+                    .map(|vr| ValueRecord::from_parsed(vr, vertical))
                     .unwrap_or_else(|| ValueRecord::zero());
 
                 for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
@@ -133,6 +144,7 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
     match statement {
         Table(ref t) => handle_table(ctx, t),
         FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
+        LanguageSystem(ref _ls) => (),
 
         s => {
             println!("unhandled {:#?}\n", s);
@@ -238,9 +250,11 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
         handle_top_level(&mut ctx, &s)?;
     }
 
-    if ctx.head_table.is_none() {
-        ctx.head_table = Some(tables::Head::new());
-    }
+    // FIXME: "add head table" should be a compiler option
+    //
+    // if ctx.head_table.is_none() {
+    //     ctx.head_table = Some(tables::Head::new());
+    // }
 
     if let Some(gpos) = ctx.gpos_table.as_ref() {
         let mut buf = EncodeBuf::new();

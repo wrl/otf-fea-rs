@@ -85,13 +85,13 @@ pub(crate) fn lookup<Input>() -> impl Parser<FeaRsStream<Input>, Output = Lookup
         .map(Lookup)
 }
 
-pub(crate) enum LookupRefOrDefinition {
+pub enum LookupRefOrDefinition {
     Reference(Lookup),
     Definition(LookupDefinition)
 }
 
 impl LookupRefOrDefinition {
-    pub fn parse<Input>() -> impl Parser<FeaRsStream<Input>, Output = Self>
+    pub(crate) fn parse<Input>() -> impl Parser<FeaRsStream<Input>, Output = Self>
         where Input: Stream<Token = u8>,
               Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
     {
