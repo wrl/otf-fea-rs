@@ -43,13 +43,8 @@ impl GPOS {
         for i in indices {
             let i = *i as usize;
 
-            match self.lookup_list.0.get_mut(i) {
-                Some(l) =>
-                    if get_lookup_variant(l).is_some() {
-                        return Some(i)
-                    },
-
-                _ => continue
+            if let Some(_) = self.lookup_list.0.get_mut(i).map(&get_lookup_variant) {
+                return Some(i);
             }
         }
 
