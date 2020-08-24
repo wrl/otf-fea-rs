@@ -21,7 +21,7 @@ pub use lookup::*;
 pub struct GPOS {
     pub script_list: ScriptList,
     pub feature_list: FeatureList,
-    pub lookup_list: LookupList<GPOSSubtable>,
+    pub lookup_list: LookupList<GPOSLookup>,
     pub feature_variations: Option<usize>
 }
 
@@ -35,15 +35,19 @@ impl GPOS {
         }
     }
 
-    pub fn find_lookup(&self, feature_tag: &Tag, lookup_type: u16) -> Option<usize> {
+    pub fn find_lookup<T, G>(&mut self, feature_tag: &Tag, get_lookup_variant: G) -> Option<usize>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut T>
+    {
         let indices = self.feature_list.indices_for_tag(feature_tag);
 
         for i in indices {
             let i = *i as usize;
 
-            match self.lookup_list.0.get(i) {
-                Some(Lookup { lookup_type: lt, .. })
-                    if *lt == lookup_type => return Some(i),
+            match self.lookup_list.0.get_mut(i) {
+                Some(ref mut l) =>
+                    if get_lookup_variant(l).is_some() {
+                        return Some(i)
+                    },
 
                 _ => continue
             }
@@ -52,9 +56,12 @@ impl GPOS {
         None
     }
 
-    pub fn find_or_insert_lookup<'a>(&'a mut self, feature_tag: &Tag, lookup_type: u16)
-            -> &'a mut Lookup<GPOSSubtable> {
-        let idx = match self.find_lookup(feature_tag, lookup_type) {
+    pub fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I) -> &'a mut T
+        where G: Fn(&mut GPOSLookup) -> Option<&mut T> + Copy,
+              I: Fn() -> GPOSLookup
+    {
+        let idx = self.find_lookup(feature_tag, get_lookup_variant);
+        let idx = match idx {
             Some(idx) => idx,
             None => {
                 let indices = self.feature_list.indices_for_tag_mut(feature_tag);
@@ -64,13 +71,13 @@ impl GPOS {
                     .default_lang_sys.features.push(*feature_tag);
 
                 indices.push(idx as u16);
-                self.lookup_list.0.push(Lookup::new(lookup_type));
+                self.lookup_list.0.push(insert());
 
                 idx
             }
         };
 
-        &mut self.lookup_list.0[idx]
+        get_lookup_variant(&mut self.lookup_list.0[idx]).unwrap()
     }
 }
 

@@ -1,3 +1,4 @@
+use std::ops;
 use std::collections::HashMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
@@ -5,6 +6,7 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::value_record::*;
+use crate::compile_model::lookup_list::*;
 use crate::compile_model::coverage::*;
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -46,16 +48,29 @@ impl PairValueRecord {
 pub type PairSet = Vec<PairValueRecord>;
 
 #[derive(Debug)]
-pub enum GPOSLookup {
-    PairGlyphs(CoverageLookup<PairSet>)
+pub struct PairGlyphs(pub CoverageLookup<PairSet>);
+
+impl PairGlyphs {
+    pub fn new() -> Self {
+        Self(CoverageLookup::new())
+    }
 }
 
-#[derive(Debug)]
-pub struct GPOSSubtable {
-    pub lookup: GPOSLookup,
+impl ops::Deref for PairGlyphs {
+    type Target = CoverageLookup<PairSet>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
-impl GPOSLookup {
+impl ops::DerefMut for PairGlyphs {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl PairGlyphs {
     #[inline]
     fn decode_pairs(bytes: &[u8], coverage_bytes: &[u8]) -> DecodeResult<CoverageLookup<PairSet>> {
         let header: PairPosFormat1Header = decode_from_slice(bytes);
@@ -89,8 +104,31 @@ impl GPOSLookup {
     }
 
     #[inline]
-    fn encode_pair_glyphs(sets: &CoverageLookup<PairSet>, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+    fn decode_from_format(bytes: &[u8], coverage_bytes: &[u8], format: u16) -> DecodeResult<Self> {
+        match format {
+            1 => Self::decode_pairs(bytes, coverage_bytes).map(PairGlyphs),
+            _ => return Err(DecodeError::InvalidValue("format",
+                    "GPOS subtable".into()))
+        }
+    }
+}
+
+impl TTFDecode for PairGlyphs {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
+        let format = decode_u16_be(bytes, 0);
+        let coverage_bytes = {
+            let offset = decode_u16_be(bytes, 2) as usize;
+            &bytes[offset..]
+        };
+
+        PairGlyphs::decode_from_format(bytes, coverage_bytes, format)
+    }
+}
+
+impl TTFEncode for PairGlyphs {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
+        let sets = &self.0;
 
         buf.bytes.resize(start + PairPosFormat1Header::PACKED_LEN, 0u8);
 
@@ -143,44 +181,28 @@ impl GPOSLookup {
 
         Ok(start)
     }
-
-    #[inline]
-    fn decode_from_format(bytes: &[u8], coverage_bytes: &[u8], format: u16) -> DecodeResult<Self> {
-        match format {
-            1 => Self::decode_pairs(bytes, coverage_bytes).map(Self::PairGlyphs),
-            _ => return Err(DecodeError::InvalidValue("format",
-                    "GPOS subtable".into()))
-        }
-    }
-
-    #[inline]
-    fn encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        match self {
-            Self::PairGlyphs(sets) => Self::encode_pair_glyphs(sets, buf)
-        }
-    }
 }
 
-impl TTFDecode for GPOSSubtable {
+#[derive(Debug)]
+pub enum GPOSLookup {
+    PairGlyphs(Lookup<PairGlyphs>)
+}
+
+impl TTFDecode for GPOSLookup {
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
-        // FIXME: need to pass through lookup_type
+        let lookup_type = decode_u16_be(bytes, 0);
 
-        let format = decode_u16_be(bytes, 0);
-        let coverage_bytes = {
-            let offset = decode_u16_be(bytes, 2) as usize;
-            &bytes[offset..]
-        };
-
-        let lookup = GPOSLookup::decode_from_format(bytes, coverage_bytes, format)?;
-
-        Ok(GPOSSubtable {
-            lookup
-        })
+        match lookup_type {
+            2 => Lookup::ttf_decode(bytes).map(GPOSLookup::PairGlyphs),
+            _ => Err(DecodeError::InvalidValue("lookup_type", "GPOS Lookup".into()))
+        }
     }
 }
 
-impl TTFEncode for GPOSSubtable {
+impl TTFEncode for GPOSLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        self.lookup.encode(buf)
+        match self {
+            GPOSLookup::PairGlyphs(lookup) => lookup.ttf_encode(buf, 2)
+        }
     }
 }

@@ -6,7 +6,7 @@ use crate::compile_model::util::encode::*;
 
 
 #[derive(Debug)]
-pub struct LookupList<T>(pub Vec<Lookup<T>>);
+pub struct LookupList<T>(pub Vec<T>);
 
 impl<T> LookupList<T> {
     pub fn new() -> Self {
@@ -21,8 +21,7 @@ impl<T: TTFDecode> TTFDecode for LookupList<T> {
         let records = decode_from_pool(records_count, &bytes[2..]);
 
         let lookups = records
-            .map(|offset: u16|
-                Lookup::ttf_decode(&bytes[offset as usize..]));
+            .map(|offset: u16| T::ttf_decode(&bytes[offset as usize..]));
 
         lookups.collect::<DecodeResult<_>>()
             .map(Self)
@@ -67,7 +66,6 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct Lookup<T> {
-    pub lookup_type: u16,
     pub lookup_flags: LookupFlags,
     pub mark_filtering_set: Option<u16>,
 
@@ -75,9 +73,8 @@ pub struct Lookup<T> {
 }
 
 impl<T> Lookup<T> {
-    pub fn new(lookup_type: u16) -> Self {
+    pub fn new() -> Self {
         Self {
-            lookup_type,
             lookup_flags: LookupFlags::empty(),
             mark_filtering_set: None,
 
@@ -116,7 +113,6 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
             };
 
         Ok(Lookup {
-            lookup_type: header.lookup_type,
             lookup_flags,
             mark_filtering_set,
 
@@ -125,8 +121,8 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
     }
 }
 
-impl<T: TTFEncode> TTFEncode for Lookup<T> {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+impl<T: TTFEncode> Lookup<T> {
+    pub fn ttf_encode(&self, buf: &mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
 
@@ -134,7 +130,7 @@ impl<T: TTFEncode> TTFEncode for Lookup<T> {
             self.mark_filtering_set.is_some());
 
         let header = LookupTableHeader {
-            lookup_type: self.lookup_type,
+            lookup_type: lookup_type,
             lookup_flags: self.lookup_flags.bits(),
             subtable_count: self.subtables.len() as u16
         };

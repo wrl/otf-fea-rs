@@ -39,8 +39,8 @@ impl CompilerState {
  */
 
 use tables::gpos::{
-    GPOSSubtable,
     GPOSLookup,
+    PairGlyphs,
     PairValueRecord,
 };
 
@@ -50,24 +50,20 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
     match p {
         Pair { glyph_classes, value_records } => {
             let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
-            let lookup = gpos.find_or_insert_lookup(feature_tag, 2);
+            let lookup = gpos.find_or_insert_lookup(feature_tag,
+                |lookup| match lookup {
+                    GPOSLookup::PairGlyphs(l) => Some(l)
+                },
+                || GPOSLookup::PairGlyphs(Lookup::new()));
 
             if lookup.subtables.len() == 0 {
-                lookup.subtables.push(GPOSSubtable {
-                    lookup: GPOSLookup::PairGlyphs(CoverageLookup::new())
-                });
+                lookup.subtables.push(PairGlyphs::new());
             }
 
-            let pair_lookup = {
-                let subtable = &mut lookup.subtables[0];
-
-                match subtable.lookup {
-                    GPOSLookup::PairGlyphs(ref mut cl) => cl
-                }
-            };
+            let pair_lookup = &mut lookup.subtables[0];
 
             for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
-                let pairs = pair_lookup.0.entry(first_glyph?)
+                let pairs = pair_lookup.entry(first_glyph?)
                     .or_default();
 
                 let vr1 = ValueRecord::from_parsed(&value_records.0, false);

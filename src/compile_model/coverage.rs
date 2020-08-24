@@ -1,3 +1,4 @@
+use std::ops;
 use std::collections::BTreeMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
@@ -41,6 +42,21 @@ fn decode_coverage<'a>(bytes: &'a [u8]) -> DecodeResult<impl Iterator<Item = u16
 
 #[derive(Debug)]
 pub struct CoverageLookup<T>(pub BTreeMap<u16, T>);
+
+impl<T> ops::Deref for CoverageLookup<T> {
+    type Target = BTreeMap<u16, T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> ops::DerefMut for CoverageLookup<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 
 trait Pred: Copy
 {
