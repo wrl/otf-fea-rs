@@ -56,7 +56,8 @@ impl GPOS {
         None
     }
 
-    pub fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I) -> &'a mut Lookup<T>
+    pub fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I)
+        -> &'a mut Lookup<T>
         where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
               I: Fn() -> GPOSLookup
     {
@@ -82,6 +83,8 @@ impl GPOS {
         // it's possible for insert() to create a lookup which is not then matched by
         // get_lookup_variant(), but that's a programmer error that the panic from unwrap will
         // direct the programmer to fix the issue.
+        //
+        // if we ever get "enum variants as types" we'll be able to use those here instead.
         get_lookup_variant(&mut self.lookup_list.0[idx]).unwrap()
     }
 }
