@@ -3,8 +3,49 @@
 RUNNER=./target/debug/compile
 TESTS_DIR=../fonttools/Tests/feaLib/data
 OUT_DIR=./compiler_test_out
+ALLTESTS=($TESTS_DIR/*.fea)
 
 mkdir -p $OUT_DIR
+
+all_tests() {
+	echo ''
+
+	count=${#ALLTESTS[@]}
+
+	for ((i = 0; i < count; i++)); do
+		printf "\rrunning %d/%d" "$((i + 1))" "$count"
+
+		test=${ALLTESTS[i]}
+		out="$OUT_DIR/$(basename "${test%%.fea}").fea-rs.ttf"
+
+		if $RUNNER "$test" "$out" > /dev/null 2>&1; then
+			pass+=("$test")
+		else
+			fail+=("$test")
+		fi
+	done
+
+	printf '\r                             \r'
+
+	echo 'passing:'
+	for test in "${pass[@]}"; do
+		echo "    ${test##*/}"
+	done
+
+	echo ''
+
+	echo 'failing:'
+	for test in "${fail[@]}"; do
+		echo "    ${test##*/}"
+	done
+
+	echo ''
+	echo ''
+	echo "total test cases: $count"
+	echo "  passing: ${#pass[@]}"
+	echo "  failing: ${#fail[@]}"
+	echo ''
+}
 
 one_test() {
 	p="$TESTS_DIR/$*"
@@ -36,8 +77,7 @@ one_test() {
 
 case "$1" in
 	"")
-		echo 'need a test file'
-		exit 1
+		all_tests
 		;;
 
 	*)

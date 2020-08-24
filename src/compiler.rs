@@ -85,7 +85,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
             }
         },
 
-        _ => (),
+        _ => panic!()
     };
 
     Ok(())
@@ -101,7 +101,7 @@ fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinitio
     for s in &def.statements {
         match s {
             Position(pos) => handle_position_statement(ctx, tag, pos)?,
-            _ => ()
+            _ => panic!()
         }
     }
 
@@ -134,7 +134,10 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
         Table(ref t) => handle_table(ctx, t),
         FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
 
-        s => println!("unhandled {:#?}\n", s),
+        s => {
+            println!("unhandled {:#?}\n", s);
+            panic!();
+        }
     }
 
     Ok(())
