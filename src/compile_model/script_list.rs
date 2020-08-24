@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    HashSet
+};
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
@@ -9,9 +12,6 @@ use crate::compile_model::feature_list::{
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
-use crate::compile_model::{
-    TTFTagged,
-};
 
 use crate::{
     Tag,
@@ -37,10 +37,10 @@ impl ScriptList {
             .or_insert_with(|| Script {
                 default_lang_sys: LangSys {
                     required_feature: None,
-                    features: Vec::new()
+                    features: HashSet::new()
                 },
 
-                lang_sys: Vec::new()
+                lang_sys: HashMap::new()
             })
     }
 }
@@ -48,13 +48,13 @@ impl ScriptList {
 #[derive(Debug)]
 pub struct Script {
     pub default_lang_sys: LangSys,
-    pub lang_sys: Vec<TTFTagged<LangSys>>
+    pub lang_sys: HashMap<Tag, LangSys>
 }
 
 #[derive(Debug)]
 pub struct LangSys {
     pub required_feature: Option<Tag>,
-    pub features: Vec<Tag>
+    pub features: HashSet<Tag>
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -176,7 +176,7 @@ impl Script {
         let lang_sys = lang_sys_records
             .map(|lsr: LangSysRecord|
                 LangSys::ttf_decode(&bytes[lsr.lang_sys_offset as usize..], feature_index_to_tag)
-                    .map(|sys| TTFTagged::new(lsr.tag, sys)))
+                    .map(|sys| (lsr.tag, sys)))
             .collect::<DecodeResult<_>>()?;
 
         Ok(Script {
@@ -201,7 +201,7 @@ impl Script {
 
         buf.encode_at(&table, start)?;
 
-        for TTFTagged(tag, lang_sys) in &self.lang_sys {
+        for (tag, lang_sys) in &self.lang_sys {
             let record = LangSysRecord {
                 tag: *tag,
                 lang_sys_offset: try_as_u16!(lang_sys.ttf_encode(buf, tag_to_feature_index)? - start,
@@ -264,7 +264,7 @@ impl ScriptList {
             let record = ScriptRecord {
                 tag: dflt,
                 script_offset: try_as_u16!(script.ttf_encode(buf, &tag_to_feature_index)? - start,
-                    format!("ScriptList[{}]", dflt), "script_offset")?
+                    "ScriptList[DFLT]".into(), "script_offset")?
             };
 
             buf.encode_at(&record, record_offset)?;
@@ -272,7 +272,7 @@ impl ScriptList {
         }
 
         for (tag, script) in &self.0 {
-            if *tag == tag!(D,F,L,T) {
+            if tag == &dflt {
                 continue
             }
 

@@ -63,7 +63,7 @@ impl GPOS {
                 let idx = self.lookup_list.0.len();
 
                 self.script_list.script_for_tag_mut(&tag!(D,F,L,T))
-                    .default_lang_sys.features.push(*feature_tag);
+                    .default_lang_sys.features.insert(*feature_tag);
 
                 indices.push(idx as u16);
                 self.lookup_list.0.push(insert());
