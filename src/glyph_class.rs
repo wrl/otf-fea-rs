@@ -25,6 +25,20 @@ impl From<GlyphRef> for GlyphClassItem {
 pub struct GlyphClass(pub Vec<GlyphClassItem>);
 
 impl GlyphClass {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.len() == 0
+    }
+
+    #[inline]
+    pub fn is_single(&self) -> bool {
+        if let &[GlyphClassItem::Single(_)] = self.0.as_slice() {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn from_single(glyph: GlyphRef) -> GlyphClass {
         GlyphClass(vec![glyph.into()])
     }
@@ -38,7 +52,7 @@ impl GlyphClass {
                 match i {
                     Single(glyph) => {
                         Either2::A(iter::once(
-                                glyph_order.id_for_glyph(glyph)
+                            glyph_order.id_for_glyph(glyph)
                                 .ok_or_else(|| GlyphOrderError::UnknownGlyph(glyph.clone()))
                         ))
                     },
