@@ -75,11 +75,13 @@ impl TableWithLookups for GPOS {
 }
 
 pub trait HasLookups<L>: TableWithLookups {
-    fn find_lookup<T>(&mut self, lookup_type: &L) -> Option<usize>
+    fn find_lookup<T>(&mut self, lookup_ref: &L) -> Option<usize>
         where T: LookupSubtable<Self::Lookup>;
 
-    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_type: &L) -> &'a mut Lookup<T>
+    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_ref: &L) -> &'a mut Lookup<T>
         where T: LookupSubtable<Self::Lookup>;
+
+    fn insert_lookup_index<'a>(&'a mut self, lookup_ref: &L, index: u16);
 }
 
 impl HasLookups<LookupBlockLabel> for GPOS {
@@ -116,6 +118,10 @@ impl HasLookups<LookupBlockLabel> for GPOS {
         // T::get_lookup_variant_mut(), but that's a programmer error that the panic from unwrap
         // will direct the programmer to fix the issue.
         T::get_lookup_variant_mut(&mut self.lookup_list.0[idx]).unwrap()
+    }
+
+    fn insert_lookup_index<'a>(&'a mut self, _lookup_name: &LookupBlockLabel, _index: u16) {
+        panic!("references between named lookups presently unsupported");
     }
 }
 
@@ -154,6 +160,10 @@ impl HasLookups<Tag> for GPOS {
         // T::get_lookup_variant_mut(), but that's a programmer error that the panic from unwrap
         // will direct the programmer to fix the issue.
         T::get_lookup_variant_mut(&mut self.lookup_list.0[idx]).unwrap()
+    }
+
+    fn insert_lookup_index<'a>(&'a mut self, _feature_tag: &Tag, _index: u16) {
+        panic!("feature -> lookup ref unimplemented");
     }
 }
 

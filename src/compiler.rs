@@ -124,23 +124,41 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
     Ok(())
 }
 
-fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinition) -> CompileResult<()> {
+fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupBlockLabel) -> CompileResult<()> {
+    Ok(())
+}
+
+fn handle_block_statements(ctx: &mut CompilerState, block: &Block, statements: &[pm::BlockStatement]) -> CompileResult<()> {
     use pm::BlockStatement::*;
 
-    let tag = &def.tag;
-
-    println!("feature {}:", tag);
-
-    let block = Block::Feature(tag);
-
-    for s in &def.statements {
+    for s in statements {
         match s {
-            Position(pos) => handle_position_statement(ctx, &block, pos)?,
-            _ => panic!()
+            Position(pos) => handle_position_statement(ctx, block, pos)?,
+            Lookup(pm::Lookup(name)) => handle_lookup_reference(ctx, block, name)?,
+
+            stmt => panic!("unimplemented block statement {:?}", stmt)
         }
     }
 
     Ok(())
+}
+
+fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinition) -> CompileResult<()> {
+    let tag = &def.tag;
+    let block = Block::Feature(tag);
+
+    println!("feature {}:", tag);
+
+    handle_block_statements(ctx, &block, &def.statements)
+}
+
+fn handle_lookup_definition(ctx: &mut CompilerState, def: &pm::LookupDefinition) -> CompileResult<()> {
+    let name = &def.label;
+    let block = Block::Lookup(name);
+
+    println!("lookup {}:", name);
+
+    handle_block_statements(ctx, &block, &def.statements)
 }
 
 /**
@@ -166,9 +184,12 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
     use pm::TopLevelStatement::*;
 
     match statement {
-        Table(ref t) => handle_table(ctx, t),
-        FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
         LanguageSystem(ref _ls) => (),
+
+        Table(ref t) => handle_table(ctx, t),
+
+        FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
+        LookupDefinition(ref ld) => handle_lookup_definition(ctx, ld)?,
 
         s => {
             println!("unhandled {:#?}\n", s);
