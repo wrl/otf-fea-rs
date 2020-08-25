@@ -1,4 +1,14 @@
+use std::collections::{
+    HashMap,
+    HashSet
+};
+
 use endian_codec::{PackedSize, DecodeBE};
+
+use crate::{
+    Tag,
+    tag
+};
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
@@ -6,10 +16,8 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 
-use crate::{
-    Tag,
-    tag
-};
+use crate::parse_model::LookupBlockLabel;
+
 
 pub mod header;
 use header::*;
@@ -17,12 +25,15 @@ use header::*;
 pub mod lookup;
 pub use lookup::*;
 
+
 #[derive(Debug)]
 pub struct GPOS {
     pub script_list: ScriptList,
     pub feature_list: FeatureList,
     pub lookup_list: LookupList<GPOSLookup>,
-    pub feature_variations: Option<usize>
+    pub feature_variations: Option<usize>,
+
+    pub named_lookups: HashMap<LookupBlockLabel, HashSet<u16>>
 }
 
 impl GPOS {
@@ -31,11 +42,77 @@ impl GPOS {
             script_list: ScriptList::new(),
             feature_list: FeatureList::new(),
             lookup_list: LookupList::new(),
-            feature_variations: None
+            feature_variations: None,
+
+            named_lookups: HashMap::new()
         }
     }
+}
 
-    pub fn find_lookup<T, G>(&mut self, feature_tag: &Tag, get_lookup_variant: G) -> Option<usize>
+pub trait HasLookups<L> {
+    fn find_lookup<T, G>(&mut self, lookup_type: &L, get_lookup_variant: G) -> Option<usize>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>;
+
+    fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, lookup_type: &L, get_lookup_variant: G, insert: I)
+        -> &'a mut Lookup<T>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
+              I: Fn() -> GPOSLookup;
+}
+
+impl HasLookups<LookupBlockLabel> for GPOS {
+    fn find_lookup<T, G>(&mut self, lookup_name: &LookupBlockLabel, get_lookup_variant: G) -> Option<usize>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>
+    {
+        let indices = match self.named_lookups.get(lookup_name) {
+            Some(i) => i,
+            None => return None
+        };
+
+        for i in indices {
+            let i = *i as usize;
+
+            if let Some(_) = self.lookup_list.0.get_mut(i).map(&get_lookup_variant) {
+                return Some(i);
+            }
+        }
+
+        None
+    }
+
+    fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, lookup_name: &LookupBlockLabel, get_lookup_variant: G,
+        insert: I)
+        -> &'a mut Lookup<T>
+        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
+              I: Fn() -> GPOSLookup
+    {
+        let idx = match self.find_lookup(lookup_name, get_lookup_variant) {
+            Some(idx) => idx,
+            None => {
+                let indices = self.named_lookups.entry(lookup_name.clone())
+                    .or_default();
+                let idx = self.lookup_list.0.len();
+
+                indices.insert(idx as u16);
+                self.lookup_list.0.push(insert());
+
+                idx
+            }
+        };
+
+        // unwrap() is fine here since we've either already succeeded with get_lookup_variant() in
+        // find_lookup() or insert() has inserted a valid lookup.
+        //
+        // it's possible for insert() to create a lookup which is not then matched by
+        // get_lookup_variant(), but that's a programmer error that the panic from unwrap will
+        // direct the programmer to fix the issue.
+        //
+        // if we ever get "enum variants as types" we'll be able to use those here instead.
+        get_lookup_variant(&mut self.lookup_list.0[idx]).unwrap()
+    }
+}
+
+impl HasLookups<Tag> for GPOS {
+    fn find_lookup<T, G>(&mut self, feature_tag: &Tag, get_lookup_variant: G) -> Option<usize>
         where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>
     {
         let indices = self.feature_list.indices_for_tag(feature_tag);
@@ -51,7 +128,7 @@ impl GPOS {
         None
     }
 
-    pub fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I)
+    fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I)
         -> &'a mut Lookup<T>
         where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
               I: Fn() -> GPOSLookup
@@ -104,7 +181,9 @@ impl TTFDecode for GPOS {
             script_list: ScriptList::ttf_decode(script_bytes, feature_bytes)?,
             feature_list: FeatureList::ttf_decode(feature_bytes)?,
             lookup_list: LookupList::ttf_decode(lookup_bytes)?,
-            feature_variations: offsets.feature_variations
+            feature_variations: offsets.feature_variations,
+
+            named_lookups: HashMap::new()
         })
     }
 }

@@ -39,6 +39,7 @@ impl CompilerState {
  */
 
 use tables::gpos::{
+    HasLookups,
     GPOSLookup,
     PairGlyphs,
     PairValueRecord,

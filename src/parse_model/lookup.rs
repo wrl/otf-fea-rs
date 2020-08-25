@@ -1,7 +1,4 @@
-use std::{
-    fmt,
-    cmp
-};
+use std::fmt;
 
 use combine::{
     Parser,
@@ -16,7 +13,7 @@ use super::block::*;
 use super::glyph::*;
 use super::util::*;
 
-#[derive(cmp::PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct LookupBlockLabel(pub GlyphNameStorage);
 
 impl fmt::Debug for LookupBlockLabel {
