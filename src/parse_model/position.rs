@@ -244,7 +244,6 @@ fn single_or_pair<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         .map(|(glyph_class, rest)| {
             match rest {
                 Either2::A(value_record) => {
-                    println!(" yo {:?}", &glyph_class);
                     Position::SingleAdjustment {
                         glyph_class,
                         value_record
