@@ -13,7 +13,7 @@ use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup_list::*;
 
-use crate::parse_model::LookupBlockLabel;
+use crate::parse_model::LookupName;
 
 
 pub mod header;
@@ -30,7 +30,7 @@ pub struct GPOS {
     pub lookup_list: LookupList<GPOSLookup>,
     pub feature_variations: Option<usize>,
 
-    pub named_lookups: HashMap<LookupBlockLabel, Vec<u16>>
+    pub named_lookups: HashMap<LookupName, Vec<u16>>
 }
 
 impl GPOS {
@@ -79,8 +79,8 @@ pub trait HasLookups<L>: TableWithLookups {
         where T: LookupSubtable<Self::Lookup>;
 }
 
-impl HasLookups<LookupBlockLabel> for GPOS {
-    fn find_lookup<T>(&mut self, lookup_name: &LookupBlockLabel) -> Option<usize>
+impl HasLookups<LookupName> for GPOS {
+    fn find_lookup<T>(&mut self, lookup_name: &LookupName) -> Option<usize>
         where T: LookupSubtable<Self::Lookup>
     {
         self.named_lookups.get(lookup_name)
@@ -89,7 +89,7 @@ impl HasLookups<LookupBlockLabel> for GPOS {
             })
     }
 
-    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_name: &LookupBlockLabel) -> &'a mut Lookup<T>
+    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_name: &LookupName) -> &'a mut Lookup<T>
         where T: LookupSubtable<Self::Lookup>
     {
         let idx = match self.find_lookup::<T>(lookup_name) {

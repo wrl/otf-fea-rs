@@ -54,7 +54,7 @@ use tables::gpos::{
 #[allow(dead_code)]
 enum Block<'a> {
     Feature(&'a Tag),
-    Lookup(&'a pm::LookupBlockLabel)
+    Lookup(&'a pm::LookupName)
 }
 
 fn feature_is_vertical(tag: &Tag) -> bool {
@@ -75,7 +75,7 @@ impl<'a> Block<'a> {
     }
 
     fn find_or_insert_lookup<'b, T, L>(&self, table: &'b mut T) -> &'b mut Lookup<L>
-        where T: TableWithLookups + HasLookups<Tag> + HasLookups<pm::LookupBlockLabel>,
+        where T: TableWithLookups + HasLookups<Tag> + HasLookups<pm::LookupName>,
               L: LookupSubtable<T::Lookup>
     {
         match *self {
@@ -143,7 +143,7 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
     Ok(())
 }
 
-fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupBlockLabel) -> CompileResult<()> {
+fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupName) -> CompileResult<()> {
     let gpos = match ctx.gpos_table.as_mut() {
         None => return Ok(()),
         Some(gpos) => gpos

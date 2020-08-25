@@ -14,11 +14,11 @@ use super::glyph::*;
 use super::util::*;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct LookupBlockLabel(pub GlyphNameStorage);
+pub struct LookupName(pub GlyphNameStorage);
 
-impl fmt::Debug for LookupBlockLabel {
+impl fmt::Debug for LookupName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "LookupBlockLabel(\"")?;
+        write!(f, "LookupName(\"")?;
 
         for c in &self.0 {
             write!(f, "{}", c)?;
@@ -28,7 +28,7 @@ impl fmt::Debug for LookupBlockLabel {
     }
 }
 
-impl fmt::Display for LookupBlockLabel {
+impl fmt::Display for LookupName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for c in &self.0 {
             write!(f, "{}", c)?;
@@ -39,17 +39,17 @@ impl fmt::Display for LookupBlockLabel {
 }
 
 #[inline]
-pub(crate) fn lookup_block_label<Input>() -> impl Parser<FeaRsStream<Input>, Output = LookupBlockLabel>
+pub(crate) fn lookup_block_label<Input>() -> impl Parser<FeaRsStream<Input>, Output = LookupName>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_name_unwrapped()
-        .map(LookupBlockLabel)
+        .map(LookupName)
 }
 
 #[derive(Debug)]
 pub struct LookupDefinition {
-    pub label: LookupBlockLabel,
+    pub label: LookupName,
     pub statements: Vec<BlockStatement>
 }
 
@@ -70,7 +70,7 @@ pub(crate) fn lookup_definition<Input>() -> impl Parser<FeaRsStream<Input>, Outp
 }
 
 #[derive(Debug)]
-pub struct Lookup(pub LookupBlockLabel);
+pub struct Lookup(pub LookupName);
 
 pub(crate) fn lookup<Input>() -> impl Parser<FeaRsStream<Input>, Output = Lookup>
     where Input: Stream<Token = u8>,
