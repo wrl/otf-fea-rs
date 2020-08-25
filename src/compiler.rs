@@ -40,7 +40,6 @@ impl CompilerState {
 
 use tables::gpos::{
     HasLookups,
-    GPOSLookup,
     PairGlyphs,
     PairValueRecord,
 };
@@ -60,12 +59,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
     match p {
         Pair { glyph_classes, value_records } => {
             let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
-            let lookup = gpos.find_or_insert_lookup(
-                feature_tag,
-                |lookup| match lookup {
-                    GPOSLookup::PairGlyphs(l) => Some(l)
-                },
-                || GPOSLookup::PairGlyphs(Lookup::new()));
+            let lookup: &mut Lookup<PairGlyphs> = gpos.find_or_insert_lookup(feature_tag);
 
             if lookup.subtables.len() == 0 {
                 lookup.subtables.push(PairGlyphs::new());

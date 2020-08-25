@@ -49,43 +49,53 @@ impl GPOS {
     }
 }
 
-pub trait HasLookups<L> {
-    fn find_lookup<T, G>(&mut self, lookup_type: &L, get_lookup_variant: G) -> Option<usize>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>;
+pub trait TableWithLookups {
+    type Lookup: Sized;
 
-    fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, lookup_type: &L, get_lookup_variant: G, insert: I)
-        -> &'a mut Lookup<T>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
-              I: Fn() -> GPOSLookup;
+    fn lookup_index_for_type<T, I>(&self, indices: I) -> Option<usize>
+        where T: LookupSubtable<Self::Lookup>,
+              I: IntoIterator<Item = usize>;
 }
 
-impl HasLookups<LookupBlockLabel> for GPOS {
-    fn find_lookup<T, G>(&mut self, lookup_name: &LookupBlockLabel, get_lookup_variant: G) -> Option<usize>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>
+impl TableWithLookups for GPOS {
+    type Lookup = GPOSLookup;
+
+    fn lookup_index_for_type<T, I>(&self, indices: I) -> Option<usize>
+        where T: LookupSubtable<Self::Lookup>,
+              I: IntoIterator<Item = usize>
     {
-        let indices = match self.named_lookups.get(lookup_name) {
-            Some(i) => i,
-            None => return None
-        };
-
         for i in indices {
-            let i = *i as usize;
-
-            if let Some(_) = self.lookup_list.0.get_mut(i).map(&get_lookup_variant) {
+            if let Some(_) = self.lookup_list.0.get(i).map(T::get_lookup_variant) {
                 return Some(i);
             }
         }
 
         None
     }
+}
 
-    fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, lookup_name: &LookupBlockLabel, get_lookup_variant: G,
-        insert: I)
-        -> &'a mut Lookup<T>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
-              I: Fn() -> GPOSLookup
+pub trait HasLookups<L>: TableWithLookups {
+    fn find_lookup<T>(&mut self, lookup_type: &L) -> Option<usize>
+        where T: LookupSubtable<Self::Lookup>;
+
+    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_type: &L) -> &'a mut Lookup<T>
+        where T: LookupSubtable<Self::Lookup>;
+}
+
+impl HasLookups<LookupBlockLabel> for GPOS {
+    fn find_lookup<T>(&mut self, lookup_name: &LookupBlockLabel) -> Option<usize>
+        where T: LookupSubtable<Self::Lookup>
     {
-        let idx = match self.find_lookup(lookup_name, get_lookup_variant) {
+        self.named_lookups.get(lookup_name)
+            .and_then(|indices| {
+                self.lookup_index_for_type::<T, _> (indices.iter().map(|x| *x as usize))
+            })
+    }
+
+    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_name: &LookupBlockLabel) -> &'a mut Lookup<T>
+        where T: LookupSubtable<Self::Lookup>
+    {
+        let idx = match self.find_lookup::<T>(lookup_name) {
             Some(idx) => idx,
             None => {
                 let indices = self.named_lookups.entry(lookup_name.clone())
@@ -93,47 +103,35 @@ impl HasLookups<LookupBlockLabel> for GPOS {
                 let idx = self.lookup_list.0.len();
 
                 indices.insert(idx as u16);
-                self.lookup_list.0.push(insert());
+                self.lookup_list.0.push(T::new_lookup());
 
                 idx
             }
         };
 
-        // unwrap() is fine here since we've either already succeeded with get_lookup_variant() in
-        // find_lookup() or insert() has inserted a valid lookup.
+        // unwrap() is fine here since we've either already succeeded with T::get_lookup_variant()
+        // in find_lookup() or T::new_lookup() has inserted a valid lookup.
         //
-        // it's possible for insert() to create a lookup which is not then matched by
-        // get_lookup_variant(), but that's a programmer error that the panic from unwrap will
-        // direct the programmer to fix the issue.
-        //
-        // if we ever get "enum variants as types" we'll be able to use those here instead.
-        get_lookup_variant(&mut self.lookup_list.0[idx]).unwrap()
+        // it's possible for T::new_lookup() to create a lookup which is not then matched by
+        // T::get_lookup_variant_mut(), but that's a programmer error that the panic from unwrap
+        // will direct the programmer to fix the issue.
+        T::get_lookup_variant_mut(&mut self.lookup_list.0[idx]).unwrap()
     }
 }
 
 impl HasLookups<Tag> for GPOS {
-    fn find_lookup<T, G>(&mut self, feature_tag: &Tag, get_lookup_variant: G) -> Option<usize>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>>
+    fn find_lookup<T>(&mut self, feature_tag: &Tag) -> Option<usize>
+        where T: LookupSubtable<Self::Lookup>
     {
-        let indices = self.feature_list.indices_for_tag(feature_tag);
-
-        for i in indices {
-            let i = *i as usize;
-
-            if let Some(_) = self.lookup_list.0.get_mut(i).map(&get_lookup_variant) {
-                return Some(i);
-            }
-        }
-
-        None
+        self.lookup_index_for_type::<T, _>(
+            self.feature_list.indices_for_tag(feature_tag).iter()
+                .map(|x| *x as usize))
     }
 
-    fn find_or_insert_lookup<'a, T, G, I>(&'a mut self, feature_tag: &Tag, get_lookup_variant: G, insert: I)
-        -> &'a mut Lookup<T>
-        where G: Fn(&mut GPOSLookup) -> Option<&mut Lookup<T>> + Copy,
-              I: Fn() -> GPOSLookup
+    fn find_or_insert_lookup<'a, T>(&'a mut self, feature_tag: &Tag) -> &'a mut Lookup<T>
+        where T: LookupSubtable<Self::Lookup>
     {
-        let idx = match self.find_lookup(feature_tag, get_lookup_variant) {
+        let idx = match self.find_lookup::<T>(feature_tag) {
             Some(idx) => idx,
             None => {
                 let indices = self.feature_list.indices_for_tag_mut(feature_tag);
@@ -143,21 +141,19 @@ impl HasLookups<Tag> for GPOS {
                     .default_lang_sys.features.insert(*feature_tag);
 
                 indices.push(idx as u16);
-                self.lookup_list.0.push(insert());
+                self.lookup_list.0.push(T::new_lookup());
 
                 idx
             }
         };
 
-        // unwrap() is fine here since we've either already succeeded with get_lookup_variant() in
-        // find_lookup() or insert() has inserted a valid lookup.
+        // unwrap() is fine here since we've either already succeeded with T::get_lookup_variant()
+        // in find_lookup() or T::new_lookup() has inserted a valid lookup.
         //
-        // it's possible for insert() to create a lookup which is not then matched by
-        // get_lookup_variant(), but that's a programmer error that the panic from unwrap will
-        // direct the programmer to fix the issue.
-        //
-        // if we ever get "enum variants as types" we'll be able to use those here instead.
-        get_lookup_variant(&mut self.lookup_list.0[idx]).unwrap()
+        // it's possible for T::new_lookup() to create a lookup which is not then matched by
+        // T::get_lookup_variant_mut(), but that's a programmer error that the panic from unwrap
+        // will direct the programmer to fix the issue.
+        T::get_lookup_variant_mut(&mut self.lookup_list.0[idx]).unwrap()
     }
 }
 
