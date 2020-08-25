@@ -38,11 +38,19 @@ impl CompilerState {
  * feature definitions
  */
 
+use crate::compile_model::LookupSubtable;
 use tables::gpos::{
     HasLookups,
+    TableWithLookups,
     PairGlyphs,
     PairValueRecord,
 };
+
+#[allow(dead_code)]
+enum Block<'a> {
+    Feature(&'a Tag),
+    Lookup(&'a pm::LookupBlockLabel)
+}
 
 fn feature_is_vertical(tag: &Tag) -> bool {
     match tag {
@@ -53,13 +61,32 @@ fn feature_is_vertical(tag: &Tag) -> bool {
     }
 }
 
-fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm::Position) -> CompileResult<()> {
+impl<'a> Block<'a> {
+    fn is_vertical(&self) -> bool {
+        match self {
+            Block::Feature(tag) => feature_is_vertical(tag),
+            Block::Lookup(_) => false,
+        }
+    }
+
+    fn find_or_insert_lookup<'b, T, L>(&self, table: &'b mut T) -> &'b mut Lookup<L>
+        where T: TableWithLookups + HasLookups<Tag> + HasLookups<pm::LookupBlockLabel>,
+              L: LookupSubtable<T::Lookup>
+    {
+        match *self {
+            Block::Feature(f) => table.find_or_insert_lookup(f),
+            Block::Lookup(l) => table.find_or_insert_lookup(l)
+        }
+    }
+}
+
+fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
     match p {
         Pair { glyph_classes, value_records } => {
             let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
-            let lookup: &mut Lookup<PairGlyphs> = gpos.find_or_insert_lookup(feature_tag);
+            let lookup: &mut Lookup<PairGlyphs> = block.find_or_insert_lookup(gpos);
 
             if lookup.subtables.len() == 0 {
                 lookup.subtables.push(PairGlyphs::new());
@@ -67,7 +94,7 @@ fn handle_position_statement(ctx: &mut CompilerState, feature_tag: &Tag, p: &pm:
 
             let pair_lookup = &mut lookup.subtables[0];
 
-            let vertical = feature_is_vertical(feature_tag);
+            let vertical = block.is_vertical();
 
             for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
                 let pairs = pair_lookup.entry(first_glyph?)
@@ -104,9 +131,11 @@ fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinitio
 
     println!("feature {}:", tag);
 
+    let block = Block::Feature(tag);
+
     for s in &def.statements {
         match s {
-            Position(pos) => handle_position_statement(ctx, tag, pos)?,
+            Position(pos) => handle_position_statement(ctx, &block, pos)?,
             _ => panic!()
         }
     }
