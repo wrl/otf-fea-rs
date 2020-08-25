@@ -1,7 +1,4 @@
-use std::collections::{
-    HashMap,
-    HashSet
-};
+use std::collections::HashMap;
 
 use endian_codec::{PackedSize, DecodeBE};
 
@@ -33,7 +30,7 @@ pub struct GPOS {
     pub lookup_list: LookupList<GPOSLookup>,
     pub feature_variations: Option<usize>,
 
-    pub named_lookups: HashMap<LookupBlockLabel, HashSet<u16>>
+    pub named_lookups: HashMap<LookupBlockLabel, Vec<u16>>
 }
 
 impl GPOS {
@@ -80,8 +77,6 @@ pub trait HasLookups<L>: TableWithLookups {
 
     fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_ref: &L) -> &'a mut Lookup<T>
         where T: LookupSubtable<Self::Lookup>;
-
-    fn insert_lookup_index<'a>(&'a mut self, lookup_ref: &L, index: u16);
 }
 
 impl HasLookups<LookupBlockLabel> for GPOS {
@@ -100,12 +95,12 @@ impl HasLookups<LookupBlockLabel> for GPOS {
         let idx = match self.find_lookup::<T>(lookup_name) {
             Some(idx) => idx,
             None => {
-                let indices = self.named_lookups.entry(lookup_name.clone())
-                    .or_default();
                 let idx = self.lookup_list.0.len();
-
-                indices.insert(idx as u16);
                 self.lookup_list.0.push(T::new_lookup());
+
+                self.named_lookups.entry(lookup_name.clone())
+                    .or_default()
+                    .push(idx as u16);
 
                 idx
             }
@@ -118,10 +113,6 @@ impl HasLookups<LookupBlockLabel> for GPOS {
         // T::get_lookup_variant_mut(), but that's a programmer error that the panic from unwrap
         // will direct the programmer to fix the issue.
         T::get_lookup_variant_mut(&mut self.lookup_list.0[idx]).unwrap()
-    }
-
-    fn insert_lookup_index<'a>(&'a mut self, _lookup_name: &LookupBlockLabel, _index: u16) {
-        panic!("references between named lookups presently unsupported");
     }
 }
 
@@ -140,13 +131,12 @@ impl HasLookups<Tag> for GPOS {
         let idx = match self.find_lookup::<T>(feature_tag) {
             Some(idx) => idx,
             None => {
-                let indices = self.feature_list.indices_for_tag_mut(feature_tag);
                 let idx = self.lookup_list.0.len();
 
                 self.script_list.script_for_tag_mut(&tag!(D,F,L,T))
                     .default_lang_sys.features.insert(*feature_tag);
 
-                indices.push(idx as u16);
+                self.feature_list.add_lookup_index(feature_tag, idx as u16);
                 self.lookup_list.0.push(T::new_lookup());
 
                 idx
@@ -160,10 +150,6 @@ impl HasLookups<Tag> for GPOS {
         // T::get_lookup_variant_mut(), but that's a programmer error that the panic from unwrap
         // will direct the programmer to fix the issue.
         T::get_lookup_variant_mut(&mut self.lookup_list.0[idx]).unwrap()
-    }
-
-    fn insert_lookup_index<'a>(&'a mut self, _feature_tag: &Tag, _index: u16) {
-        panic!("feature -> lookup ref unimplemented");
     }
 }
 

@@ -1,3 +1,5 @@
+use std::iter;
+
 use endian_codec::{PackedSize, EncodeBE};
 
 use crate::parse_model as pm;
@@ -7,6 +9,8 @@ use crate::{
     tag,
     Tag
 };
+
+use crate::util::*;
 
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
@@ -40,6 +44,7 @@ impl CompilerState {
 
 use crate::compile_model::LookupSubtable;
 use tables::gpos::{
+    GPOS,
     HasLookups,
     TableWithLookups,
     PairGlyphs,
@@ -77,6 +82,18 @@ impl<'a> Block<'a> {
             Block::Feature(f) => table.find_or_insert_lookup(f),
             Block::Lookup(l) => table.find_or_insert_lookup(l)
         }
+    }
+
+    fn insert_into_script(&self, gpos: &mut GPOS, script_tag: &Tag) {
+        let feature_tag = match self {
+            Block::Feature(tag) => *tag,
+            Block::Lookup(_) => return
+        };
+
+        gpos.script_list.script_for_tag_mut(script_tag)
+            .default_lang_sys
+            .features
+            .insert(*feature_tag);
     }
 }
 
@@ -116,6 +133,8 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
                     pairs.push(pvr);
                 }
             }
+
+            block.insert_into_script(gpos, &tag!(D,F,L,T));
         },
 
         _ => panic!()
@@ -125,6 +144,26 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
 }
 
 fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupBlockLabel) -> CompileResult<()> {
+    let gpos = match ctx.gpos_table.as_mut() {
+        None => return Ok(()),
+        Some(gpos) => gpos
+    };
+
+    let feature_indices = match block {
+        Block::Feature(tag) => gpos.feature_list.indices_for_tag_mut(tag),
+        Block::Lookup(_) =>
+            panic!("lookup references from inside a lookup block are unsupported")
+    };
+
+    let lookup_indices = gpos.named_lookups.get(name)
+        .map(|indices| Either2::A(indices.iter()))
+        .unwrap_or_else(|| Either2::B(iter::empty::<&u16>()));
+
+    for idx in lookup_indices {
+        feature_indices.push(*idx);
+    }
+
+    block.insert_into_script(gpos, &tag!(D,F,L,T));
     Ok(())
 }
 

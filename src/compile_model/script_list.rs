@@ -1,6 +1,6 @@
 use std::collections::{
     HashMap,
-    HashSet
+    BTreeSet
 };
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
@@ -37,7 +37,7 @@ impl ScriptList {
             .or_insert_with(|| Script {
                 default_lang_sys: LangSys {
                     required_feature: None,
-                    features: HashSet::new()
+                    features: BTreeSet::new()
                 },
 
                 lang_sys: HashMap::new()
@@ -54,7 +54,7 @@ pub struct Script {
 #[derive(Debug)]
 pub struct LangSys {
     pub required_feature: Option<Tag>,
-    pub features: HashSet<Tag>
+    pub features: BTreeSet<Tag>
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]

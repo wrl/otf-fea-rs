@@ -17,6 +17,7 @@ impl FeatureList {
         Self(BTreeMap::new())
     }
 
+    #[inline]
     pub fn indices_for_tag(&self, tag: &Tag) -> &[u16] {
         match self.0.get(tag) {
             Some(i) => i,
@@ -24,9 +25,16 @@ impl FeatureList {
         }
     }
 
+    #[inline]
     pub fn indices_for_tag_mut(&mut self, tag: &Tag) -> &mut LookupIndices {
         self.0.entry(*tag)
             .or_default()
+    }
+
+    #[inline]
+    pub fn add_lookup_index(&mut self, tag: &Tag, index: u16) {
+        let indices = self.indices_for_tag_mut(tag);
+        indices.push(index);
     }
 }
 
