@@ -8,14 +8,17 @@ use crate::util::*;
 #[derive(Debug, Clone)]
 pub enum GlyphClassItem {
     Single(GlyphRef),
+
     Range {
         start: GlyphRef,
         end: GlyphRef
     },
+
     ClassRef(GlyphClassName)
 }
 
 impl From<GlyphRef> for GlyphClassItem {
+    #[inline]
     fn from(glyph: GlyphRef) -> GlyphClassItem {
         GlyphClassItem::Single(glyph)
     }
@@ -25,6 +28,11 @@ impl From<GlyphRef> for GlyphClassItem {
 pub struct GlyphClass(pub Vec<GlyphClassItem>);
 
 impl GlyphClass {
+    #[inline]
+    pub fn from_single(glyph: GlyphRef) -> GlyphClass {
+        GlyphClass(vec![glyph.into()])
+    }
+
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.len() == 0
@@ -37,10 +45,6 @@ impl GlyphClass {
         } else {
             false
         }
-    }
-
-    pub fn from_single(glyph: GlyphRef) -> GlyphClass {
-        GlyphClass(vec![glyph.into()])
     }
 
     pub fn iter_glyphs<'a>(&'a self, glyph_order: &'a GlyphOrder)

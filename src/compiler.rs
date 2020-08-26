@@ -349,9 +349,9 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
 
     actually_compile(&mut ctx, out);
 
-    if let Some(gpos) = ctx.gpos_table.as_ref() {
-        println!("{:#?}", gpos);
-    }
+    // if let Some(gpos) = ctx.gpos_table.as_ref() {
+    //     println!("{:#?}", gpos);
+    // }
 
     Ok(())
 }
