@@ -81,7 +81,7 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn insert_into_script(&self, gpos: &mut GPOS, script_tag: &Tag) {
+    fn insert_into_script(&self, gpos: &mut GPOS, script_tag: &ScriptTag) {
         let feature_tag = match self {
             Block::Feature(tag) => *tag,
             Block::Lookup(_) => return
@@ -131,7 +131,7 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
                 }
             }
 
-            block.insert_into_script(gpos, &tag!(D,F,L,T));
+            block.insert_into_script(gpos, &script_tag!(D,F,L,T));
         },
 
         _ => panic!()
@@ -160,7 +160,7 @@ fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::Lo
         feature_indices.push(*idx);
     }
 
-    block.insert_into_script(gpos, &tag!(D,F,L,T));
+    block.insert_into_script(gpos, &script_tag!(D,F,L,T));
     Ok(())
 }
 

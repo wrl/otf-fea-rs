@@ -16,7 +16,7 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
 #[derive(Debug)]
-pub struct ScriptList(HashMap<Tag, Script>);
+pub struct ScriptList(HashMap<ScriptTag, Script>);
 
 impl ScriptList {
     pub fn new() -> Self {
@@ -24,12 +24,12 @@ impl ScriptList {
     }
 
     #[inline]
-    pub fn script_for_tag(&self, tag: &Tag) -> Option<&Script> {
+    pub fn script_for_tag(&self, tag: &ScriptTag) -> Option<&Script> {
         self.0.get(tag)
     }
 
     #[inline]
-    pub fn script_for_tag_mut(&mut self, tag: &Tag) -> &mut Script {
+    pub fn script_for_tag_mut(&mut self, tag: &ScriptTag) -> &mut Script {
         self.0.entry(*tag)
             .or_insert_with(|| Script {
                 default_lang_sys: LangSys {
@@ -56,7 +56,7 @@ pub struct LangSys {
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct ScriptRecord {
-    tag: Tag,
+    tag: ScriptTag,
     script_offset: u16
 }
 
@@ -255,7 +255,7 @@ impl ScriptList {
                 .map(|(i, tag)| (tag.clone(), i as u16))
                 .collect();
 
-        let dflt = tag!(D,F,L,T);
+        let dflt = script_tag!(D,F,L,T);
 
         if let Some(script) = self.0.get(&dflt) {
             let record = ScriptRecord {

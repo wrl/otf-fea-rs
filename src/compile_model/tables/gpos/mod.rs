@@ -130,9 +130,6 @@ impl HasLookups<FeatureTag> for GPOS {
             None => {
                 let idx = self.lookup_list.0.len();
 
-                self.script_list.script_for_tag_mut(&tag!(D,F,L,T))
-                    .default_lang_sys.features.insert(*feature_tag);
-
                 self.feature_list.add_lookup_index(feature_tag, idx as u16);
                 self.lookup_list.0.push(T::new_lookup());
 

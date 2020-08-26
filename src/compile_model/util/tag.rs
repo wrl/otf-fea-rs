@@ -1,9 +1,6 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
-use crate::{
-    Tag,
-    FeatureTag
-};
+use crate::*;
 
 macro_rules! impl_for {
     ($type:ty) => {
@@ -39,3 +36,4 @@ macro_rules! impl_for {
 
 impl_for!(Tag);
 impl_for!(FeatureTag);
+impl_for!(ScriptTag);
