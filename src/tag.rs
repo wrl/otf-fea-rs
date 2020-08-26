@@ -3,6 +3,20 @@ use ascii::AsciiChar;
 
 pub(crate) type TagStorage = [AsciiChar; 4];
 
+fn tag_storage_from_bytes(v: &[u8]) -> Result<TagStorage, ::ascii::ToAsciiCharError> {
+    let mut tag = [::ascii::AsciiChar::Space; 4];
+
+    let iter = v.iter()
+        .map(|x| ::ascii::AsciiChar::from_ascii(*x))
+        .take(4);
+
+    for (i, c) in iter.enumerate() {
+        tag[i] = c?;
+    }
+
+    Ok(tag)
+}
+
 #[macro_export]
 macro_rules! tag_storage {
     ($a:ident, $b:ident, $c:ident, $d:ident) => {
@@ -42,22 +56,23 @@ macro_rules! tag_storage {
     };
 }
 
-#[macro_export]
-macro_rules! tag_impl {
-    ($type:ident) => {
+// from https://github.com/rust-lang/rust/issues/35853#issuecomment-415993963, thanks!
+macro_rules! with_dollar_sign {
+    ($($body:tt)*) => {
+        macro_rules! __with_dollar_sign { $($body)* }
+        __with_dollar_sign!($);
+    }
+}
+
+macro_rules! tag_type {
+    ($type:ident, $mac:ident) => {
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
+        pub struct $type(pub TagStorage);
+
         impl $type {
             pub fn from_bytes(v: &[u8]) -> Result<Self, ::ascii::ToAsciiCharError> {
-                let mut tag = $type([::ascii::AsciiChar::Space; 4]);
-
-                let iter = v.iter()
-                    .map(|x| ::ascii::AsciiChar::from_ascii(*x))
-                    .take(4);
-
-                for (i, c) in iter.enumerate() {
-                    tag.0[i] = c?;
-                }
-
-                Ok(tag)
+                tag_storage_from_bytes(v)
+                    .map($type)
             }
         }
 
@@ -74,32 +89,22 @@ macro_rules! tag_impl {
                     self.0[0], self.0[1], self.0[2], self.0[3])
             }
         }
+
+        with_dollar_sign! {
+            ($d:tt) => {
+                #[macro_export]
+                macro_rules! $mac {
+                    ($d($d args:tt),+) => {
+                        $crate::$type($crate::tag_storage!($d($d args),+))
+                    }
+                }
+            }
+        }
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
-pub struct Tag(pub TagStorage);
-
-tag_impl!(Tag);
-
-#[macro_export]
-macro_rules! tag {
-    ($($args:tt),+) => {
-        $crate::Tag($crate::tag_storage!($($args),+))
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
-pub struct FeatureTag(pub TagStorage);
-
-tag_impl!(FeatureTag);
-
-#[macro_export]
-macro_rules! feature_tag {
-    ($($args:tt),+) => {
-        $crate::FeatureTag($crate::tag_storage!($($args),+))
-    }
-}
+tag_type!(Tag, tag);
+tag_type!(FeatureTag, feature_tag);
 
 #[cfg(test)]
 mod tests {

@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use endian_codec::{PackedSize, DecodeBE};
 
-use crate::{
-    FeatureTag,
-    tag
-};
+use crate::*;
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;

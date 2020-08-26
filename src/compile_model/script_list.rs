@@ -5,6 +5,8 @@ use std::collections::{
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
+use crate::*;
+
 use crate::compile_model::feature_list::{
     FeatureRecord,
     FeatureList
@@ -12,12 +14,6 @@ use crate::compile_model::feature_list::{
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
-
-use crate::{
-    Tag,
-    FeatureTag,
-    tag
-};
 
 #[derive(Debug)]
 pub struct ScriptList(HashMap<Tag, Script>);
