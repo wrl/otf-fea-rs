@@ -6,6 +6,9 @@ use crate::compile_model::lookup_list::*;
 mod pair_glyphs;
 pub use pair_glyphs::*;
 
+mod pair_class;
+pub use pair_class::*;
+
 
 #[derive(Debug)]
 pub enum GPOSLookup {

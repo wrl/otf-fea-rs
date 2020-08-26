@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
-use crate::util::Either2;
+use crate::util::*;
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
@@ -58,66 +58,6 @@ impl<T> ops::DerefMut for CoverageLookup<T> {
 }
 
 
-trait Pred: Copy
-{
-    fn pred(self) -> Self;
-}
-
-impl Pred for u16 {
-    fn pred(self) -> Self {
-        self - 1
-    }
-}
-
-struct ContiguousRanges<T, I>
-    where T: Pred + Eq,
-          I: Iterator<Item = T>
-{
-    inner: I,
-    start: Option<T>
-}
-
-impl<T, I> Iterator for ContiguousRanges<T, I>
-    where T: Pred + Eq + Copy,
-          I: Iterator<Item = T>
-{
-    type Item = (T, T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let start = match self.start.take() {
-            Some(x) => x,
-
-            None => match self.inner.next() {
-                Some(x) => x,
-                None => return None
-            }
-        };
-
-        let mut prev = start;
-
-        for x in &mut self.inner {
-            if prev != x.pred() {
-                self.start = Some(x);
-                return Some((start, prev));
-            }
-
-            prev = x;
-        }
-
-        Some((start, prev))
-    }
-}
-
-fn contiguous_ranges<T, I>(inner: I) -> ContiguousRanges<T, I>
-    where T: Pred + Eq,
-          I: Iterator<Item = T>
-{
-    ContiguousRanges {
-        inner,
-        start: None
-    }
-}
-
 impl<T> CoverageLookup<T> {
     #[inline]
     pub fn new() -> Self {
@@ -157,12 +97,10 @@ impl<T> TTFEncode for CoverageLookup<T> {
         let count_offset = buf.bytes.len();
         buf.append(&0u16)?;
 
-        // &u16 -> u16
-        let glyphs = self.0.keys().map(|x| *x);
         let mut start_coverage_index = 0u16;
         let mut count = 0u16;
 
-        for range in contiguous_ranges(glyphs) {
+        for range in self.0.keys().map(|x| *x).contiguous_ranges() {
             let glyph_range = GlyphRange {
                 start: range.0,
                 end: range.1,
