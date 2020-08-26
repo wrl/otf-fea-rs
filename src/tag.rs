@@ -1,14 +1,13 @@
-use std::fmt;
-use std::cmp;
-
 use ascii::{
     AsciiChar,
     ToAsciiCharError
 };
 
 
-#[derive(Eq, Ord, PartialOrd, Hash, Copy, Clone)]
-pub struct Tag(pub [AsciiChar; 4]);
+pub(crate) type TagStorage = [AsciiChar; 4];
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
+pub struct Tag(pub TagStorage);
 
 impl Tag {
     pub fn from_bytes(v: &[u8]) -> Result<Self, ToAsciiCharError> {
@@ -26,63 +25,71 @@ impl Tag {
     }
 }
 
-impl fmt::Debug for Tag {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Tag(\"{}{}{}{}\")",
-            self.0[0], self.0[1], self.0[2], self.0[3])
-    }
-}
-
-impl fmt::Display for Tag {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}{}{}",
-            self.0[0], self.0[1], self.0[2], self.0[3])
-    }
-}
-
-impl cmp::PartialEq for Tag {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
 #[macro_export]
-macro_rules! tag {
+macro_rules! tag_storage {
     ($a:ident, $b:ident, $c:ident, $d:ident) => {
-        $crate::Tag([
+        [
             ascii::AsciiChar::$a,
             ascii::AsciiChar::$b,
             ascii::AsciiChar::$c,
             ascii::AsciiChar::$d
-        ])
+        ]
     };
 
     ($a:ident, $b:ident, $c:ident) => {
-        $crate::Tag([
+        [
             ascii::AsciiChar::$a,
             ascii::AsciiChar::$b,
             ascii::AsciiChar::$c,
             ascii::AsciiChar::Space
-        ])
+        ]
     };
 
     ($a:ident, $b:ident) => {
-        $crate::Tag([
+        [
             ascii::AsciiChar::$a,
             ascii::AsciiChar::$b,
             ascii::AsciiChar::Space,
             ascii::AsciiChar::Space
-        ])
+        ]
     };
 
     ($a:ident) => {
-        $crate::Tag([
+        [
             ascii::AsciiChar::$a,
             ascii::AsciiChar::Space,
             ascii::AsciiChar::Space,
             ascii::AsciiChar::Space
-        ])
+        ]
     };
+}
+
+#[macro_export]
+macro_rules! tag_impl {
+    ($type:ty) => {
+        impl ::std::fmt::Debug for $type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                write!(f, concat!(stringify!($type), "(\"{}{}{}{}\")"),
+                self.0[0], self.0[1], self.0[2], self.0[3])
+            }
+        }
+
+        impl ::std::fmt::Display for $type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                write!(f, "{}{}{}{}",
+                    self.0[0], self.0[1], self.0[2], self.0[3])
+            }
+        }
+    }
+}
+
+tag_impl!(Tag);
+
+#[macro_export]
+macro_rules! tag {
+    ($($args:tt),+) => {
+        $crate::Tag($crate::tag_storage!($($args),+))
+    }
 }
 
 #[cfg(test)]

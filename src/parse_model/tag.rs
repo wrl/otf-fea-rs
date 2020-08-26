@@ -18,7 +18,7 @@ use crate::glyph::*;
 use crate::parser::FeaRsStream;
 
 
-pub(crate) fn tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = Tag>
+pub(crate) fn tag_storage<Input>() -> impl Parser<FeaRsStream<Input>, Output = TagStorage>
     where Input: Stream<Token = u8>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
@@ -34,6 +34,14 @@ pub(crate) fn tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = Tag>
             three.map(|x| tag[2] = unsafe { x.to_ascii_char_unchecked() });
             four.map(|x| tag[3] = unsafe { x.to_ascii_char_unchecked() });
 
-            Tag(tag)
+            tag
         })
+}
+
+pub(crate) fn tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = Tag>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    tag_storage()
+        .map(Tag)
 }
