@@ -5,15 +5,16 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
-use crate::Tag;
+use crate::*;
 
+use super::language::*;
+use super::script::*;
 use super::util::*;
-use super::tag::*;
 
 #[derive(Debug)]
 pub struct LanguageSystem {
-    pub script: Tag,
-    pub language: Tag
+    pub script: ScriptTag,
+    pub language: LanguageTag
 }
 
 pub(crate) fn language_system<Input>() -> impl Parser<FeaRsStream<Input>, Output = LanguageSystem>
@@ -22,9 +23,9 @@ pub(crate) fn language_system<Input>() -> impl Parser<FeaRsStream<Input>, Output
 {
     literal_ignore_case("languagesystem")
         .skip(required_whitespace())
-        .with(tag())
+        .with(script_tag())
         .skip(required_whitespace())
-        .and(tag())
+        .and(language_tag())
 
         .map(|(script, language)| LanguageSystem {
             script,

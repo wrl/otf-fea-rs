@@ -12,16 +12,24 @@ use combine::{
 };
 
 use crate::parser::FeaRsStream;
-use crate::Tag;
+use crate::LanguageTag;
 
 use super::util::*;
 use super::tag::*;
 
 #[derive(Debug)]
 pub struct Language {
-    pub tag: Tag,
+    pub tag: LanguageTag,
     pub include_default: bool,
     pub required: bool
+}
+
+pub(crate) fn language_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = LanguageTag>
+    where Input: Stream<Token = u8>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
+{
+    tag_storage()
+        .map(LanguageTag)
 }
 
 pub(crate) fn language<Input>() -> impl Parser<FeaRsStream<Input>, Output = Language>
@@ -30,7 +38,7 @@ pub(crate) fn language<Input>() -> impl Parser<FeaRsStream<Input>, Output = Lang
 {
     literal_ignore_case("language")
         .skip(required_whitespace())
-        .with(tag())
+        .with(language_tag())
 
         .and(choice((
             look_ahead(token(b';')).map(|_| None),

@@ -106,6 +106,7 @@ macro_rules! tag_type {
 tag_type!(Tag, tag);
 tag_type!(FeatureTag, feature_tag);
 tag_type!(ScriptTag, script_tag);
+tag_type!(LanguageTag, language_tag);
 
 #[cfg(test)]
 mod tests {
