@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use endian_codec::{PackedSize, DecodeBE};
 
 use crate::{
-    Tag,
+    FeatureTag,
     tag
 };
 
@@ -116,8 +116,8 @@ impl HasLookups<LookupName> for GPOS {
     }
 }
 
-impl HasLookups<Tag> for GPOS {
-    fn find_lookup<T>(&mut self, feature_tag: &Tag) -> Option<usize>
+impl HasLookups<FeatureTag> for GPOS {
+    fn find_lookup<T>(&mut self, feature_tag: &FeatureTag) -> Option<usize>
         where T: LookupSubtable<Self::Lookup>
     {
         self.lookup_index_for_type::<T, _>(
@@ -125,7 +125,7 @@ impl HasLookups<Tag> for GPOS {
                 .map(|x| *x as usize))
     }
 
-    fn find_or_insert_lookup<'a, T>(&'a mut self, feature_tag: &Tag) -> &'a mut Lookup<T>
+    fn find_or_insert_lookup<'a, T>(&'a mut self, feature_tag: &FeatureTag) -> &'a mut Lookup<T>
         where T: LookupSubtable<Self::Lookup>
     {
         let idx = match self.find_lookup::<T>(feature_tag) {

@@ -5,12 +5,12 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
-use crate::Tag;
+use crate::FeatureTag;
 
 type LookupIndices = Vec<u16>;
 
 #[derive(Debug)]
-pub struct FeatureList(pub BTreeMap<Tag, LookupIndices>);
+pub struct FeatureList(pub BTreeMap<FeatureTag, LookupIndices>);
 
 impl FeatureList {
     pub fn new() -> Self {
@@ -18,7 +18,7 @@ impl FeatureList {
     }
 
     #[inline]
-    pub fn indices_for_tag(&self, tag: &Tag) -> &[u16] {
+    pub fn indices_for_tag(&self, tag: &FeatureTag) -> &[u16] {
         match self.0.get(tag) {
             Some(i) => i,
             None => &[]
@@ -26,13 +26,13 @@ impl FeatureList {
     }
 
     #[inline]
-    pub fn indices_for_tag_mut(&mut self, tag: &Tag) -> &mut LookupIndices {
+    pub fn indices_for_tag_mut(&mut self, tag: &FeatureTag) -> &mut LookupIndices {
         self.0.entry(*tag)
             .or_default()
     }
 
     #[inline]
-    pub fn add_lookup_index(&mut self, tag: &Tag, index: u16) {
+    pub fn add_lookup_index(&mut self, tag: &FeatureTag, index: u16) {
         let indices = self.indices_for_tag_mut(tag);
         indices.push(index);
     }
@@ -107,7 +107,7 @@ impl TTFEncode for FeatureList {
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 pub struct FeatureRecord {
-    pub tag: Tag,
+    pub tag: FeatureTag,
     pub feature_offset: u16
 }
 

@@ -19,6 +19,7 @@ pub use contour_point::*;
 mod device;
 pub use device::*;
 
+#[macro_use]
 mod feature;
 pub use feature::*;
 

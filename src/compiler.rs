@@ -2,19 +2,14 @@ use std::iter;
 
 use endian_codec::{PackedSize, EncodeBE};
 
-use crate::parse_model as pm;
-
-use crate::{
-    GlyphOrder,
-    tag,
-    Tag
-};
-
+use crate::*;
 use crate::util::*;
 
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util;
+
+use crate::parse_model as pm;
 
 
 struct CompilerState {
@@ -53,14 +48,16 @@ use tables::gpos::{
 
 #[allow(dead_code)]
 enum Block<'a> {
-    Feature(&'a Tag),
+    Feature(&'a FeatureTag),
     Lookup(&'a pm::LookupName)
 }
 
-fn feature_is_vertical(tag: &Tag) -> bool {
+fn feature_is_vertical(tag: &FeatureTag) -> bool {
     match tag {
-        tag!(v,k,r,n) | tag!(v,p,a,l)
-            | tag!(v,h,a,l) | tag!(v,a,l,t) => true,
+        feature_tag!(v,k,r,n)
+            | feature_tag!(v,p,a,l)
+            | feature_tag!(v,h,a,l)
+            | feature_tag!(v,a,l,t) => true,
 
         _ => false
     }
@@ -75,7 +72,7 @@ impl<'a> Block<'a> {
     }
 
     fn find_or_insert_lookup<'b, T, L>(&self, table: &'b mut T) -> &'b mut Lookup<L>
-        where T: TableWithLookups + HasLookups<Tag> + HasLookups<pm::LookupName>,
+        where T: TableWithLookups + HasLookups<FeatureTag> + HasLookups<pm::LookupName>,
               L: LookupSubtable<T::Lookup>
     {
         match *self {

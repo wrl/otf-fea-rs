@@ -5,6 +5,8 @@ pub use glyph_order::{
 };
 
 pub mod parser;
+
+#[macro_use]
 pub mod parse_model;
 
 pub mod compiler;
@@ -15,6 +17,6 @@ pub mod glyph_class;
 
 #[macro_use]
 mod tag;
-pub use tag::Tag;
+pub use tag::*;
 
 mod util;

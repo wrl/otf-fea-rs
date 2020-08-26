@@ -15,6 +15,7 @@ use crate::compile_model::util::encode::*;
 
 use crate::{
     Tag,
+    FeatureTag,
     tag
 };
 
@@ -53,8 +54,8 @@ pub struct Script {
 
 #[derive(Debug)]
 pub struct LangSys {
-    pub required_feature: Option<Tag>,
-    pub features: BTreeSet<Tag>
+    pub required_feature: Option<FeatureTag>,
+    pub features: BTreeSet<FeatureTag>
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -82,8 +83,8 @@ struct LangSysTable {
     feature_index_count: u16
 }
 
-type FeatureIndexToTag = HashMap<u16, Tag>;
-type TagToFeatureIndex = HashMap<Tag, u16>;
+type FeatureIndexToTag = HashMap<u16, FeatureTag>;
+type TagToFeatureIndex = HashMap<FeatureTag, u16>;
 
 macro_rules! try_as_u16 {
     ($val:expr, $scope:expr, $item:expr) => {{

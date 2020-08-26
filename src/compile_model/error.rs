@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::glyph_order::*;
-use crate::tag::*;
+use crate::FeatureTag;
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
@@ -37,7 +37,7 @@ pub enum EncodeError {
     },
 
     #[error("{0} referenced tag {1}, which is not in the feature list")]
-    TagNotInFeatureList(&'static str, Tag),
+    TagNotInFeatureList(&'static str, FeatureTag),
 
     #[error("tried to encode a {0}, but the buffer was too small")]
     BufferTooSmallForType(&'static str)
