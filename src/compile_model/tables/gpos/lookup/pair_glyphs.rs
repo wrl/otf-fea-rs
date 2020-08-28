@@ -9,19 +9,36 @@ use crate::compile_model::value_record::*;
 use crate::compile_model::coverage::*;
 
 
-#[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
-struct PairPosFormat1Header {
-    pub format: u16,
-    pub coverage_offset: u16,
-    pub value_format_1: u16,
-    pub value_format_2: u16,
-    pub pair_set_count: u16
-}
-
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct PairValueRecord {
     pub second_glyph: u16,
     pub records: (ValueRecord, ValueRecord)
+}
+
+pub type PairSet = Vec<PairValueRecord>;
+
+#[derive(Debug)]
+pub struct PairGlyphs(pub CoverageLookup<PairSet>);
+
+
+impl PairGlyphs {
+    pub fn new() -> Self {
+        Self(CoverageLookup::new())
+    }
+}
+
+impl ops::Deref for PairGlyphs {
+    type Target = CoverageLookup<PairSet>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl ops::DerefMut for PairGlyphs {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 impl PairValueRecord {
@@ -45,29 +62,13 @@ impl PairValueRecord {
     }
 }
 
-pub type PairSet = Vec<PairValueRecord>;
-
-#[derive(Debug)]
-pub struct PairGlyphs(pub CoverageLookup<PairSet>);
-
-impl PairGlyphs {
-    pub fn new() -> Self {
-        Self(CoverageLookup::new())
-    }
-}
-
-impl ops::Deref for PairGlyphs {
-    type Target = CoverageLookup<PairSet>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl ops::DerefMut for PairGlyphs {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+#[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
+struct PairPosFormat1Header {
+    pub format: u16,
+    pub coverage_offset: u16,
+    pub value_format_1: u16,
+    pub value_format_2: u16,
+    pub pair_set_count: u16
 }
 
 impl PairGlyphs {

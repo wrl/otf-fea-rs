@@ -9,6 +9,8 @@ mkdir -p $OUT_DIR
 
 all_tests() {
 	echo ''
+	cargo build
+	echo ''
 
 	count=${#ALLTESTS[@]}
 
@@ -57,6 +59,10 @@ one_test() {
 		echo "$fea" ': no such file or directory'
 		exit 1
 	}
+
+	echo ''
+	cargo build
+	echo ''
 
 	echo "$fea"
 	echo ''

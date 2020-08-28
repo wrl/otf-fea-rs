@@ -94,7 +94,7 @@ impl<'a> Block<'a> {
     }
 }
 
-fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
+fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
     let pm::position::Pair {
         glyph_classes,
         value_records
@@ -134,6 +134,18 @@ fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::posit
 
     block.insert_into_script(gpos, &script_tag!(D,F,L,T));
     Ok(())
+}
+
+fn handle_pair_position_class(_ctx: &mut CompilerState, _block: &Block, _pair: &pm::position::Pair) -> CompileResult<()> {
+    panic!("handle_pair_position_class()");
+}
+
+fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
+    if pair.glyph_classes.0.is_single() {
+        handle_pair_position_glyphs(ctx, block, pair)
+    } else {
+        handle_pair_position_class(ctx, block, pair)
+    }
 }
 
 fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Position) -> CompileResult<()> {

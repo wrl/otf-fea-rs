@@ -29,8 +29,8 @@ pub struct GlyphClass(pub Vec<GlyphClassItem>);
 
 impl GlyphClass {
     #[inline]
-    pub fn from_single(glyph: GlyphRef) -> GlyphClass {
-        GlyphClass(vec![glyph.into()])
+    pub fn from_single(glyph: GlyphRef) -> Self {
+        Self(vec![glyph.into()])
     }
 
     #[inline]

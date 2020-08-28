@@ -34,7 +34,10 @@ mod error;
 pub use error::*;
 
 mod value_record;
-pub use value_record::ValueRecord;
+pub use value_record::{
+    ValueRecord,
+    ValueRecordFromParsed
+};
 
 #[macro_use]
 pub mod util;
