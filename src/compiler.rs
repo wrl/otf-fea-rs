@@ -94,50 +94,55 @@ impl<'a> Block<'a> {
     }
 }
 
+fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
+    let pm::position::Pair {
+        glyph_classes,
+        value_records
+    } = pair;
+
+    let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<PairGlyphs> = block.find_or_insert_lookup(gpos);
+
+    if lookup.subtables.len() == 0 {
+        lookup.subtables.push(PairGlyphs::new());
+    }
+
+    let pair_lookup = &mut lookup.subtables[0];
+
+    let vertical = block.is_vertical();
+
+    for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
+        let pairs = pair_lookup.entry(first_glyph?)
+            .or_default();
+
+        let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
+        let vr2 = value_records.1.as_ref()
+            .map(|vr| ValueRecord::from_parsed(vr, vertical))
+            .unwrap_or_else(|| ValueRecord::zero());
+
+        for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
+            let second_glyph = second_glyph?;
+
+            let pvr = PairValueRecord {
+                second_glyph,
+                records: (vr1.clone(), vr2.clone())
+            };
+
+            pairs.push(pvr);
+        }
+    }
+
+    block.insert_into_script(gpos, &script_tag!(D,F,L,T));
+    Ok(())
+}
+
 fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
     match p {
-        Pair { glyph_classes, value_records } => {
-            let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
-            let lookup: &mut Lookup<PairGlyphs> = block.find_or_insert_lookup(gpos);
-
-            if lookup.subtables.len() == 0 {
-                lookup.subtables.push(PairGlyphs::new());
-            }
-
-            let pair_lookup = &mut lookup.subtables[0];
-
-            let vertical = block.is_vertical();
-
-            for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
-                let pairs = pair_lookup.entry(first_glyph?)
-                    .or_default();
-
-                let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
-                let vr2 = value_records.1.as_ref()
-                    .map(|vr| ValueRecord::from_parsed(vr, vertical))
-                    .unwrap_or_else(|| ValueRecord::zero());
-
-                for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
-                    let second_glyph = second_glyph?;
-
-                    let pvr = PairValueRecord {
-                        second_glyph,
-                        records: (vr1.clone(), vr2.clone())
-                    };
-
-                    pairs.push(pvr);
-                }
-            }
-
-            block.insert_into_script(gpos, &script_tag!(D,F,L,T));
-        },
-
+        Pair(pair) => handle_pair_position(ctx, block, pair),
         _ => panic!()
-    };
-
-    Ok(())
+    }
 }
 
 fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupName) -> CompileResult<()> {

@@ -57,8 +57,8 @@ pub use name::*;
 mod parameters;
 pub use parameters::*;
 
-mod position;
-pub use position::*;
+pub mod position;
+pub use position::Position;
 
 mod script;
 pub use script::*;

@@ -11,3 +11,7 @@ struct PairPosFormat2Header {
     pub class_1_count: u16,
     pub class_2_count: u16
 }
+
+#[derive(Debug)]
+pub struct PairClass {
+}

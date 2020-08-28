@@ -35,47 +35,71 @@ pub struct LigatureComponent {
     anchors: Vec<(Anchor, Option<MarkClassName>)>
 }
 
+// GPOS type 1
+#[derive(Debug)]
+pub struct SingleAdjustment {
+    pub glyph_class: GlyphClass,
+    pub value_record: ValueRecord
+}
+
+// GPOS type 2
+#[derive(Debug)]
+pub struct Pair {
+    pub glyph_classes: (GlyphClass, GlyphClass),
+    pub value_records: (ValueRecord, Option<ValueRecord>)
+}
+
+// GPOS type 3
+#[derive(Debug)]
+pub struct Cursive {
+    pub glyph_class: GlyphClass,
+    pub entry: Anchor,
+    pub exit: Anchor
+}
+
+// GPOS type 4
+#[derive(Debug)]
+pub struct MarkToBase {
+    pub glyph_class: GlyphClass,
+    pub anchors: Vec<(Anchor, MarkClassName)>
+}
+
+// GPOS type 5
+#[derive(Debug)]
+pub struct Ligature {
+    pub glyph_class: GlyphClass,
+    pub components: Vec<LigatureComponent>
+}
+
+// GPOS type 6
+#[derive(Debug)]
+pub struct MarkToMark {
+    pub glyph_class: GlyphClass,
+    pub anchors: Vec<(Anchor, MarkClassName)>
+}
+
 #[derive(Debug)]
 pub enum Position {
-    // GPOS type 1
-    SingleAdjustment {
-        glyph_class: GlyphClass,
-        value_record: ValueRecord
-    },
-
-    // GPOS type 2
-    Pair {
-        glyph_classes: (GlyphClass, GlyphClass),
-        value_records: (ValueRecord, Option<ValueRecord>)
-    },
-
-    // GPOS type 3
-    Cursive {
-        glyph_class: GlyphClass,
-        entry: Anchor,
-        exit: Anchor
-    },
-
-    // GPOS type 4
-    MarkToBase {
-        glyph_class: GlyphClass,
-        anchors: Vec<(Anchor, MarkClassName)>
-    },
-
-    // GPOS type 5
-    Ligature {
-        glyph_class: GlyphClass,
-        components: Vec<LigatureComponent>
-    },
-
-    // GPOS type 6
-    MarkToMark {
-        glyph_class: GlyphClass,
-        anchors: Vec<(Anchor, MarkClassName)>
-    },
-
-    // FIXME: more of these
+    SingleAdjustment(SingleAdjustment),
+    Pair(Pair),
+    Cursive(Cursive),
+    MarkToBase(MarkToBase),
+    Ligature(Ligature),
+    MarkToMark(MarkToMark)
 }
+
+macro_rules! position_from_variant {
+    ($from:ident) => {
+        $crate::impl_from_variant!(Position, $from);
+    }
+}
+
+position_from_variant!(SingleAdjustment);
+position_from_variant!(Pair);
+position_from_variant!(Cursive);
+position_from_variant!(MarkToBase);
+position_from_variant!(Ligature);
+position_from_variant!(MarkToMark);
 
 fn cursive<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
     where Input: Stream<Token = u8>,
@@ -90,11 +114,11 @@ fn cursive<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         .and(anchor())
 
         .map(|((glyph_class, entry), exit)| {
-            Position::Cursive {
+            Cursive {
                 glyph_class,
                 entry,
                 exit
-            }
+            }.into()
         })
 }
 
@@ -158,10 +182,10 @@ fn ligature<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         }))
 
         .map(|(glyph_class, components)|
-            Position::Ligature {
+            Ligature {
                 glyph_class,
                 components
-            })
+            }.into())
 }
 
 fn mark_to<Input>() -> impl Parser<FeaRsStream<Input>, Output = (GlyphClass, Vec<(Anchor, MarkClassName)>)>
@@ -189,10 +213,10 @@ fn mark_to_base<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 
         .with(mark_to())
         .map(|(glyph_class, anchors)| {
-            Position::MarkToBase {
+            MarkToBase {
                 glyph_class,
                 anchors
-            }
+            }.into()
         })
 }
 
@@ -205,10 +229,10 @@ fn mark_to_mark<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 
         .with(mark_to())
         .map(|(glyph_class, anchors)| {
-            Position::MarkToMark {
+            MarkToMark {
                 glyph_class,
                 anchors
-            }
+            }.into()
         })
 }
 
@@ -244,17 +268,17 @@ fn single_or_pair<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         .map(|(glyph_class, rest)| {
             match rest {
                 Either2::A(value_record) => {
-                    Position::SingleAdjustment {
+                    SingleAdjustment {
                         glyph_class,
                         value_record
-                    }
+                    }.into()
                 },
 
                 Either2::B((second_glyph_class, value_records)) =>
-                    Position::Pair {
+                    Pair {
                         glyph_classes: (glyph_class, second_glyph_class),
                         value_records
-                    }
+                    }.into()
             }
         })
 }
