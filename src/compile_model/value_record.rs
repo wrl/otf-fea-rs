@@ -156,11 +156,11 @@ impl ValueRecord {
 }
 
 pub trait ValueRecordFromParsed<T> {
-    fn from_parsed(parsed: &T, vertical: bool) -> Self;
+    fn from_parsed(parsed: T, vertical: bool) -> Self;
 }
 
-impl ValueRecordFromParsed<pm::ValueRecord> for ValueRecord {
-    // FIXME: return a result if the f64 -> i16 fails
+impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
+    // FIXME: return a Result<> if the f64 -> i16 fails
     fn from_parsed(parsed: &pm::ValueRecord, vertical: bool) -> Self {
         use pm::ValueRecord::*;
 
@@ -191,5 +191,13 @@ impl ValueRecordFromParsed<pm::ValueRecord> for ValueRecord {
 
             Null => Self::zero(),
         }
+    }
+}
+
+impl ValueRecordFromParsed<&Option<pm::ValueRecord>> for ValueRecord {
+    fn from_parsed(parsed: &Option<pm::ValueRecord>, vertical: bool) -> Self {
+        parsed.as_ref()
+            .map(|vr| Self::from_parsed(vr, vertical))
+            .unwrap_or_else(|| Self::zero())
     }
 }

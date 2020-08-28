@@ -116,9 +116,7 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
             .or_default();
 
         let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
-        let vr2 = value_records.1.as_ref()
-            .map(|vr| ValueRecord::from_parsed(vr, vertical))
-            .unwrap_or_else(|| ValueRecord::zero());
+        let vr2 = ValueRecord::from_parsed(&value_records.1, vertical);
 
         for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
             let second_glyph = second_glyph?;
