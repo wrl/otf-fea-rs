@@ -25,7 +25,7 @@ pub enum GlyphError {
 
 pub(crate) type GlyphNameStorage = ArrayVec::<[AsciiChar; 63]>;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct GlyphName(pub GlyphNameStorage);
 
 impl fmt::Debug for GlyphName {
@@ -64,7 +64,7 @@ pub(crate) fn glyph_character_valid(c: u8, first_character: bool, development_na
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct GlyphCID(pub usize);
 
 impl fmt::Debug for GlyphCID {
@@ -73,7 +73,7 @@ impl fmt::Debug for GlyphCID {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum GlyphRef {
     Name(GlyphName),
     CID(GlyphCID)

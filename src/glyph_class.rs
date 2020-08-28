@@ -5,7 +5,7 @@ use crate::glyph_order::*;
 use crate::glyph::*;
 use crate::util::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum GlyphClassItem {
     Single(GlyphRef),
 
@@ -24,7 +24,7 @@ impl From<GlyphRef> for GlyphClassItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct GlyphClass(pub Vec<GlyphClassItem>);
 
 impl GlyphClass {
@@ -89,7 +89,7 @@ impl GlyphClass {
 // named glyph classes
 /////////////////////////
 
-#[derive(Clone)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct GlyphClassName(pub GlyphNameStorage);
 
 impl fmt::Debug for GlyphClassName {

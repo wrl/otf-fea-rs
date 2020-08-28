@@ -1,6 +1,7 @@
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::lookup_list::*;
+use crate::util::variant::*;
 
 
 mod pair_glyphs;
@@ -11,8 +12,37 @@ pub use pair_class::*;
 
 
 #[derive(Debug)]
+pub enum Pair {
+    Glyphs(PairGlyphs),
+    Class(PairClass)
+}
+
+crate::impl_variant_ext_for!(Pair, Glyphs, PairGlyphs);
+crate::impl_variant_ext_for!(Pair, Class, PairClass);
+
+impl TTFDecode for Pair {
+    fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
+        let format = decode_u16_be(bytes, 0);
+
+        match format {
+            1 => PairGlyphs::ttf_decode(bytes).map(Pair::Glyphs),
+            _ => Err(DecodeError::InvalidValue("format", "PairPos".into()))
+        }
+    }
+}
+
+impl TTFEncode for Pair {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        match self {
+            Pair::Glyphs(glyphs) => glyphs.ttf_encode(buf),
+            _ => Ok(buf.bytes.len())
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum GPOSLookup {
-    PairGlyphs(Lookup<PairGlyphs>)
+    Pair(Lookup<Pair>)
 }
 
 macro_rules! impl_subtable_for {
@@ -44,14 +74,14 @@ macro_rules! impl_subtable_for {
     }
 }
 
-impl_subtable_for!(PairGlyphs);
+impl_subtable_for!(Pair);
 
 impl TTFDecode for GPOSLookup {
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
         let lookup_type = decode_u16_be(bytes, 0);
 
         match lookup_type {
-            2 => Lookup::ttf_decode(bytes).map(GPOSLookup::PairGlyphs),
+            2 => Lookup::ttf_decode(bytes).map(GPOSLookup::Pair),
             _ => Err(DecodeError::InvalidValue("lookup_type", "GPOS Lookup".into()))
         }
     }
@@ -60,7 +90,7 @@ impl TTFDecode for GPOSLookup {
 impl TTFEncode for GPOSLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
-            GPOSLookup::PairGlyphs(lookup) => lookup.ttf_encode(buf, 2)
+            GPOSLookup::Pair(lookup) => lookup.ttf_encode(buf, 2)
         }
     }
 }

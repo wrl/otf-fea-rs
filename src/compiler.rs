@@ -42,8 +42,12 @@ use tables::gpos::{
     GPOS,
     HasLookups,
     TableWithLookups,
+
+    Pair,
     PairGlyphs,
     PairValueRecord,
+
+    PairClass,
 };
 
 #[allow(dead_code)]
@@ -92,6 +96,30 @@ impl<'a> Block<'a> {
             .features
             .insert(*feature_tag);
     }
+
+    fn subtable_breaks(&self) -> usize {
+        0
+    }
+}
+
+fn get_subtable_variant<'a, E, T>(lookup: &'a mut Lookup<E>, block: &Block) -> &'a mut T
+    where T: VariantExt<E> + Default + Into<E>
+{
+    let idx = lookup.subtables.iter().enumerate()
+        .filter_map(|(idx, subtable)| {
+            T::get_variant(subtable)
+                .map(|_| idx)
+        })
+        .skip(block.subtable_breaks())
+        .next()
+
+        .unwrap_or_else(|| {
+            let idx = lookup.subtables.len();
+            lookup.subtables.push(T::default().into());
+            idx
+        });
+
+    T::get_variant_mut(&mut lookup.subtables[idx]).unwrap()
 }
 
 fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
@@ -101,18 +129,13 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     } = pair;
 
     let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
-    let lookup: &mut Lookup<PairGlyphs> = block.find_or_insert_lookup(gpos);
+    let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
-    if lookup.subtables.len() == 0 {
-        lookup.subtables.push(PairGlyphs::new());
-    }
-
-    let pair_lookup = &mut lookup.subtables[0];
-
+    let subtable: &mut PairGlyphs = get_subtable_variant(lookup, block);
     let vertical = block.is_vertical();
 
     for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
-        let pairs = pair_lookup.entry(first_glyph?)
+        let pairs = subtable.entry(first_glyph?)
             .or_default();
 
         let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
@@ -134,8 +157,19 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     Ok(())
 }
 
-fn handle_pair_position_class(_ctx: &mut CompilerState, _block: &Block, _pair: &pm::position::Pair) -> CompileResult<()> {
-    panic!("handle_pair_position_class()");
+fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, _pair: &pm::position::Pair) -> CompileResult<()> {
+    // let pm::position::Pair {
+    //     glyph_classes,
+    //     value_records
+    // } = pair;
+
+    let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
+
+    let _subtable: &mut PairClass = get_subtable_variant(lookup, block);
+    let _vertical = block.is_vertical();
+
+    Ok(())
 }
 
 fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
@@ -364,9 +398,9 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
 
     actually_compile(&mut ctx, out);
 
-    // if let Some(gpos) = ctx.gpos_table.as_ref() {
-    //     println!("{:#?}", gpos);
-    // }
+    if let Some(gpos) = ctx.gpos_table.as_ref() {
+        println!("{:#?}", gpos);
+    }
 
     Ok(())
 }

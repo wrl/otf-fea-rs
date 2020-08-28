@@ -4,4 +4,5 @@ pub(crate) use either::*;
 mod range;
 pub use range::*;
 
-mod variant;
+pub(crate) mod variant;
+pub(crate) use variant::*;

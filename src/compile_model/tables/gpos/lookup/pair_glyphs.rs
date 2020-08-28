@@ -21,8 +21,8 @@ pub type PairSet = Vec<PairValueRecord>;
 pub struct PairGlyphs(pub CoverageLookup<PairSet>);
 
 
-impl PairGlyphs {
-    pub fn new() -> Self {
+impl Default for PairGlyphs {
+    fn default() -> Self {
         Self(CoverageLookup::new())
     }
 }

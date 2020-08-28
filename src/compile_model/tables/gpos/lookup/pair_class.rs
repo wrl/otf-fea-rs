@@ -10,7 +10,15 @@ use crate::glyph_class::*;
 pub struct PairClassIntersect(ValueRecord, ValueRecord);
 
 #[derive(Debug)]
-pub struct PairClass(pub BTreeMap<GlyphClass, BTreeMap<GlyphClass, Vec<PairClassIntersect>>>);
+pub struct PairClass(pub BTreeMap<GlyphClass,
+    BTreeMap<GlyphClass, Vec<PairClassIntersect>>>);
+
+
+impl Default for PairClass {
+    fn default() -> Self {
+        PairClass(BTreeMap::new())
+    }
+}
 
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
