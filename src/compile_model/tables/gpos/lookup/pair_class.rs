@@ -1,3 +1,4 @@
+use std::ops;
 use std::collections::BTreeMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
@@ -7,16 +8,31 @@ use crate::glyph_class::*;
 
 
 #[derive(Debug)]
-pub struct PairClassIntersect(ValueRecord, ValueRecord);
+pub struct PairClassIntersect(pub ValueRecord, pub ValueRecord);
+
+type PairClassStorage = BTreeMap<GlyphClass, BTreeMap<GlyphClass, Vec<PairClassIntersect>>>;
 
 #[derive(Debug)]
-pub struct PairClass(pub BTreeMap<GlyphClass,
-    BTreeMap<GlyphClass, Vec<PairClassIntersect>>>);
+pub struct PairClass(pub PairClassStorage);
 
 
 impl Default for PairClass {
     fn default() -> Self {
         PairClass(BTreeMap::new())
+    }
+}
+
+impl ops::Deref for PairClass {
+    type Target = PairClassStorage;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl ops::DerefMut for PairClass {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

@@ -48,6 +48,7 @@ use tables::gpos::{
     PairValueRecord,
 
     PairClass,
+    PairClassIntersect
 };
 
 #[allow(dead_code)]
@@ -157,17 +158,28 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     Ok(())
 }
 
-fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, _pair: &pm::position::Pair) -> CompileResult<()> {
-    // let pm::position::Pair {
-    //     glyph_classes,
-    //     value_records
-    // } = pair;
+fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
+    let pm::position::Pair {
+        glyph_classes,
+        value_records
+    } = pair;
 
     let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
-    let _subtable: &mut PairClass = get_subtable_variant(lookup, block);
-    let _vertical = block.is_vertical();
+    let subtable: &mut PairClass = get_subtable_variant(lookup, block);
+    let vertical = block.is_vertical();
+
+    let first_class = subtable.entry(glyph_classes.0.clone())
+        .or_default();
+
+    let second_class = first_class.entry(glyph_classes.1.clone())
+        .or_default();
+
+    second_class.push(PairClassIntersect(
+        ValueRecord::from_parsed(&value_records.0, vertical),
+        ValueRecord::from_parsed(&value_records.1, vertical)
+    ));
 
     Ok(())
 }
