@@ -6,11 +6,14 @@ use crate::Tag;
 
 pub mod tables;
 
-mod script_list;
-pub use script_list::{
-    ScriptList,
-    Script,
-};
+mod class_def;
+pub use class_def::ClassDef;
+
+mod coverage;
+pub use coverage::CoverageLookup;
+
+mod error;
+pub use error::*;
 
 mod feature_list;
 pub use feature_list::{
@@ -27,21 +30,21 @@ pub use lookup_list::{
     LookupSubtable
 };
 
-mod coverage;
-pub use coverage::CoverageLookup;
+mod script_list;
+pub use script_list::{
+    ScriptList,
+    Script,
+};
 
-mod error;
-pub use error::*;
+#[macro_use]
+pub mod util;
+pub use util::TTFVersion;
 
 mod value_record;
 pub use value_record::{
     ValueRecord,
     ValueRecordFromParsed
 };
-
-#[macro_use]
-pub mod util;
-pub use util::TTFVersion;
 
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]

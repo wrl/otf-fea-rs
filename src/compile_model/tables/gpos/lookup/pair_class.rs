@@ -4,13 +4,13 @@ use std::collections::BTreeMap;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::value_record::*;
-use crate::glyph_class::*;
+use crate::compile_model::class_def::*;
 
 
 #[derive(Debug)]
 pub struct PairClassIntersect(pub ValueRecord, pub ValueRecord);
 
-type PairClassStorage = BTreeMap<GlyphClass, BTreeMap<GlyphClass, Vec<PairClassIntersect>>>;
+type PairClassStorage = BTreeMap<ClassDef, BTreeMap<ClassDef, Vec<PairClassIntersect>>>;
 
 #[derive(Debug)]
 pub struct PairClass(pub PairClassStorage);

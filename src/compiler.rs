@@ -170,10 +170,15 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     let subtable: &mut PairClass = get_subtable_variant(lookup, block);
     let vertical = block.is_vertical();
 
-    let first_class = subtable.entry(glyph_classes.0.clone())
+    let classes = (
+        ClassDef::from_glyph_class(&glyph_classes.0, &ctx.glyph_order)?,
+        ClassDef::from_glyph_class(&glyph_classes.1, &ctx.glyph_order)?
+    );
+
+    let first_class = subtable.entry(classes.0)
         .or_default();
 
-    let second_class = first_class.entry(glyph_classes.1.clone())
+    let second_class = first_class.entry(classes.1)
         .or_default();
 
     second_class.push(PairClassIntersect(
