@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
+use crate::compile_model::util::encode::*;
 use crate::compile_model::value_record::*;
 use crate::compile_model::class_def::*;
 
@@ -47,4 +48,17 @@ struct PairPosFormat2Header {
     pub class_def_2_offset: u16,
     pub class_1_count: u16,
     pub class_2_count: u16
+}
+
+impl TTFEncode for PairClass {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        let start = buf.bytes.len();
+
+        buf.bytes.resize(start + PairPosFormat2Header::PACKED_LEN, 0u8);
+
+        for _c1 in &self.0 {
+        }
+
+        Ok(start)
+    }
 }

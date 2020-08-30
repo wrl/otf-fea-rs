@@ -10,10 +10,10 @@ use crate::compile_model::util::encode::*;
 
 
 #[derive(Debug, PackedSize, DecodeBE, EncodeBE)]
-pub struct GlyphRange {
-    pub start: u16,
-    pub end: u16,
-    pub start_coverage_index: u16
+struct GlyphRange {
+    start: u16,
+    end: u16,
+    start_coverage_index: u16
 }
 
 fn decode_coverage<'a>(bytes: &'a [u8]) -> DecodeResult<impl Iterator<Item = u16> + 'a> {
