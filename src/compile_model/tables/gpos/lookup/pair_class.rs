@@ -1,7 +1,9 @@
-use std::collections::BTreeMap;
+use std::collections::{
+    HashSet,
+    HashMap
+};
 
 use thiserror::Error;
-
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::encode::*;
@@ -13,41 +15,69 @@ use crate::compile_model::error::*;
 #[derive(Debug)]
 pub struct PairClassIntersect(pub ValueRecord, pub ValueRecord);
 
-type PairClassStorage = BTreeMap<ClassDef, BTreeMap<ClassDef, Vec<PairClassIntersect>>>;
+#[derive(Debug, Default)]
+pub struct PairClass {
+    pub glyphs: (ClassDef, ClassDef),
+    pub classes: (HashSet<ClassDef>, HashSet<ClassDef>),
 
-#[derive(Debug)]
-pub struct PairClass(pub PairClassStorage);
+    pub pairs: HashMap<(ClassDef, ClassDef), Vec<PairClassIntersect>>
+}
 
 #[derive(Debug, Error)]
 pub enum PairClassError {
-    #[error("adding pair would result in a partial glyph class overlap")]
+    #[error("adding class pair resulted in a partial glyph class overlap. the subtable must be rebuilt.")]
     PartialOverlap
 }
 
 
-impl Default for PairClass {
-    fn default() -> Self {
-        PairClass(BTreeMap::new())
-    }
-}
-
 impl PairClass {
-    pub fn can_add_pair(&self, _pair: &(ClassDef, ClassDef)) -> bool {
-        true
+    pub fn can_add_pair(&self, pair: &(ClassDef, ClassDef)) -> bool {
+        let glyphs_disjoint = (
+            self.glyphs.0.is_disjoint(&pair.0),
+            self.glyphs.1.is_disjoint(&pair.1)
+        );
+
+        if glyphs_disjoint == (true, true) {
+            return true
+        }
+
+        let classes_present = (
+            self.classes.0.contains(&pair.0),
+            self.classes.1.contains(&pair.1)
+        );
+
+        if (!glyphs_disjoint.0 && classes_present.0) && (!glyphs_disjoint.1 && classes_present.1) {
+            return true
+        }
+
+        false
     }
 
     pub fn add_pair(&mut self, pair: (ClassDef, ClassDef), value_records: (ValueRecord, ValueRecord))
             -> Result<(), PairClassError> {
-        let first_class = self.0.entry(pair.0)
-            .or_default();
 
-        let second_class = first_class.entry(pair.1)
-            .or_default();
+        let glyphs_overlap = (
+            pair.0.iter()
+                .map(|g| self.glyphs.0.insert(*g))
+                .any(|x| x),
 
-        second_class.push(PairClassIntersect(
-            value_records.0,
-            value_records.1
-        ));
+            pair.1.iter()
+                .map(|g| self.glyphs.1.insert(*g))
+                .any(|x| x)
+        );
+
+        let classes_present = (
+            self.classes.0.insert(pair.0.clone()),
+            self.classes.1.insert(pair.1.clone())
+        );
+
+        if (glyphs_overlap.0 && !classes_present.0) || (glyphs_overlap.1 && !classes_present.1) {
+            return Err(PairClassError::PartialOverlap);
+        }
+
+        self.pairs.entry(pair)
+            .or_default()
+            .push(PairClassIntersect(value_records.0, value_records.1));
 
         Ok(())
     }
@@ -71,9 +101,6 @@ impl TTFEncode for PairClass {
         let start = buf.bytes.len();
 
         buf.bytes.resize(start + PairPosFormat2Header::PACKED_LEN, 0u8);
-
-        for _c1 in &self.0 {
-        }
 
         Ok(start)
     }

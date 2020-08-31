@@ -9,7 +9,7 @@ use crate::glyph_order::*;
 use crate::compile_model::util::encode::*;
 
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct ClassDef(pub BTreeSet<u16>);
 
 
