@@ -81,7 +81,7 @@ impl<'a> Block<'a> {
     }
 }
 
-fn get_subtable_variant<'a, E, T>(lookup: &'a mut Lookup<E>, block: &Block) -> &'a mut T
+fn get_subtable_variant<'a, E, T>(lookup: &'a mut Lookup<E>, skip: usize) -> &'a mut T
     where T: VariantExt<E> + Default + Into<E>
 {
     let idx = lookup.subtables.iter().enumerate()
@@ -89,7 +89,7 @@ fn get_subtable_variant<'a, E, T>(lookup: &'a mut Lookup<E>, block: &Block) -> &
             T::get_variant(subtable)
                 .map(|_| idx)
         })
-        .skip(block.subtable_breaks())
+        .skip(skip)
         .next()
 
         .unwrap_or_else(|| {
@@ -110,7 +110,7 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
-    let subtable: &mut PairGlyphs = get_subtable_variant(lookup, block);
+    let subtable: &mut PairGlyphs = get_subtable_variant(lookup, block.subtable_breaks());
     let vertical = block.is_vertical();
 
     for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
@@ -145,7 +145,6 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
-    let subtable: &mut PairClass = get_subtable_variant(lookup, block);
     let vertical = block.is_vertical();
 
     let classes = (
@@ -153,10 +152,24 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
         ClassDef::from_glyph_class(&glyph_classes.1, &ctx.glyph_order)?
     );
 
-    subtable.add_pair(classes, (
+    let value_records = (
         ValueRecord::from_parsed(&value_records.0, vertical),
         ValueRecord::from_parsed(&value_records.1, vertical)
-    ));
+    );
+
+    let mut skip = block.subtable_breaks();
+
+    let subtable = loop {
+        let subtable: &mut PairClass = get_subtable_variant(lookup, skip);
+
+        if subtable.can_add_pair(&classes) {
+            break subtable;
+        } else {
+            skip += 1;
+        }
+    };
+
+    subtable.add_pair(classes, value_records)?;
 
     Ok(())
 }

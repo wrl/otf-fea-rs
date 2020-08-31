@@ -1,11 +1,13 @@
-use std::ops;
 use std::collections::BTreeMap;
+
+use thiserror::Error;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::compile_model::util::encode::*;
 use crate::compile_model::value_record::*;
 use crate::compile_model::class_def::*;
+use crate::compile_model::error::*;
 
 
 #[derive(Debug)]
@@ -16,24 +18,16 @@ type PairClassStorage = BTreeMap<ClassDef, BTreeMap<ClassDef, Vec<PairClassInter
 #[derive(Debug)]
 pub struct PairClass(pub PairClassStorage);
 
+#[derive(Debug, Error)]
+pub enum PairClassError {
+    #[error("adding pair would result in a partial glyph class overlap")]
+    PartialOverlap
+}
+
 
 impl Default for PairClass {
     fn default() -> Self {
         PairClass(BTreeMap::new())
-    }
-}
-
-impl ops::Deref for PairClass {
-    type Target = PairClassStorage;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl ops::DerefMut for PairClass {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 
@@ -42,8 +36,9 @@ impl PairClass {
         true
     }
 
-    pub fn add_pair(&mut self, pair: (ClassDef, ClassDef), value_records: (ValueRecord, ValueRecord)) {
-        let first_class = self.entry(pair.0)
+    pub fn add_pair(&mut self, pair: (ClassDef, ClassDef), value_records: (ValueRecord, ValueRecord))
+            -> Result<(), PairClassError> {
+        let first_class = self.0.entry(pair.0)
             .or_default();
 
         let second_class = first_class.entry(pair.1)
@@ -53,6 +48,8 @@ impl PairClass {
             value_records.0,
             value_records.1
         ));
+
+        Ok(())
     }
 }
 

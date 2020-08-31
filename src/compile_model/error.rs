@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+use crate::compile_model::tables::gpos::lookup::*;
 use crate::glyph_order::*;
 use crate::FeatureTag;
 
@@ -8,7 +9,10 @@ pub type CompileResult<T> = Result<T, CompileError>;
 #[derive(Debug, Error)]
 pub enum CompileError {
     #[error(transparent)]
-    GlyphOrderError(#[from] GlyphOrderError)
+    GlyphOrderError(#[from] GlyphOrderError),
+
+    #[error(transparent)]
+    PairClassError(#[from] PairClassError)
 }
 
 pub type DecodeResult<T> = Result<T, DecodeError>;
