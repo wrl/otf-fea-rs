@@ -12,27 +12,6 @@ use crate::compile_model::util;
 use crate::parse_model as pm;
 
 
-struct CompilerState {
-    pub glyph_order: GlyphOrder,
-
-    pub head_table: Option<tables::Head>,
-    pub gpos_table: Option<tables::GPOS>,
-    tables: Vec<(Tag, Vec<u8>)>
-}
-
-impl CompilerState {
-    fn new() -> Self {
-        Self {
-            glyph_order: GlyphOrder::new(),
-
-            head_table: None,
-            gpos_table: None,
-
-            tables: Vec::new(),
-        }
-    }
-}
-
 /**
  * feature definitions
  */
@@ -268,7 +247,7 @@ fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
             ctx.head_table = Some(tables::Head::from_parsed_table(statements)),
         pm::TableTag::name => {
             let table = tables::Name::from_parsed_table(statements);
-            ctx.tables.push((tag!(n,a,m,e), table.to_be()));
+            ctx.tables_encoded.push((tag!(n,a,m,e), table.to_be()));
         }
 
         _ => panic!()
@@ -324,7 +303,7 @@ fn prepare_head(ctx: &mut CompilerState) {
     let mut encoded = vec![0u8; tables::Head::PACKED_LEN];
     head.encode_as_be_bytes(&mut encoded);
 
-    ctx.tables.insert(0, (
+    ctx.tables_encoded.insert(0, (
         tag!(h,e,a,d),
         encoded
     ));
@@ -334,14 +313,14 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
     prepare_head(ctx);
 
     let offset_table = TTFOffsetTable::new(
-        TTFVersion::TTF, ctx.tables.len() as u16);
+        TTFVersion::TTF, ctx.tables_encoded.len() as u16);
     write_into(buf, &offset_table);
 
     let mut offset = util::align_len(buf.len() +
-        (ctx.tables.len() * TTFTableRecord::PACKED_LEN));
+        (ctx.tables_encoded.len() * TTFTableRecord::PACKED_LEN));
     let mut running_checksum = 0u32;
 
-    for (tag, encoded) in ctx.tables.iter() {
+    for (tag, encoded) in ctx.tables_encoded.iter() {
         let checksum = util::checksum(encoded);
 
         let record = TTFTableRecord {
@@ -370,10 +349,10 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
                 .0
         };
 
-        head.encode_as_be_bytes(&mut ctx.tables[0].1);
+        head.encode_as_be_bytes(&mut ctx.tables_encoded[0].1);
     }
 
-    for (_, encoded) in ctx.tables.iter() {
+    for (_, encoded) in ctx.tables_encoded.iter() {
         buf.extend(encoded.iter());
         buf.resize(util::align_len(buf.len()), 0u8);
     }
@@ -400,7 +379,7 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
         let mut buf = EncodeBuf::new();
         gpos.ttf_encode(&mut buf).unwrap();
 
-        ctx.tables.push((
+        ctx.tables_encoded.push((
             tag!(G,P,O,S),
             buf.bytes
         ));

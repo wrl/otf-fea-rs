@@ -44,3 +44,31 @@ pub use value_record::{
 
 mod ttf_table;
 pub use ttf_table::*;
+
+
+use crate::{
+    GlyphOrder,
+    Tag
+};
+
+pub struct CompilerState {
+    pub glyph_order: GlyphOrder,
+
+    pub head_table: Option<tables::Head>,
+    pub gpos_table: Option<tables::GPOS>,
+
+    pub tables_encoded: Vec<(Tag, Vec<u8>)>
+}
+
+impl CompilerState {
+    pub fn new() -> Self {
+        Self {
+            glyph_order: GlyphOrder::new(),
+
+            head_table: None,
+            gpos_table: None,
+
+            tables_encoded: Vec::new(),
+        }
+    }
+}
