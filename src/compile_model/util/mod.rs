@@ -16,6 +16,9 @@ mod tag;
 mod ttf_version;
 pub use ttf_version::TTFVersion;
 
+mod ttf_tagged;
+pub use ttf_tagged::TTFTagged;
+
 pub(crate) const fn align_len(len: usize) -> usize {
     let round_up = (4usize - (len & 0x3)) & 0x3;
     return len + round_up;
