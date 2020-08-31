@@ -20,7 +20,7 @@ pub struct PairClass {
     pub glyphs: (ClassDef, ClassDef),
     pub classes: (HashSet<ClassDef>, HashSet<ClassDef>),
 
-    pub pairs: HashMap<(ClassDef, ClassDef), Vec<PairClassIntersect>>
+    pub pairs: HashMap<(ClassDef, ClassDef), PairClassIntersect>
 }
 
 #[derive(Debug, Error)]
@@ -75,9 +75,8 @@ impl PairClass {
             return Err(PairClassError::PartialOverlap);
         }
 
-        self.pairs.entry(pair)
-            .or_default()
-            .push(PairClassIntersect(value_records.0, value_records.1));
+        self.pairs.insert(pair,
+            PairClassIntersect(value_records.0, value_records.1));
 
         Ok(())
     }
@@ -107,9 +106,35 @@ impl TTFEncode for PairClass {
             self.classes.1.iter().collect::<Vec<_>>()
         );
 
-        classes.0.sort_by(|a, b| b.len().cmp(&a.len()));
+        classes.0.sort_by(|a, b|
+            b.smallest_encoded_size()
+                .cmp(&a.smallest_encoded_size()));
 
-        classes.0.ttf_encode(buf, true)?;
+        let value_formats = self.pairs.values()
+            .fold((0u16, 0u16), |vr, pair|
+                (vr.0 | pair.0.smallest_possible_format(),
+                    vr.1 | pair.1.smallest_possible_format()));
+
+        let null_vr = ValueRecord::zero();
+
+        for x in &classes.0 {
+            // class 0
+            null_vr.encode_to_format(buf, value_formats.0)?;
+            null_vr.encode_to_format(buf, value_formats.1)?;
+
+            for y in &classes.1 {
+                // FIXME: clone. why the hell?
+                let intersect = match self.pairs.get(&((*x).clone(), (*y).clone())) {
+                    Some(PairClassIntersect(a, b)) => (a, b),
+                    None => (&null_vr, &null_vr)
+                };
+
+                intersect.0.encode_to_format(buf, value_formats.0)?;
+                intersect.1.encode_to_format(buf, value_formats.1)?;
+            }
+        }
+
+        // FIXME: coverage
 
         Ok(start)
     }

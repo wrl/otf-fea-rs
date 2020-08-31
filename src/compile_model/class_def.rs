@@ -109,9 +109,19 @@ impl ClassDef {
             + (self.0.len() * u16::PACKED_LEN)
     }
 
-    fn format_2_size(records: &[(u16, ops::Range<u16>)]) -> usize {
+    fn format_2_size(range_count: usize) -> usize {
         Format2Header::PACKED_LEN
-            + (records.len() * ClassRangeRecord::PACKED_LEN)
+            + (range_count * ClassRangeRecord::PACKED_LEN)
+    }
+
+    pub fn smallest_encoded_size(&self) -> usize {
+        let ranges_count = self.0.iter()
+            .map(|x| *x)
+            .contiguous_ranges()
+            .count();
+
+        self.format_1_size()
+            .min(Self::format_2_size(ranges_count))
     }
 }
 
@@ -123,7 +133,7 @@ impl TTFEncode for ClassDef {
             .map(|(start, end)| (1u16, (start..end)))
             .collect();
 
-        if self.format_1_size() < Self::format_2_size(&ranges) {
+        if self.format_1_size() < Self::format_2_size(ranges.len()) {
             self.encode_format_1(buf)
         } else {
             Self::encode_format_2(buf, &ranges)
