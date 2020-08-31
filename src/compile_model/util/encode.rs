@@ -42,12 +42,11 @@ impl EncodeBuf {
     }
 }
 
-pub trait TTFEncode: Sized {
+pub trait TTFEncode {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize>;
 }
 
-impl<T: EncodeBE> TTFEncode for T
-{
+impl<T: EncodeBE> TTFEncode for T {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let end = start + T::PACKED_LEN;

@@ -102,6 +102,15 @@ impl TTFEncode for PairClass {
 
         buf.bytes.resize(start + PairPosFormat2Header::PACKED_LEN, 0u8);
 
+        let mut classes = (
+            self.classes.0.iter().collect::<Vec<_>>(),
+            self.classes.1.iter().collect::<Vec<_>>()
+        );
+
+        classes.0.sort_by(|a, b| b.len().cmp(&a.len()));
+
+        classes.0.ttf_encode(buf, true)?;
+
         Ok(start)
     }
 }
