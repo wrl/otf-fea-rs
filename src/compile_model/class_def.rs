@@ -147,6 +147,10 @@ impl<'a, T> ClassDefTTFEncode for T
                 self
             };
 
+        if self.len() == 0 {
+            return ClassDef::encode_format_2(buf, &[]);
+        }
+
         if let [single_class] = classes {
             return single_class.ttf_encode(buf);
         }
