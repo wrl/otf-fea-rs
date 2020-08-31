@@ -48,7 +48,6 @@ use tables::gpos::{
     PairValueRecord,
 
     PairClass,
-    PairClassIntersect
 };
 
 #[allow(dead_code)]
@@ -175,13 +174,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
         ClassDef::from_glyph_class(&glyph_classes.1, &ctx.glyph_order)?
     );
 
-    let first_class = subtable.entry(classes.0)
-        .or_default();
-
-    let second_class = first_class.entry(classes.1)
-        .or_default();
-
-    second_class.push(PairClassIntersect(
+    subtable.add_pair(classes, (
         ValueRecord::from_parsed(&value_records.0, vertical),
         ValueRecord::from_parsed(&value_records.1, vertical)
     ));

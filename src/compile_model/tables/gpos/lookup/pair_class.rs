@@ -37,6 +37,25 @@ impl ops::DerefMut for PairClass {
     }
 }
 
+impl PairClass {
+    pub fn can_add_pair(&self, _pair: &(ClassDef, ClassDef)) -> bool {
+        true
+    }
+
+    pub fn add_pair(&mut self, pair: (ClassDef, ClassDef), value_records: (ValueRecord, ValueRecord)) {
+        let first_class = self.entry(pair.0)
+            .or_default();
+
+        let second_class = first_class.entry(pair.1)
+            .or_default();
+
+        second_class.push(PairClassIntersect(
+            value_records.0,
+            value_records.1
+        ));
+    }
+}
+
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
 struct PairPosFormat2Header {
