@@ -92,8 +92,6 @@ impl ClassDef {
         buf.append(&header)?;
 
         for id in first..(last + 1) {
-            println!(" ?? {} {}", id, self.0.contains(&id));
-
             if self.0.contains(&id) {
                 buf.append(&1u16)?;
             } else {
