@@ -18,19 +18,6 @@ pub use lookup::*;
 
 pub type GPOS = LookupTable<GPOSLookup>;
 
-impl GPOS {
-    pub fn new() -> Self {
-        LookupTable {
-            script_list: ScriptList::new(),
-            feature_list: FeatureList::new(),
-            lookup_list: LookupList::new(),
-            feature_variations: None,
-
-            named_lookups: HashMap::new()
-        }
-    }
-}
-
 
 impl TTFDecode for GPOS {
     #[inline]
@@ -48,7 +35,7 @@ impl TTFDecode for GPOS {
         let feature_bytes = &bytes[offsets.feature..];
         let lookup_bytes = &bytes[offsets.lookup..];
 
-        Ok(LookupTable {
+        Ok(GPOS {
             script_list: ScriptList::ttf_decode(script_bytes, feature_bytes)?,
             feature_list: FeatureList::ttf_decode(feature_bytes)?,
             lookup_list: LookupList::ttf_decode(lookup_bytes)?,

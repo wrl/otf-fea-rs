@@ -20,6 +20,17 @@ pub struct LookupTable<L: Sized> {
 }
 
 impl<L> LookupTable<L> {
+    pub fn new() -> Self {
+        Self {
+            script_list: ScriptList::new(),
+            feature_list: FeatureList::new(),
+            lookup_list: LookupList::new(),
+            feature_variations: None,
+
+            named_lookups: HashMap::new()
+        }
+    }
+
     pub fn lookup_index_for_type<T, I>(&self, indices: I) -> Option<usize>
         where T: LookupSubtable<L>,
               I: IntoIterator<Item = usize>
