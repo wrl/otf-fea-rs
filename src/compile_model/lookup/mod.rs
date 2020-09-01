@@ -4,6 +4,9 @@ pub use list::*;
 mod lookup;
 pub use lookup::*;
 
+mod table;
+pub use table::*;
+
 
 pub trait LookupSubtable<E>: Sized {
     fn new_lookup() -> E;

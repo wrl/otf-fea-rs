@@ -16,10 +16,9 @@ use crate::parse_model as pm;
  * feature definitions
  */
 
-use crate::compile_model::LookupSubtable;
+use crate::compile_model::lookup::*;
 use tables::gpos::{
     GPOS,
-    KeyedLookups,
 
     Pair,
     PairGlyphs,
