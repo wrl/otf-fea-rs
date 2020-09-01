@@ -60,11 +60,7 @@ pub enum BlockStatement {
 
 macro_rules! cvt_to_statement (
     ($iden:ident) => {
-        impl From<$iden> for BlockStatement {
-            fn from(x: $iden) -> BlockStatement {
-                BlockStatement::$iden(x)
-            }
-        }
+        $crate::impl_from_variant!(BlockStatement, $iden);
     }
 );
 
