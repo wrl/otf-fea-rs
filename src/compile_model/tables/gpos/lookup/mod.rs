@@ -67,7 +67,7 @@ impl TTFDecode for GPOSLookup {
 impl TTFEncode for GPOSLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
-            GPOSLookup::Pair(lookup) => lookup.ttf_encode(buf, 2)
+            GPOSLookup::Pair(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2)
         }
     }
 }

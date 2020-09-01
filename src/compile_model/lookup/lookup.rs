@@ -75,7 +75,7 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
 }
 
 impl<T: TTFEncode> Lookup<T> {
-    pub fn ttf_encode(&self, buf: &mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
+    pub fn ttf_encode_with_lookup_type(&self, buf: &mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
 
