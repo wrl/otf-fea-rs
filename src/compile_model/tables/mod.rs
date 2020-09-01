@@ -1,6 +1,9 @@
 pub mod gpos;
 pub use gpos::GPOS;
 
+pub mod gsub;
+pub use gsub::GSUB;
+
 mod gdef;
 
 mod head;

@@ -56,6 +56,7 @@ pub struct CompilerState {
 
     pub head_table: Option<tables::Head>,
     pub gpos_table: Option<tables::GPOS>,
+    pub gsub_table: Option<tables::GSUB>,
 
     pub tables_encoded: Vec<(Tag, Vec<u8>)>
 }
@@ -67,6 +68,7 @@ impl CompilerState {
 
             head_table: None,
             gpos_table: None,
+            gsub_table: None,
 
             tables_encoded: Vec::new(),
         }
