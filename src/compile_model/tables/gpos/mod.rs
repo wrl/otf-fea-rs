@@ -21,41 +21,18 @@ pub use lookup::*;
 
 
 #[derive(Debug)]
-pub struct GPOS {
+pub struct LookupTable<L: Sized> {
     pub script_list: ScriptList,
     pub feature_list: FeatureList,
-    pub lookup_list: LookupList<GPOSLookup>,
+    pub lookup_list: LookupList<L>,
     pub feature_variations: Option<usize>,
 
     pub named_lookups: HashMap<LookupName, Vec<u16>>
 }
 
-impl GPOS {
-    pub fn new() -> Self {
-        Self {
-            script_list: ScriptList::new(),
-            feature_list: FeatureList::new(),
-            lookup_list: LookupList::new(),
-            feature_variations: None,
-
-            named_lookups: HashMap::new()
-        }
-    }
-}
-
-pub trait TableWithLookups {
-    type Lookup: Sized;
-
-    fn lookup_index_for_type<T, I>(&self, indices: I) -> Option<usize>
-        where T: LookupSubtable<Self::Lookup>,
-              I: IntoIterator<Item = usize>;
-}
-
-impl TableWithLookups for GPOS {
-    type Lookup = GPOSLookup;
-
-    fn lookup_index_for_type<T, I>(&self, indices: I) -> Option<usize>
-        where T: LookupSubtable<Self::Lookup>,
+impl<L> LookupTable<L> {
+    pub fn lookup_index_for_type<T, I>(&self, indices: I) -> Option<usize>
+        where T: LookupSubtable<L>,
               I: IntoIterator<Item = usize>
     {
         for i in indices {
@@ -68,17 +45,17 @@ impl TableWithLookups for GPOS {
     }
 }
 
-pub trait HasLookups<L>: TableWithLookups {
-    fn find_lookup<T>(&mut self, lookup_ref: &L) -> Option<usize>
-        where T: LookupSubtable<Self::Lookup>;
+pub trait KeyedLookups<K, L> {
+    fn find_lookup<T>(&mut self, lookup_key: &K) -> Option<usize>
+        where T: LookupSubtable<L>;
 
-    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_ref: &L) -> &'a mut Lookup<T>
-        where T: LookupSubtable<Self::Lookup>;
+    fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_key: &K) -> &'a mut Lookup<T>
+        where T: LookupSubtable<L>;
 }
 
-impl HasLookups<LookupName> for GPOS {
+impl<L> KeyedLookups<LookupName, L> for LookupTable<L> {
     fn find_lookup<T>(&mut self, lookup_name: &LookupName) -> Option<usize>
-        where T: LookupSubtable<Self::Lookup>
+        where T: LookupSubtable<L>
     {
         self.named_lookups.get(lookup_name)
             .and_then(|indices| {
@@ -87,7 +64,7 @@ impl HasLookups<LookupName> for GPOS {
     }
 
     fn find_or_insert_lookup<'a, T>(&'a mut self, lookup_name: &LookupName) -> &'a mut Lookup<T>
-        where T: LookupSubtable<Self::Lookup>
+        where T: LookupSubtable<L>
     {
         let idx = match self.find_lookup::<T>(lookup_name) {
             Some(idx) => idx,
@@ -113,9 +90,9 @@ impl HasLookups<LookupName> for GPOS {
     }
 }
 
-impl HasLookups<FeatureTag> for GPOS {
+impl<L> KeyedLookups<FeatureTag, L> for LookupTable<L> {
     fn find_lookup<T>(&mut self, feature_tag: &FeatureTag) -> Option<usize>
-        where T: LookupSubtable<Self::Lookup>
+        where T: LookupSubtable<L>
     {
         self.lookup_index_for_type::<T, _>(
             self.feature_list.indices_for_tag(feature_tag).iter()
@@ -123,7 +100,7 @@ impl HasLookups<FeatureTag> for GPOS {
     }
 
     fn find_or_insert_lookup<'a, T>(&'a mut self, feature_tag: &FeatureTag) -> &'a mut Lookup<T>
-        where T: LookupSubtable<Self::Lookup>
+        where T: LookupSubtable<L>
     {
         let idx = match self.find_lookup::<T>(feature_tag) {
             Some(idx) => idx,
@@ -147,6 +124,22 @@ impl HasLookups<FeatureTag> for GPOS {
     }
 }
 
+pub type GPOS = LookupTable<GPOSLookup>;
+
+impl GPOS {
+    pub fn new() -> Self {
+        LookupTable {
+            script_list: ScriptList::new(),
+            feature_list: FeatureList::new(),
+            lookup_list: LookupList::new(),
+            feature_variations: None,
+
+            named_lookups: HashMap::new()
+        }
+    }
+}
+
+
 impl TTFDecode for GPOS {
     #[inline]
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
@@ -163,7 +156,7 @@ impl TTFDecode for GPOS {
         let feature_bytes = &bytes[offsets.feature..];
         let lookup_bytes = &bytes[offsets.lookup..];
 
-        Ok(GPOS {
+        Ok(LookupTable {
             script_list: ScriptList::ttf_decode(script_bytes, feature_bytes)?,
             feature_list: FeatureList::ttf_decode(feature_bytes)?,
             lookup_list: LookupList::ttf_decode(lookup_bytes)?,

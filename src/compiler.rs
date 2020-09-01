@@ -19,8 +19,7 @@ use crate::parse_model as pm;
 use crate::compile_model::LookupSubtable;
 use tables::gpos::{
     GPOS,
-    HasLookups,
-    TableWithLookups,
+    KeyedLookups,
 
     Pair,
     PairGlyphs,
@@ -54,9 +53,9 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn find_or_insert_lookup<'b, T, L>(&self, table: &'b mut T) -> &'b mut Lookup<L>
-        where T: TableWithLookups + HasLookups<FeatureTag> + HasLookups<pm::LookupName>,
-              L: LookupSubtable<T::Lookup>
+    fn find_or_insert_lookup<'b, T, L, S>(&self, table: &'b mut T) -> &'b mut Lookup<S>
+        where T: KeyedLookups<FeatureTag, L> + KeyedLookups<pm::LookupName, L>,
+              S: LookupSubtable<L>
     {
         match *self {
             Block::Feature(f) => table.find_or_insert_lookup(f),
