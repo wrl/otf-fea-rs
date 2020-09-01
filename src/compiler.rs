@@ -420,15 +420,22 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
     //     ctx.head_table = Some(tables::Head::new());
     // }
 
-    if let Some(gpos) = ctx.gpos.as_ref() {
-        let mut buf = EncodeBuf::new();
-        gpos.ttf_encode(&mut buf).unwrap();
+    macro_rules! encode_table {
+        ($table:ident, $tag:expr) => {
+            if let Some(table) = ctx.$table.as_ref() {
+                let mut buf = EncodeBuf::new();
+                table.ttf_encode(&mut buf).unwrap();
 
-        ctx.tables_encoded.push((
-            tag!(G,P,O,S),
-            buf.bytes
-        ));
+                ctx.tables_encoded.push((
+                    $tag,
+                    buf.bytes
+                ));
+            }
+        }
     }
+
+    encode_table!(gpos, tag!(G,P,O,S));
+    encode_table!(gsub, tag!(G,S,U,B));
 
     actually_compile(&mut ctx, out);
 

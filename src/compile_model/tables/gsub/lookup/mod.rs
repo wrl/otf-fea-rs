@@ -31,8 +31,8 @@ impl TTFDecode for GSUBLookup {
 
 impl TTFEncode for GSUBLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        let _start = buf.bytes.len();
-
-        panic!("unimplemented");
+        match self {
+            GSUBLookup::Multiple(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2)
+        }
     }
 }
