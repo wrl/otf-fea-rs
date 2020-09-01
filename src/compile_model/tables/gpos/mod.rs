@@ -9,7 +9,7 @@ use crate::compile_model::feature_list::*;
 use crate::compile_model::lookup::*;
 
 
-pub mod header;
+pub(crate) mod header;
 use header::*;
 
 pub mod lookup;

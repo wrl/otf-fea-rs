@@ -1,16 +1,16 @@
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
-pub(super) struct Version {
-    pub(super) major: u16,
-    pub(super) minor: u16
+pub(crate) struct Version {
+    pub(crate) major: u16,
+    pub(crate) minor: u16
 }
 
-pub(super) struct Offsets {
-    pub(super) script: usize,
-    pub(super) feature: usize,
-    pub(super) lookup: usize,
-    pub(super) feature_variations: Option<usize>
+pub(crate) struct Offsets {
+    pub(crate) script: usize,
+    pub(crate) feature: usize,
+    pub(crate) lookup: usize,
+    pub(crate) feature_variations: Option<usize>
 }
 
 impl From<Offsets> for Header_1_0 {
@@ -39,7 +39,7 @@ impl From<Offsets> for Header_1_1 {
 }
 
 #[derive(PackedSize, EncodeBE, DecodeBE)]
-pub(super) struct Header_1_0 {
+pub(crate) struct Header_1_0 {
     major: u16,
     minor: u16,
     script_list_offset: u16,
@@ -59,7 +59,7 @@ impl From<Header_1_0> for Offsets {
 }
 
 #[derive(PackedSize, EncodeBE, DecodeBE)]
-pub(super) struct Header_1_1 {
+pub(crate) struct Header_1_1 {
     major: u16,
     minor: u16,
     script_list_offset: u16,
