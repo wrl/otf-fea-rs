@@ -126,8 +126,10 @@ impl ClassDef {
     }
 
     fn format_1_size(&self) -> usize {
+        let (first, last) = self.first_and_last_glyphs();
+
         Format1Header::PACKED_LEN
-            + (self.0.len() * u16::PACKED_LEN)
+            + ((last - first + 1) as usize * u16::PACKED_LEN)
     }
 
     fn format_2_size(range_count: usize) -> usize {
