@@ -193,6 +193,14 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
     }
 }
 
+fn handle_substitute_statement(_ctx: &mut CompilerState, _block: &Block, s: &pm::Substitute) -> CompileResult<()> {
+    // use pm::Substitute::*;
+
+    match s {
+        _ => panic!()
+    }
+}
+
 fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupName) -> CompileResult<()> {
     let gpos = match ctx.gpos.as_mut() {
         None => return Ok(()),
@@ -223,6 +231,8 @@ fn handle_block_statements(ctx: &mut CompilerState, block: &mut Block, statement
     for s in statements {
         match s {
             Position(pos) => handle_position_statement(ctx, block, pos)?,
+            Substitute(sub) => handle_substitute_statement(ctx, block, sub)?,
+
             Lookup(pm::Lookup(name)) => handle_lookup_reference(ctx, block, name)?,
 
             Subtable => block.add_subtable_break(),

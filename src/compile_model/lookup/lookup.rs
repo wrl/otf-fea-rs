@@ -56,6 +56,23 @@ impl<T> Lookup<T> {
 
         V::get_variant_mut(&mut self.subtables[idx]).unwrap()
     }
+
+    pub fn get_subtable(&mut self, skip: usize) -> &mut T
+        where T: Default
+    {
+        let idx = self.subtables.iter().enumerate()
+            .map(|(idx, _)| idx)
+            .skip(skip)
+            .next()
+
+            .unwrap_or_else(|| {
+                let idx = self.subtables.len();
+                self.subtables.push(T::default().into());
+                idx
+            });
+
+        &mut self.subtables[idx]
+    }
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
