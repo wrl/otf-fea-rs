@@ -2,15 +2,22 @@ use std::collections::HashMap;
 
 use crate::*;
 
-use crate::compile_model::script_list::*;
+use crate::compile_model::util::decode::*;
+use crate::compile_model::util::encode::*;
 use crate::compile_model::feature_list::*;
+use crate::compile_model::script_list::*;
 use crate::compile_model::lookup::*;
 
 use crate::parse_model::LookupName;
 
 
+mod header;
+mod codec;
+
+
 #[derive(Debug)]
-pub struct LookupTable<L: Sized> {
+pub struct LookupTable<L: Sized>
+{
     pub script_list: ScriptList,
     pub feature_list: FeatureList,
     pub lookup_list: LookupList<L>,
