@@ -134,7 +134,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                 .and(glyph_class_or_class_ref().map(|gc| vec![gc])),
             value(()).map(|_| (None, vec![]))
         )))
-        .flat_map(|(((position, subtype), mut pattern), (keyword, replacement))| {
+        .flat_map(|(((position, subtype), pattern), (keyword, replacement))| {
             if pattern.num_value_records > 0 {
                 crate::parse_bail!(Input, position,
                     "Substitution statements cannot contain value records");
@@ -184,6 +184,8 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                 }.into());
             }
 
+            // GSUB lookup type 2
+            //     "substitute f_f_i by f f i;"
             if subtype == Subtype::Forward
                 && pattern.glyphs.len() == 1
                 && pattern.glyphs[0].class.is_single()
@@ -191,9 +193,8 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                 && replacement.iter().all(|cls| cls.is_single())
                 && pattern.num_lookups == 0 {
 
-                let glyph = pattern.glyphs
-                    .pop().unwrap()
-                    .class.into_single().unwrap();
+                let glyph = into_first_glyph(pattern.glyphs).unwrap()
+                    .into_single().unwrap();
 
                 let sequence = replacement.into_iter()
                     .map(|cls| cls.into_single().unwrap())
@@ -204,8 +205,6 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                     sequence,
                 }.into());
             }
-
-            println!(" >>> {:?} {:?}", pattern, replacement);
 
             Ok(Single {
                 prefix: Vec::new(),
