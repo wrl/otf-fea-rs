@@ -17,8 +17,8 @@ pub use feature_list::{
     FeatureRecord,
 };
 
-mod lookup_list;
-pub use lookup_list::{
+mod lookup;
+pub use lookup::{
     LookupList,
     LookupFlags,
     Lookup,

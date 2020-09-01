@@ -8,7 +8,7 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::script_list::*;
 use crate::compile_model::feature_list::*;
-use crate::compile_model::lookup_list::*;
+use crate::compile_model::lookup::*;
 
 use crate::parse_model::LookupName;
 
