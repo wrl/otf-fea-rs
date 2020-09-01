@@ -109,7 +109,7 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
         value_records
     } = pair;
 
-    let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
     let subtable: &mut PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks());
@@ -144,7 +144,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
         value_records
     } = pair;
 
-    let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
     let vertical = block.is_vertical();
@@ -194,7 +194,7 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
 }
 
 fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupName) -> CompileResult<()> {
-    let gpos = match ctx.gpos_table.as_mut() {
+    let gpos = match ctx.gpos.as_mut() {
         None => return Ok(()),
         Some(gpos) => gpos
     };
@@ -261,7 +261,7 @@ fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
 
     match tag {
         pm::TableTag::head =>
-            ctx.head_table = Some(tables::Head::from_parsed_table(statements)),
+            ctx.head = Some(tables::Head::from_parsed_table(statements)),
         pm::TableTag::name => {
             let table = tables::Name::from_parsed_table(statements);
             ctx.tables_encoded.push((tag!(n,a,m,e), table.to_be()));
@@ -306,7 +306,7 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
 }
 
 fn prepare_head(ctx: &mut CompilerState) {
-    let mut head = match ctx.head_table {
+    let mut head = match ctx.head {
         Some(ref mut head) => head,
         None => return
     };
@@ -355,7 +355,7 @@ fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
 
     buf.resize(util::align_len(buf.len()), 0u8);
 
-    if let Some(ref mut head) = ctx.head_table {
+    if let Some(ref mut head) = ctx.head {
         head.checksum_adjustment = {
             let whole_file_checksum = util::checksum(&buf);
 
@@ -392,7 +392,7 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
     //     ctx.head_table = Some(tables::Head::new());
     // }
 
-    if let Some(gpos) = ctx.gpos_table.as_ref() {
+    if let Some(gpos) = ctx.gpos.as_ref() {
         let mut buf = EncodeBuf::new();
         gpos.ttf_encode(&mut buf).unwrap();
 
@@ -404,7 +404,7 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
 
     actually_compile(&mut ctx, out);
 
-    if let Some(gpos) = ctx.gpos_table.as_ref() {
+    if let Some(gpos) = ctx.gpos.as_ref() {
         println!("{:#?}", gpos);
     }
 

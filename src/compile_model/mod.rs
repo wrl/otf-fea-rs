@@ -54,9 +54,9 @@ use crate::{
 pub struct CompilerState {
     pub glyph_order: GlyphOrder,
 
-    pub head_table: Option<tables::Head>,
-    pub gpos_table: Option<tables::GPOS>,
-    pub gsub_table: Option<tables::GSUB>,
+    pub head: Option<tables::Head>,
+    pub gpos: Option<tables::GPOS>,
+    pub gsub: Option<tables::GSUB>,
 
     pub tables_encoded: Vec<(Tag, Vec<u8>)>
 }
@@ -66,9 +66,9 @@ impl CompilerState {
         Self {
             glyph_order: GlyphOrder::new(),
 
-            head_table: None,
-            gpos_table: None,
-            gsub_table: None,
+            head: None,
+            gpos: None,
+            gsub: None,
 
             tables_encoded: Vec::new(),
         }
