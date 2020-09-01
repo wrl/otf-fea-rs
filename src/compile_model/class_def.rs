@@ -63,19 +63,42 @@ impl ClassDef {
             .map(Self)
     }
 
+    #[inline]
+    fn first_and_last_glyphs(&self) -> (u16, u16) {
+        // https://github.com/rust-lang/rust/issues/62924
+        // why is this nightly-only, what the hell
+
+        let mut iter = self.0.iter();
+
+        iter.clone().next()
+            .zip(iter.next_back())
+            .map(|(a, b)| (*a, *b))
+            .unwrap_or((0, 0))
+    }
+
+    // FIXME: only encodes class id 1 right now.
+    //        should be easy enough to extend to multiple classes
     fn encode_format_1(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
+        let (first, last) = self.first_and_last_glyphs();
+
         let header = Format1Header {
             format: 1,
-            start_glyph_id: self.0.iter().next().map(|x| *x).unwrap_or(0u16),
-            glyph_count: self.0.len() as u16
+            start_glyph_id: first,
+            glyph_count: last - first + 1
         };
 
         buf.append(&header)?;
 
-        for id in self.0.iter() {
-            buf.append(id)?;
+        for id in first..(last + 1) {
+            println!(" ?? {} {}", id, self.0.contains(&id));
+
+            if self.0.contains(&id) {
+                buf.append(&1u16)?;
+            } else {
+                buf.append(&0u16)?;
+            }
         }
 
         Ok(start)
@@ -151,7 +174,7 @@ impl<'a, T> ClassDefTTFEncode for T
 {
     fn ttf_encode(&self, buf: &mut EncodeBuf, use_zero_class: bool) -> EncodeResult<usize> {
         let classes =
-            if use_zero_class && self.len() > 1 {
+            if use_zero_class && self.len() > 0 {
                 &self[1..]
             } else {
                 self

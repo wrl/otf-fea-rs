@@ -9,6 +9,7 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::compile_model::util::encode::*;
 use crate::compile_model::value_record::*;
 use crate::compile_model::class_def::*;
+use crate::compile_model::coverage::*;
 use crate::compile_model::error::*;
 
 
@@ -59,11 +60,11 @@ impl PairClass {
         let glyphs_overlap = (
             pair.0.iter()
                 .map(|g| self.glyphs.0.insert(*g))
-                .any(|x| x),
+                .fold(false, |acc, overlap| acc || overlap),
 
             pair.1.iter()
                 .map(|g| self.glyphs.1.insert(*g))
-                .any(|x| x)
+                .fold(false, |acc, overlap| acc || overlap),
         );
 
         let classes_present = (
@@ -97,12 +98,17 @@ struct PairPosFormat2Header {
 
 impl TTFEncode for PairClass {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        let start = buf.bytes.len();
-
-        buf.bytes.resize(start + PairPosFormat2Header::PACKED_LEN, 0u8);
+        let mut coverage: CoverageLookup<()> = CoverageLookup::new();
 
         let mut classes = (
-            self.classes.0.iter().collect::<Vec<_>>(),
+            self.classes.0.iter()
+                .inspect(|cls| {
+                    for glyph in cls.iter() {
+                        coverage.insert(*glyph, ());
+                    }
+                })
+                .collect::<Vec<_>>(),
+
             self.classes.1.iter().collect::<Vec<_>>()
         );
 
@@ -111,14 +117,18 @@ impl TTFEncode for PairClass {
                 .cmp(&a.smallest_encoded_size()));
 
         let value_formats = self.pairs.values()
-            .fold((0u16, 0u16), |vr, pair|
+            .fold((0u16, 0u16), |vr, pair| {
                 (vr.0 | pair.0.smallest_possible_format(),
-                    vr.1 | pair.1.smallest_possible_format()));
+                    vr.1 | pair.1.smallest_possible_format())
+            });
+
+        let start = buf.bytes.len();
+        buf.bytes.resize(start + PairPosFormat2Header::PACKED_LEN, 0u8);
 
         let null_vr = ValueRecord::zero();
 
         for x in &classes.0 {
-            // class 0
+            // class 2 id 0
             null_vr.encode_to_format(buf, value_formats.0)?;
             null_vr.encode_to_format(buf, value_formats.1)?;
 
@@ -134,8 +144,20 @@ impl TTFEncode for PairClass {
             }
         }
 
-        // FIXME: coverage
+        let header = PairPosFormat2Header {
+            format: 2,
+            coverage_offset: (buf.append(&coverage)? - start) as u16,
 
-        Ok(start)
+            value_format_1: value_formats.0,
+            value_format_2: value_formats.1,
+
+            class_def_1_offset: (classes.0.ttf_encode(buf, true)? - start) as u16,
+            class_def_2_offset: (classes.1.ttf_encode(buf, false)? - start) as u16,
+
+            class_1_count: classes.0.len() as u16,
+            class_2_count: (classes.1.len() + 1) as u16
+        };
+
+        buf.encode_at(&header, start)
     }
 }

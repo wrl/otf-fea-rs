@@ -34,8 +34,8 @@ impl TTFDecode for Pair {
 impl TTFEncode for Pair {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
-            Pair::Glyphs(glyphs) => glyphs.ttf_encode(buf),
-            _ => Ok(buf.bytes.len())
+            Pair::Glyphs(pg) => pg.ttf_encode(buf),
+            Pair::Class(pc) => pc.ttf_encode(buf)
         }
     }
 }
