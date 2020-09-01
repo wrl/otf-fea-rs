@@ -39,12 +39,30 @@ impl GlyphClass {
     }
 
     #[inline]
-    pub fn is_single(&self) -> bool {
-        if let &[GlyphClassItem::Single(_)] = self.0.as_slice() {
-            true
-        } else {
-            false
+    pub fn into_single(mut self) -> Option<GlyphRef> {
+        if !self.is_single() {
+            return None
         }
+
+        if let GlyphClassItem::Single(r) = self.0.pop().unwrap() {
+            Some(r)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn as_single(&self) -> Option<&GlyphRef> {
+        if let &[GlyphClassItem::Single(ref r)] = self.0.as_slice() {
+            Some(r)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn is_single(&self) -> bool {
+        self.as_single().is_some()
     }
 
     pub fn iter_glyphs<'a>(&'a self, glyph_order: &'a GlyphOrder)
