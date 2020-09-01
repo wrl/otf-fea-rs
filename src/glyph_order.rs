@@ -24,9 +24,10 @@ impl GlyphOrder {
         Self(HashMap::new())
     }
 
-    pub(crate) fn id_for_glyph(&self, glyph: &GlyphRef) -> Option<u16> {
+    pub(crate) fn id_for_glyph(&self, glyph: &GlyphRef) -> Result<u16, GlyphOrderError> {
         self.0.get(glyph)
             .map(|x| *x)
+            .ok_or_else(|| GlyphOrderError::UnknownGlyph(glyph.clone()))
     }
 }
 

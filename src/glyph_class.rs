@@ -75,23 +75,18 @@ impl GlyphClass {
                     Single(glyph) => {
                         Either2::A(iter::once(
                             glyph_order.id_for_glyph(glyph)
-                                .ok_or_else(|| GlyphOrderError::UnknownGlyph(glyph.clone()))
                         ))
                     },
 
                     Range { start, end } => {
                         let start = match glyph_order.id_for_glyph(start) {
-                            Some(id) => id,
-                            None => return Either2::A(iter::once(
-                                    Err(GlyphOrderError::UnknownGlyph(start.clone()))
-                            ))
+                            Ok(id) => id,
+                            e => return Either2::A(iter::once(e))
                         };
 
                         let end = match glyph_order.id_for_glyph(end) {
-                            Some(id) => id,
-                            None => return Either2::A(iter::once(
-                                    Err(GlyphOrderError::UnknownGlyph(end.clone()))
-                            ))
+                            Ok(id) => id,
+                            e => return Either2::A(iter::once(e))
                         };
 
                         Either2::B((start..end+1).map(Ok))

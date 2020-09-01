@@ -17,14 +17,9 @@ use crate::parse_model as pm;
  */
 
 use crate::compile_model::lookup::*;
-use tables::gpos::{
-    GPOS,
-
-    Pair,
-    PairGlyphs,
-    PairValueRecord,
-
-    PairClass,
+use tables::{
+    gsub,
+    gpos
 };
 
 struct Block<'a> {
@@ -86,13 +81,13 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn insert_into_script(&self, gpos: &mut GPOS, script_tag: &ScriptTag) {
+    fn insert_into_script<T>(&self, table: &mut LookupTable<T>, script_tag: &ScriptTag) {
         let feature_tag = match self.ident {
             BlockIdent::Feature(tag) => tag,
             BlockIdent::Lookup(_) => return
         };
 
-        gpos.script_list.script_for_tag_mut(script_tag)
+        table.script_list.script_for_tag_mut(script_tag)
             .default_lang_sys
             .features
             .insert(*feature_tag);
@@ -110,9 +105,9 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     } = pair;
 
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
-    let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
+    let lookup: &mut Lookup<gpos::Pair> = block.find_or_insert_lookup(gpos);
 
-    let subtable: &mut PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks());
+    let subtable: &mut gpos::PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks());
     let vertical = block.is_vertical();
 
     for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
@@ -125,7 +120,7 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
         for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
             let second_glyph = second_glyph?;
 
-            let pvr = PairValueRecord {
+            let pvr = gpos::PairValueRecord {
                 second_glyph,
                 records: (vr1.clone(), vr2.clone())
             };
@@ -145,7 +140,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     } = pair;
 
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
-    let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
+    let lookup: &mut Lookup<gpos::Pair> = block.find_or_insert_lookup(gpos);
 
     let vertical = block.is_vertical();
 
@@ -162,7 +157,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     let mut skip = block.subtable_breaks();
 
     let subtable = loop {
-        let subtable: &mut PairClass = lookup.get_subtable_variant(skip);
+        let subtable: &mut gpos::PairClass = lookup.get_subtable_variant(skip);
 
         if subtable.can_add_pair(&classes) {
             break subtable;
@@ -173,6 +168,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
 
     subtable.add_pair(classes, value_records)?;
 
+    block.insert_into_script(gpos, &script_tag!(D,F,L,T));
     Ok(())
 }
 
@@ -193,11 +189,33 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
     }
 }
 
-fn handle_substitute_statement(_ctx: &mut CompilerState, _block: &Block, s: &pm::Substitute) -> CompileResult<()> {
-    // use pm::Substitute::*;
+fn handle_multiple_substitution(ctx: &mut CompilerState, block: &Block, sub: &pm::substitute::Multiple) -> CompileResult<()> {
+    let glyph = ctx.glyph_order.id_for_glyph(&sub.glyph)?;
+
+    let sequence: Vec<_> = sub.sequence.iter()
+        .map(|gr| ctx.glyph_order.id_for_glyph(gr))
+        .collect::<Result<_, _>>()?;
+
+    let gsub = ctx.gsub.get_or_insert_with(|| tables::GSUB::new());
+    let lookup: &mut Lookup<gsub::Multiple> = block.find_or_insert_lookup(gsub);
+
+    let subtable = lookup.get_subtable(block.subtable_breaks());
+
+    // FIXME: find next subtable if sequence is already in this one?
+    //        overwrite as we're doing now?
+    subtable.insert(glyph, sequence);
+
+    block.insert_into_script(gsub, &script_tag!(D,F,L,T));
+    Ok(())
+}
+
+fn handle_substitute_statement(ctx: &mut CompilerState, block: &Block, s: &pm::Substitute) -> CompileResult<()> {
+    use pm::Substitute::*;
 
     match s {
-        _ => panic!()
+        Multiple(m) => handle_multiple_substitution(ctx, block, m),
+
+        s => panic!("{:#?}", s)
     }
 }
 
@@ -416,6 +434,10 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
 
     if let Some(gpos) = ctx.gpos.as_ref() {
         println!("{:#?}", gpos);
+    }
+
+    if let Some(gsub) = ctx.gsub.as_ref() {
+        println!("{:#?}", gsub);
     }
 
     Ok(())
