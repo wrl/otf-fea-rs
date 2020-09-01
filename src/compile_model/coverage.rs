@@ -9,6 +9,12 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
 
+#[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
+struct CoverageHeader {
+    format: u16,
+    count: u16
+}
+
 #[derive(Debug, PackedSize, DecodeBE, EncodeBE)]
 struct GlyphRange {
     start: u16,
@@ -17,16 +23,14 @@ struct GlyphRange {
 }
 
 fn decode_coverage<'a>(bytes: &'a [u8]) -> DecodeResult<impl Iterator<Item = u16> + 'a> {
-    let format = decode_u16_be(bytes, 0);
-    let count = decode_u16_be(bytes, 2);
+    let header: CoverageHeader = decode_from_slice(bytes);
+    let list_slice = &bytes[CoverageHeader::PACKED_LEN..];
 
-    let list_slice = &bytes[4..];
-
-    let glyphs_iter = match format {
-        1 => Either2::A(decode_from_pool(count, list_slice)),
+    let glyphs_iter = match header.format {
+        1 => Either2::A(decode_from_pool(header.count, list_slice)),
 
         2 => {
-            let glyphs = decode_from_pool(count, list_slice)
+            let glyphs = decode_from_pool(header.count, list_slice)
                 .flat_map(|r: GlyphRange|
                     r.start..(r.end + 1));
 
@@ -65,16 +69,6 @@ impl<T> CoverageLookup<T> {
     }
 
     #[inline]
-    pub fn values(&self) -> impl Iterator<Item = &T> {
-        self.0.values()
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline]
     pub fn decode_with_lookup<I>(coverage_bytes: &[u8], lookup_iter: I) -> DecodeResult<Self>
         where I: Iterator<Item = T>
     {
@@ -85,22 +79,34 @@ impl<T> CoverageLookup<T> {
                 .collect()
         ))
     }
-}
 
-impl<T> TTFEncode for CoverageLookup<T> {
-    #[inline]
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        let start = buf.bytes.len();
+    fn format_1_size(&self) -> usize {
+        self.len() * u16::PACKED_LEN
+    }
 
-        let format = 2u16;
-        buf.append(&format)?;
-        let count_offset = buf.bytes.len();
-        buf.append(&0u16)?;
+    fn format_2_size(&self) -> usize {
+        self.keys()
+            .map(|x| *x)
+            .contiguous_ranges()
+            .count() * GlyphRange::PACKED_LEN
+    }
 
+    fn encode_format_1(&self, buf: &mut EncodeBuf) -> EncodeResult<CoverageHeader> {
+        for glyph_id in self.keys() {
+            buf.append(glyph_id)?;
+        }
+
+        Ok(CoverageHeader {
+            format: 1,
+            count: self.len() as u16
+        })
+    }
+
+    fn encode_format_2(&self, buf: &mut EncodeBuf) -> EncodeResult<CoverageHeader> {
         let mut start_coverage_index = 0u16;
         let mut count = 0u16;
 
-        for range in self.0.keys().map(|x| *x).contiguous_ranges() {
+        for range in self.keys().map(|x| *x).contiguous_ranges() {
             let glyph_range = GlyphRange {
                 start: range.0,
                 end: range.1,
@@ -112,8 +118,25 @@ impl<T> TTFEncode for CoverageLookup<T> {
             count += 1;
         }
 
-        buf.encode_at(&count, count_offset)?;
+        Ok(CoverageHeader {
+            format: 2,
+            count
+        })
+    }
+}
 
-        Ok(start)
+impl<T> TTFEncode for CoverageLookup<T> {
+    #[inline]
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        let start = buf.bytes.len();
+
+        buf.bytes.resize(start + CoverageHeader::PACKED_LEN, 0u8);
+
+        if self.len() < 4 || self.format_1_size() < self.format_2_size() {
+            self.encode_format_1(buf)
+        } else {
+            self.encode_format_2(buf)
+        }
+            .and_then(|header| buf.encode_at(&header, start))
     }
 }
