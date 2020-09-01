@@ -27,8 +27,32 @@ use tables::gpos::{
     PairClass,
 };
 
-#[allow(dead_code)]
-enum Block<'a> {
+struct Block<'a> {
+    ident: BlockIdent<'a>,
+    subtable_breaks: usize
+}
+
+impl<'a> Block<'a> {
+    pub fn new_feature(tag: &'a FeatureTag) -> Self {
+        Self {
+            ident: BlockIdent::Feature(tag),
+            subtable_breaks: 0
+        }
+    }
+
+    pub fn new_lookup(name: &'a pm::LookupName) -> Self {
+        Self {
+            ident: BlockIdent::Lookup(name),
+            subtable_breaks: 0
+        }
+    }
+
+    pub fn add_subtable_break(&mut self) {
+        self.subtable_breaks += 1;
+    }
+}
+
+enum BlockIdent<'a> {
     Feature(&'a FeatureTag),
     Lookup(&'a pm::LookupName)
 }
@@ -46,9 +70,9 @@ fn feature_is_vertical(tag: &FeatureTag) -> bool {
 
 impl<'a> Block<'a> {
     fn is_vertical(&self) -> bool {
-        match self {
-            Block::Feature(tag) => feature_is_vertical(tag),
-            Block::Lookup(_) => false,
+        match self.ident {
+            BlockIdent::Feature(tag) => feature_is_vertical(tag),
+            BlockIdent::Lookup(_) => false,
         }
     }
 
@@ -56,16 +80,16 @@ impl<'a> Block<'a> {
         where T: KeyedLookups<FeatureTag, L> + KeyedLookups<pm::LookupName, L>,
               S: LookupSubtable<L>
     {
-        match *self {
-            Block::Feature(f) => table.find_or_insert_lookup(f),
-            Block::Lookup(l) => table.find_or_insert_lookup(l)
+        match self.ident {
+            BlockIdent::Feature(f) => table.find_or_insert_lookup(f),
+            BlockIdent::Lookup(l) => table.find_or_insert_lookup(l)
         }
     }
 
     fn insert_into_script(&self, gpos: &mut GPOS, script_tag: &ScriptTag) {
-        let feature_tag = match self {
-            Block::Feature(tag) => *tag,
-            Block::Lookup(_) => return
+        let feature_tag = match self.ident {
+            BlockIdent::Feature(tag) => tag,
+            BlockIdent::Lookup(_) => return
         };
 
         gpos.script_list.script_for_tag_mut(script_tag)
@@ -75,7 +99,7 @@ impl<'a> Block<'a> {
     }
 
     fn subtable_breaks(&self) -> usize {
-        0
+        self.subtable_breaks
     }
 }
 
@@ -175,9 +199,9 @@ fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::Lo
         Some(gpos) => gpos
     };
 
-    let feature_indices = match block {
-        Block::Feature(tag) => gpos.feature_list.indices_for_tag_mut(tag),
-        Block::Lookup(_) =>
+    let feature_indices = match block.ident {
+        BlockIdent::Feature(tag) => gpos.feature_list.indices_for_tag_mut(tag),
+        BlockIdent::Lookup(_) =>
             panic!("lookup references from inside a lookup block are unsupported")
     };
 
@@ -193,13 +217,15 @@ fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::Lo
     Ok(())
 }
 
-fn handle_block_statements(ctx: &mut CompilerState, block: &Block, statements: &[pm::BlockStatement]) -> CompileResult<()> {
+fn handle_block_statements(ctx: &mut CompilerState, block: &mut Block, statements: &[pm::BlockStatement]) -> CompileResult<()> {
     use pm::BlockStatement::*;
 
     for s in statements {
         match s {
             Position(pos) => handle_position_statement(ctx, block, pos)?,
             Lookup(pm::Lookup(name)) => handle_lookup_reference(ctx, block, name)?,
+
+            Subtable => block.add_subtable_break(),
 
             stmt => panic!("unimplemented block statement {:?}", stmt)
         }
@@ -210,20 +236,20 @@ fn handle_block_statements(ctx: &mut CompilerState, block: &Block, statements: &
 
 fn handle_feature_definition(ctx: &mut CompilerState, def: &pm::FeatureDefinition) -> CompileResult<()> {
     let tag = &def.tag;
-    let block = Block::Feature(tag);
+    let mut block = Block::new_feature(tag);
 
     println!("feature {}:", tag);
 
-    handle_block_statements(ctx, &block, &def.statements)
+    handle_block_statements(ctx, &mut block, &def.statements)
 }
 
 fn handle_lookup_definition(ctx: &mut CompilerState, def: &pm::LookupDefinition) -> CompileResult<()> {
     let name = &def.label;
-    let block = Block::Lookup(name);
+    let mut block = Block::new_lookup(name);
 
     println!("lookup {}:", name);
 
-    handle_block_statements(ctx, &block, &def.statements)
+    handle_block_statements(ctx, &mut block, &def.statements)
 }
 
 /**
