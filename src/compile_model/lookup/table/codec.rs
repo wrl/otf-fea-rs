@@ -8,6 +8,7 @@ use crate::compile_model::util::encode::*;
 use super::*;
 use super::header::*;
 
+
 impl<L: TTFDecode> TTFDecode for LookupTable<L> {
     #[inline]
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
