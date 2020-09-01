@@ -21,33 +21,50 @@ use super::glyph_pattern::*;
 use super::glyph_class::*;
 use super::util::*;
 
+// GSUB type 1
+#[derive(Debug)]
+pub struct Single {
+    pub prefix: Vec<GlyphClass>,
+    pub glyph_class: GlyphClass,
+    pub suffix: Vec<GlyphClass>,
+    pub replacement: GlyphClass,
+
+    pub force_chain: bool
+}
+
+// GSUB type 2
+#[derive(Debug)]
+pub struct Multiple {
+    pub glyph: GlyphRef,
+    pub sequence: Vec<GlyphRef>
+}
+
+// GSUB type 3
+#[derive(Debug)]
+pub struct Alternate {
+    prefix: Vec<GlyphClass>,
+    glyph: GlyphClass,
+    suffix: Vec<GlyphClass>,
+    replacement: GlyphClass
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum Substitute {
-    // GSUB type 1
-    Single {
-        prefix: Vec<GlyphClass>,
-        glyph_class: GlyphClass,
-        suffix: Vec<GlyphClass>,
-        replacement: GlyphClass,
-
-        force_chain: bool
-    },
-
-    // GSUB type 2
-    Multiple {
-        glyph: GlyphRef,
-        sequence: Vec<GlyphRef>
-    },
-
-    // GSUB type 3
-    Alternate {
-        prefix: Vec<GlyphClass>,
-        glyph: GlyphClass,
-        suffix: Vec<GlyphClass>,
-        replacement: GlyphClass
-    },
+    Single(Single),
+    Multiple(Multiple),
+    Alternate(Alternate)
 }
+
+macro_rules! substitute_from_variant {
+    ($from:ident) => {
+        $crate::impl_from_variant!(Substitute, $from);
+    }
+}
+
+substitute_from_variant!(Single);
+substitute_from_variant!(Multiple);
+substitute_from_variant!(Alternate);
 
 #[inline]
 fn into_glyphs(items: Vec<GlyphPatternItem>) -> Vec<GlyphClass>
@@ -141,12 +158,12 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                         "Expected a single glyph class after \"from\"");
                 }
 
-                return Ok(Substitute::Alternate {
+                return Ok(Alternate {
                     prefix: into_glyphs(pattern.prefix),
                     glyph: into_first_glyph(pattern.glyphs).unwrap(),
                     suffix: into_glyphs(pattern.suffix),
                     replacement: into_first(replacement).unwrap()
-                });
+                }.into());
             }
 
             // GSUB lookup type 1
@@ -157,22 +174,22 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                     && pattern.glyphs.len() == 1 && replacement.len() == 1
                     && pattern.num_lookups == 0 {
 
-                return Ok(Substitute::Single {
+                return Ok(Single {
                     prefix: into_glyphs(pattern.prefix),
                     glyph_class: into_first_glyph(pattern.glyphs).unwrap(),
                     suffix: into_glyphs(pattern.suffix),
                     replacement: into_first(replacement).unwrap(),
 
                     force_chain: pattern.has_marks
-                });
+                }.into());
             }
 
-            Ok(Substitute::Single {
+            Ok(Single {
                 prefix: Vec::new(),
                 glyph_class: GlyphClass(vec![]),
                 suffix: Vec::new(),
                 replacement: GlyphClass(vec![]),
                 force_chain: false
-            })
+            }.into())
         })
 }

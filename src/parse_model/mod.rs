@@ -63,8 +63,8 @@ pub use position::Position;
 mod script;
 pub use script::*;
 
-mod substitute;
-pub use substitute::*;
+pub mod substitute;
+pub use substitute::Substitute;
 
 mod string;
 
