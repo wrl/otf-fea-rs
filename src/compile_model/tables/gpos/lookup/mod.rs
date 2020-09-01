@@ -40,38 +40,15 @@ impl TTFEncode for Pair {
     }
 }
 
+macro_rules! impl_subtable_for {
+    ($ty:ident) => {
+        $crate::impl_lookup_subtable_for!(GPOSLookup, $ty, $ty);
+    }
+}
+
 #[derive(Debug)]
 pub enum GPOSLookup {
     Pair(Lookup<Pair>)
-}
-
-macro_rules! impl_subtable_for {
-    ($lookup:ident, $ty:ty, $variant:ident) => {
-        impl LookupSubtable<$lookup> for $ty {
-            #[inline]
-            fn new_lookup() -> $lookup {
-                $lookup::$variant(Lookup::new())
-            }
-
-            #[inline]
-            fn get_lookup_variant(lookup: &$lookup) -> Option<&Lookup<$ty>> {
-                match lookup {
-                    $lookup::$variant(l) => Some(l)
-                }
-            }
-
-            #[inline]
-            fn get_lookup_variant_mut(lookup: &mut $lookup) -> Option<&mut Lookup<$ty>> {
-                match lookup {
-                    $lookup::$variant(l) => Some(l)
-                }
-            }
-        }
-    };
-
-    ($ty:ident) => {
-        impl_subtable_for!(GPOSLookup, $ty, $ty);
-    }
 }
 
 impl_subtable_for!(Pair);
