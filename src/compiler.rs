@@ -79,26 +79,6 @@ impl<'a> Block<'a> {
     }
 }
 
-fn get_subtable_variant<'a, E, T>(lookup: &'a mut Lookup<E>, skip: usize) -> &'a mut T
-    where T: VariantExt<E> + Default + Into<E>
-{
-    let idx = lookup.subtables.iter().enumerate()
-        .filter_map(|(idx, subtable)| {
-            T::get_variant(subtable)
-                .map(|_| idx)
-        })
-        .skip(skip)
-        .next()
-
-        .unwrap_or_else(|| {
-            let idx = lookup.subtables.len();
-            lookup.subtables.push(T::default().into());
-            idx
-        });
-
-    T::get_variant_mut(&mut lookup.subtables[idx]).unwrap()
-}
-
 fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
     let pm::position::Pair {
         glyph_classes,
@@ -108,7 +88,7 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     let gpos = ctx.gpos_table.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<Pair> = block.find_or_insert_lookup(gpos);
 
-    let subtable: &mut PairGlyphs = get_subtable_variant(lookup, block.subtable_breaks());
+    let subtable: &mut PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks());
     let vertical = block.is_vertical();
 
     for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
@@ -158,7 +138,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     let mut skip = block.subtable_breaks();
 
     let subtable = loop {
-        let subtable: &mut PairClass = get_subtable_variant(lookup, skip);
+        let subtable: &mut PairClass = lookup.get_subtable_variant(skip);
 
         if subtable.can_add_pair(&classes) {
             break subtable;

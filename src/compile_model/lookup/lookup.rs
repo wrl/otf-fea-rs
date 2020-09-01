@@ -1,6 +1,8 @@
 use bitflags::bitflags;
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
+use crate::util::*;
+
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
@@ -33,6 +35,26 @@ impl<T> Lookup<T> {
 
             subtables: Vec::new()
         }
+    }
+
+    pub fn get_subtable_variant<V>(&mut self, skip: usize) -> &mut V
+        where V: VariantExt<T> + Default + Into<T>
+    {
+        let idx = self.subtables.iter().enumerate()
+            .filter_map(|(idx, subtable)| {
+                V::get_variant(subtable)
+                    .map(|_| idx)
+            })
+            .skip(skip)
+            .next()
+
+            .unwrap_or_else(|| {
+                let idx = self.subtables.len();
+                self.subtables.push(V::default().into());
+                idx
+            });
+
+        V::get_variant_mut(&mut self.subtables[idx]).unwrap()
     }
 }
 
