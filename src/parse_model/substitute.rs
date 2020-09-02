@@ -42,9 +42,7 @@ pub struct Multiple {
 // GSUB type 3
 #[derive(Debug)]
 pub struct Alternate {
-    prefix: Vec<GlyphClass>,
-    glyph: GlyphClass,
-    suffix: Vec<GlyphClass>,
+    glyph: GlyphRef,
     replacement: GlyphClass
 }
 
@@ -79,7 +77,7 @@ fn into_first<T>(v: Vec<T>) -> Option<T>
 }
 
 #[inline]
-fn into_first_glyph(items: Vec<GlyphPatternItem>) -> Option<GlyphClass>
+fn into_first_glyph_class(items: Vec<GlyphPatternItem>) -> Option<GlyphClass>
 {
     into_first(items).map(|g| g.class)
 }
@@ -148,7 +146,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                         "Reverse chaining substitutions do not support \"from\"");
                 }
 
-                if pattern.glyphs.len() != 1 || pattern.glyphs[0].class.0.len() != 1 {
+                if pattern.glyphs.len() != 1 || !pattern.glyphs[0].class.is_single() {
                     crate::parse_bail!(Input, position,
                         "Expected a single glyph before \"from\"");
                 }
@@ -158,12 +156,15 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                         "Expected a single glyph class after \"from\"");
                 }
 
-                return Ok(Alternate {
-                    prefix: into_glyphs(pattern.prefix),
-                    glyph: into_first_glyph(pattern.glyphs).unwrap(),
-                    suffix: into_glyphs(pattern.suffix),
-                    replacement: into_first(replacement).unwrap()
-                }.into());
+                if pattern.prefix.len() == 0 && pattern.suffix.len() == 0 {
+                    let glyph = into_first_glyph_class(pattern.glyphs).unwrap()
+                        .into_single().unwrap();
+
+                    return Ok(Alternate {
+                        glyph,
+                        replacement: into_first(replacement).unwrap()
+                    }.into());
+                }
             }
 
             // GSUB lookup type 1
@@ -176,7 +177,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
 
                 return Ok(Single {
                     prefix: into_glyphs(pattern.prefix),
-                    glyph_class: into_first_glyph(pattern.glyphs).unwrap(),
+                    glyph_class: into_first_glyph_class(pattern.glyphs).unwrap(),
                     suffix: into_glyphs(pattern.suffix),
                     replacement: into_first(replacement).unwrap(),
 
@@ -193,7 +194,7 @@ pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Su
                 && replacement.iter().all(|cls| cls.is_single())
                 && pattern.num_lookups == 0 {
 
-                let glyph = into_first_glyph(pattern.glyphs).unwrap()
+                let glyph = into_first_glyph_class(pattern.glyphs).unwrap()
                     .into_single().unwrap();
 
                 let sequence = replacement.into_iter()
