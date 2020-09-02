@@ -123,41 +123,42 @@ impl TTFEncode for PairClass {
             });
 
         let start = buf.bytes.len();
-        buf.bytes.resize(start + PairPosFormat2Header::PACKED_LEN, 0u8);
-
         let null_vr = ValueRecord::zero();
 
-        for x in &classes.0 {
-            // class 2 id 0
-            null_vr.encode_to_format(buf, value_formats.0)?;
-            null_vr.encode_to_format(buf, value_formats.1)?;
+        buf.defer_header_encode(
+            |buf| Ok(PairPosFormat2Header {
+                format: 2,
+                coverage_offset: (buf.append(&coverage)? - start) as u16,
 
-            for y in &classes.1 {
-                // FIXME: clone. why the hell?
-                let intersect = match self.pairs.get(&((*x).clone(), (*y).clone())) {
-                    Some(PairClassIntersect(a, b)) => (a, b),
-                    None => (&null_vr, &null_vr)
-                };
+                value_format_1: value_formats.0,
+                value_format_2: value_formats.1,
 
-                intersect.0.encode_to_format(buf, value_formats.0)?;
-                intersect.1.encode_to_format(buf, value_formats.1)?;
-            }
-        }
+                class_def_1_offset: (classes.0.ttf_encode(buf, true)? - start) as u16,
+                class_def_2_offset: (classes.1.ttf_encode(buf, false)? - start) as u16,
 
-        let header = PairPosFormat2Header {
-            format: 2,
-            coverage_offset: (buf.append(&coverage)? - start) as u16,
+                class_1_count: classes.0.len() as u16,
+                class_2_count: (classes.1.len() + 1) as u16
+            }),
 
-            value_format_1: value_formats.0,
-            value_format_2: value_formats.1,
+            |buf| {
+                for x in &classes.0 {
+                    // class 2 id 0
+                    null_vr.encode_to_format(buf, value_formats.0)?;
+                    null_vr.encode_to_format(buf, value_formats.1)?;
 
-            class_def_1_offset: (classes.0.ttf_encode(buf, true)? - start) as u16,
-            class_def_2_offset: (classes.1.ttf_encode(buf, false)? - start) as u16,
+                    for y in &classes.1 {
+                        // FIXME: clone. why the hell?
+                        let intersect = match self.pairs.get(&((*x).clone(), (*y).clone())) {
+                            Some(PairClassIntersect(a, b)) => (a, b),
+                            None => (&null_vr, &null_vr)
+                        };
 
-            class_1_count: classes.0.len() as u16,
-            class_2_count: (classes.1.len() + 1) as u16
-        };
+                        intersect.0.encode_to_format(buf, value_formats.0)?;
+                        intersect.1.encode_to_format(buf, value_formats.1)?;
+                    }
+                }
 
-        buf.encode_at(&header, start)
+                Ok(())
+            })
     }
 }

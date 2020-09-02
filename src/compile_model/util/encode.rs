@@ -44,6 +44,20 @@ impl EncodeBuf {
         Ok(start)
     }
 
+    pub(crate) fn defer_header_encode<Header, HF, PF, PR>(&mut self, header_func: HF, encode_pool: PF) -> EncodeResult<usize>
+        where Header: EncodeBE,
+              HF: Fn(&mut EncodeBuf) -> EncodeResult<Header>,
+              PF: Fn(&mut EncodeBuf) -> EncodeResult<PR>
+    {
+        let start = self.bytes.len();
+        self.bytes.resize(start + Header::PACKED_LEN, 0u8);
+
+        encode_pool(self)?;
+
+        let header = header_func(self)?;
+        self.encode_at(&header, start)
+    }
+
     pub(crate) fn encode_pool<'a, Item, I, Record, RF, IWF, IWFR>(&mut self,
         table_start: usize, items: I, record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
 

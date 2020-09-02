@@ -128,11 +128,8 @@ impl TTFDecode for PairGlyphs {
 impl TTFEncode for PairGlyphs {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
-        let sets = &self.0;
 
-        buf.bytes.resize(start + PairPosFormat1Header::PACKED_LEN, 0u8);
-
-        let value_formats = sets.values()
+        let value_formats = self.values()
             .map(|records| {
                 records.iter().fold((0u16, 0u16), |vr, pair|
                     (vr.0 | pair.records.0.smallest_possible_format(),
@@ -143,28 +140,25 @@ impl TTFEncode for PairGlyphs {
                         vr.1 | smallest.1)
             });
 
-        buf.encode_pool_dedup(start, self.values(),
-            |offset, _| offset,
-            |buf, set| {
-                buf.append(&(set.len() as u16))?;
+        buf.defer_header_encode(
+            |buf| Ok(PairPosFormat1Header {
+                format: 1,
+                coverage_offset: (self.0.ttf_encode(buf)? - start) as u16,
+                value_format_1: value_formats.0,
+                value_format_2: value_formats.1,
+                pair_set_count: self.len() as u16
+            }),
 
-                for pair in set {
-                    pair.encode_with_vf(buf, value_formats)?;
-                }
+            |buf| buf.encode_pool_dedup(start, self.values(),
+                |offset, _| offset,
+                |buf, set| {
+                    buf.append(&(set.len() as u16))?;
 
-                Ok(())
-            })?;
+                    for pair in set {
+                        pair.encode_with_vf(buf, value_formats)?;
+                    }
 
-        let header = PairPosFormat1Header {
-            format: 1,
-            coverage_offset: (sets.ttf_encode(buf)? - start) as u16,
-            value_format_1: value_formats.0,
-            value_format_2: value_formats.1,
-            pair_set_count: sets.len() as u16
-        };
-
-        buf.encode_at(&header, start)?;
-
-        Ok(start)
+                    Ok(())
+                }))
     }
 }
