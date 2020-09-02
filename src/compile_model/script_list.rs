@@ -1,5 +1,3 @@
-use std::iter;
-
 use std::collections::{
     HashMap,
     BTreeSet
@@ -8,7 +6,6 @@ use std::collections::{
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::*;
-use crate::util::*;
 
 use crate::compile_model::feature_list::{
     FeatureRecord,
@@ -254,28 +251,24 @@ impl ScriptList {
                 .map(|(i, tag)| (tag.clone(), i as u16))
                 .collect();
 
-        let dflt = script_tag!(D,F,L,T);
+        // let dflt = script_tag!(D,F,L,T);
+        //
+        // let scripts =
+        //     if let Some(script) = self.0.get(&dflt) {
+        //         Either2::A(iter::once((&dflt, script))
+        //             .chain(self.0.iter()
+        //                 .filter_map(|(tag, script)|
+        //                     if tag == &dflt {
+        //                         None
+        //                     } else {
+        //                         Some((tag, script))
+        //                     }))
+        //         )
+        //     } else {
+        //         Either2::B(self.0.iter())
+        //     };
 
-        let scripts =
-            if let Some(script) = self.0.get(&dflt) {
-                Either2::A(iter::once((&dflt, script))
-                    .chain(self.0.iter()
-                        .filter_map(|(tag, script)|
-                            if tag == &dflt {
-                                None
-                            } else {
-                                Some((tag, script))
-                            }))
-                )
-            } else {
-                Either2::B(self.0.iter())
-            };
-
-        let record_offset = buf.bytes.len();
-        buf.bytes.resize(record_offset +
-            (self.0.len() * ScriptRecord::PACKED_LEN), 0u8);
-
-        buf.encode_pool(start, record_offset, scripts,
+        buf.encode_pool(start, self.0.iter(),
             |script_offset, &(&tag, _)| ScriptRecord {
                 tag,
                 script_offset,

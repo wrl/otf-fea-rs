@@ -44,15 +44,18 @@ impl EncodeBuf {
         Ok(start)
     }
 
-    pub(crate) fn encode_pool<'a, Item, Record, RF, IWF, IWFR>(&mut self,
-        table_start: usize, mut record_offset: usize, items: impl Iterator<Item = Item>,
-        record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
+    pub(crate) fn encode_pool<'a, Item, I, Record, RF, IWF, IWFR>(&mut self,
+        table_start: usize, items: I, record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
 
         where Item: 'a,
+              I: Iterator<Item = Item> + ExactSizeIterator,
               Record: EncodeBE,
               RF: Fn(u16, &Item) -> Record,
               IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>
     {
+        let mut record_offset = self.bytes.len();
+        self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
+
         for item in items {
             let item_offset = (self.bytes.len() - table_start) as u16;
 

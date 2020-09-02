@@ -82,11 +82,7 @@ impl TTFEncode for FeatureList {
 
         buf.append(&(len as u16))?;
 
-        let record_start = buf.bytes.len();
-
-        buf.bytes.resize(record_start + (len * FeatureRecord::PACKED_LEN), 0u8);
-
-        buf.encode_pool(start, record_start, self.0.iter(),
+        buf.encode_pool(start, self.0.iter(),
             |feature_offset, &(&tag, _)| FeatureRecord {
                 tag,
                 feature_offset,

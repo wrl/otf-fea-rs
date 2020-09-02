@@ -1,5 +1,3 @@
-use endian_codec::PackedSize;
-
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 
@@ -33,11 +31,7 @@ impl<T: TTFEncode> TTFEncode for LookupList<T> {
 
         buf.append(&(self.0.len() as u16))?;
 
-        let record_offset = buf.bytes.len();
-        buf.bytes.resize(record_offset +
-            (self.0.len() * u16::PACKED_LEN), 0u8);
-
-        buf.encode_pool(start, record_offset, self.0.iter(),
+        buf.encode_pool(start, self.0.iter(),
             |offset, _| offset,
             |buf, &lookup| buf.append(lookup))?;
 

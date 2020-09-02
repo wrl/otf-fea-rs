@@ -17,6 +17,17 @@ impl<A, B, T> Iterator for Either2<A, B>
     }
 }
 
+impl<A, B, T> ExactSizeIterator for Either2<A, B>
+    where A: Iterator<Item = T> + ExactSizeIterator,
+          B: Iterator<Item = T> + ExactSizeIterator
+{
+    fn len(&self) -> usize {
+        match self {
+            Either2::A(inner) => inner.len(),
+            Either2::B(inner) => inner.len()
+        }
+    }
+}
 pub(crate) enum Either3<A,B,C> {
     A(A),
     B(B),
