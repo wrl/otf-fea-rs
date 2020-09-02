@@ -16,17 +16,21 @@ macro_rules! impl_lookup_subtable_for {
                 $lookup::$variant(Lookup::new())
             }
 
+            #[allow(unreachable_patterns)]
             #[inline]
             fn get_lookup_variant(lookup: &$lookup) -> Option<&Lookup<$ty>> {
                 match lookup {
-                    $lookup::$variant(l) => Some(l)
+                    $lookup::$variant(l) => Some(l),
+                    _ => None
                 }
             }
 
+            #[allow(unreachable_patterns)]
             #[inline]
             fn get_lookup_variant_mut(lookup: &mut $lookup) -> Option<&mut Lookup<$ty>> {
                 match lookup {
-                    $lookup::$variant(l) => Some(l)
+                    $lookup::$variant(l) => Some(l),
+                    _ => None
                 }
             }
         }

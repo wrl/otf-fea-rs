@@ -6,6 +6,8 @@ use crate::compile_model::lookup::*;
 mod multiple;
 pub use multiple::*;
 
+mod alternate;
+pub use alternate::*;
 
 macro_rules! impl_subtable_for {
     ($ty:ident) => {
@@ -15,10 +17,12 @@ macro_rules! impl_subtable_for {
 
 #[derive(Debug)]
 pub enum GSUBLookup {
-    Multiple(Lookup<Multiple>)
+    Multiple(Lookup<Multiple>),
+    Alternate(Lookup<Alternate>)
 }
 
 impl_subtable_for!(Multiple);
+impl_subtable_for!(Alternate);
 
 
 impl TTFDecode for GSUBLookup {
@@ -32,7 +36,8 @@ impl TTFDecode for GSUBLookup {
 impl TTFEncode for GSUBLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
-            GSUBLookup::Multiple(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2)
+            GSUBLookup::Multiple(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2),
+            GSUBLookup::Alternate(lookup) => lookup.ttf_encode_with_lookup_type(buf, 3)
         }
     }
 }

@@ -42,8 +42,8 @@ pub struct Multiple {
 // GSUB type 3
 #[derive(Debug)]
 pub struct Alternate {
-    glyph: GlyphRef,
-    replacement: GlyphClass
+    pub glyph: GlyphRef,
+    pub replacement: GlyphClass
 }
 
 #[allow(dead_code)]

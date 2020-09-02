@@ -92,10 +92,6 @@ impl<'a> Block<'a> {
             .features
             .insert(*feature_tag);
     }
-
-    fn subtable_breaks(&self) -> usize {
-        self.subtable_breaks
-    }
 }
 
 fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
@@ -107,7 +103,7 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<gpos::Pair> = block.find_or_insert_lookup(gpos);
 
-    let subtable: &mut gpos::PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks());
+    let subtable: &mut gpos::PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks);
     let vertical = block.is_vertical();
 
     for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
@@ -154,7 +150,7 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
         ValueRecord::from_parsed(&value_records.1, vertical)
     );
 
-    let mut skip = block.subtable_breaks();
+    let mut skip = block.subtable_breaks;
 
     let subtable = loop {
         let subtable: &mut gpos::PairClass = lookup.get_subtable_variant(skip);
@@ -199,11 +195,31 @@ fn handle_multiple_substitution(ctx: &mut CompilerState, block: &Block, sub: &pm
     let gsub = ctx.gsub.get_or_insert_with(|| tables::GSUB::new());
     let lookup: &mut Lookup<gsub::Multiple> = block.find_or_insert_lookup(gsub);
 
-    let subtable = lookup.get_subtable(block.subtable_breaks());
+    let subtable = lookup.get_subtable(block.subtable_breaks);
 
     // FIXME: find next subtable if sequence is already in this one?
     //        overwrite as we're doing now?
     subtable.insert(glyph, sequence);
+
+    block.insert_into_script(gsub, &script_tag!(D,F,L,T));
+    Ok(())
+}
+
+fn handle_alternate_substitution(ctx: &mut CompilerState, block: &Block, sub: &pm::substitute::Alternate) -> CompileResult<()> {
+    let glyph = ctx.glyph_order.id_for_glyph(&sub.glyph)?;
+
+    let replacement: Vec<_> =
+        sub.replacement.iter_glyphs(&ctx.glyph_order)
+        .collect::<Result<_, _>>()?;
+
+    let gsub = ctx.gsub.get_or_insert_with(|| tables::GSUB::new());
+    let lookup: &mut Lookup<gsub::Alternate> = block.find_or_insert_lookup(gsub);
+
+    let subtable = lookup.get_subtable(block.subtable_breaks);
+
+    // FIXME: find next subtable if sequence is already in this one?
+    //        overwrite as we're doing now?
+    subtable.insert(glyph, replacement);
 
     block.insert_into_script(gsub, &script_tag!(D,F,L,T));
     Ok(())
@@ -214,6 +230,7 @@ fn handle_substitute_statement(ctx: &mut CompilerState, block: &Block, s: &pm::S
 
     match s {
         Multiple(m) => handle_multiple_substitution(ctx, block, m),
+        Alternate(a) => handle_alternate_substitution(ctx, block, a),
 
         s => panic!("{:#?}", s)
     }
