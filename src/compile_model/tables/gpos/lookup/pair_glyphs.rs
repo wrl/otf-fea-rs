@@ -1,5 +1,4 @@
 use std::ops;
-use std::collections::HashMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
@@ -144,31 +143,20 @@ impl TTFEncode for PairGlyphs {
                         vr.1 | smallest.1)
             });
 
-        let mut record_start = buf.bytes.len();
+        let record_start = buf.bytes.len();
         buf.bytes.resize(record_start + (u16::PACKED_LEN * sets.len()), 0u8);
 
-        let mut dedup = HashMap::new();
+        buf.encode_pool_dedup(start, record_start, self.values(),
+            |offset| offset,
+            |buf, set| {
+                buf.append(&(set.len() as u16))?;
 
-        for set in sets.values() {
-            if let Some(offset) = dedup.get(&set) {
-                buf.encode_at(offset, record_start)?;
-                record_start += u16::PACKED_LEN;
+                for pair in set {
+                    pair.encode_with_vf(buf, value_formats)?;
+                }
 
-                continue;
-            }
-
-            let offset = (buf.bytes.len() - start) as u16;
-            buf.encode_at(&offset, record_start)?;
-            record_start += u16::PACKED_LEN;
-
-            dedup.insert(set, offset);
-
-            buf.append(&(set.len() as u16))?;
-
-            for pair in set {
-                pair.encode_with_vf(buf, value_formats)?;
-            }
-        }
+                Ok(())
+            })?;
 
         let header = PairPosFormat1Header {
             format: 1,

@@ -1,5 +1,4 @@
 use std::ops;
-use std::collections::HashMap;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
@@ -40,31 +39,20 @@ impl TTFEncode for Multiple {
 
         buf.bytes.resize(start + MultipleSubstFormat1Header::PACKED_LEN, 0u8);
 
-        let mut record_start = buf.bytes.len();
+        let record_start = buf.bytes.len();
         buf.bytes.resize(record_start + (u16::PACKED_LEN * self.len()), 0u8);
 
-        let mut dedup = HashMap::new();
+        buf.encode_pool_dedup(start, record_start, self.values(),
+            |offset| offset,
+            |buf, seq| {
+                buf.append(&(seq.len() as u16))?;
 
-        for seq in self.values() {
-            if let Some(offset) = dedup.get(&seq) {
-                buf.encode_at(offset, record_start)?;
-                record_start += u16::PACKED_LEN;
+                for glyph_id in seq {
+                    buf.append(glyph_id)?;
+                }
 
-                continue;
-            }
-
-            let offset = (buf.bytes.len() - start) as u16;
-            buf.encode_at(&offset, record_start)?;
-            record_start += u16::PACKED_LEN;
-
-            dedup.insert(seq, offset);
-
-            buf.append(&(seq.len() as u16))?;
-
-            for glyph_id in seq {
-                buf.append(glyph_id)?;
-            }
-        }
+                Ok(())
+            })?;
 
         let header = MultipleSubstFormat1Header {
             format: 1,
