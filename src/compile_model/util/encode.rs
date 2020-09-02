@@ -68,15 +68,18 @@ impl EncodeBuf {
         Ok(())
     }
 
-    pub(crate) fn encode_pool_dedup<'a, Item, Record, RF, IWF, IWFR>(&mut self,
-        table_start: usize, mut record_offset: usize, items: impl Iterator<Item = &'a Item>,
-        record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
+    pub(crate) fn encode_pool_dedup<'a, Item, I, Record, RF, IWF, IWFR>(&mut self,
+        table_start: usize, items: I, record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
 
         where Item: 'a + Hash + Eq,
+              I: Iterator<Item = &'a Item> + ExactSizeIterator,
               Record: EncodeBE,
               RF: Fn(u16, &Item) -> Record,
               IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>
     {
+        let mut record_offset = self.bytes.len();
+        self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
+
         let mut dedup = HashMap::new();
 
         for item in items {

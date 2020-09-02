@@ -38,10 +38,7 @@ impl TTFEncode for Alternate {
 
         buf.bytes.resize(start + AlternateSubstFormat1Header::PACKED_LEN, 0u8);
 
-        let record_start = buf.bytes.len();
-        buf.bytes.resize(record_start + (u16::PACKED_LEN * self.len()), 0u8);
-
-        buf.encode_pool_dedup(start, record_start, self.values(),
+        buf.encode_pool_dedup(start, self.values(),
             |offset, _| offset,
             |buf, set| {
                 buf.append(&(set.len() as u16))?;
