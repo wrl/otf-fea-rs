@@ -147,7 +147,7 @@ impl TTFEncode for PairGlyphs {
         buf.bytes.resize(record_start + (u16::PACKED_LEN * sets.len()), 0u8);
 
         buf.encode_pool_dedup(start, record_start, self.values(),
-            |offset| offset,
+            |offset, _| offset,
             |buf, set| {
                 buf.append(&(set.len() as u16))?;
 

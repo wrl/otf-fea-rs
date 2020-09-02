@@ -32,16 +32,14 @@ impl<T: TTFEncode> TTFEncode for LookupList<T> {
         let start = buf.bytes.len();
 
         buf.append(&(self.0.len() as u16))?;
-        let mut record_offset = buf.bytes.len();
+
+        let record_offset = buf.bytes.len();
         buf.bytes.resize(record_offset +
             (self.0.len() * u16::PACKED_LEN), 0u8);
 
-        for lookup in &self.0 {
-            let offset = (buf.append(lookup)? - start) as u16;
-
-            buf.encode_at(&offset, record_offset)?;
-            record_offset += u16::PACKED_LEN;
-        }
+        buf.encode_pool(start, record_offset, self.0.iter(),
+            |offset, _| offset,
+            |buf, &lookup| buf.append(lookup))?;
 
         Ok(start)
     }

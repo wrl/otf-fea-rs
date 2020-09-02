@@ -43,7 +43,7 @@ impl TTFEncode for Multiple {
         buf.bytes.resize(record_start + (u16::PACKED_LEN * self.len()), 0u8);
 
         buf.encode_pool_dedup(start, record_start, self.values(),
-            |offset| offset,
+            |offset, _| offset,
             |buf, seq| {
                 buf.append(&(seq.len() as u16))?;
 

@@ -82,24 +82,16 @@ impl TTFEncode for FeatureList {
 
         buf.append(&(len as u16))?;
 
-        let mut record_start = buf.bytes.len();
+        let record_start = buf.bytes.len();
 
         buf.bytes.resize(record_start + (len * FeatureRecord::PACKED_LEN), 0u8);
 
-        for (tag, lookup_indices) in self.0.iter() {
-            if lookup_indices.len() == 0 {
-                continue
-            }
-
-            let record = FeatureRecord {
-                tag: *tag,
-                feature_offset:
-                    (encode_feature_table(buf, lookup_indices)? - start) as u16
-            };
-
-            buf.encode_at(&record, record_start)?;
-            record_start += FeatureRecord::PACKED_LEN;
-        }
+        buf.encode_pool(start, record_start, self.0.iter(),
+            |feature_offset, &(&tag, _)| FeatureRecord {
+                tag,
+                feature_offset,
+            },
+            |buf, &(_, lookup_indices)| encode_feature_table(buf, lookup_indices))?;
 
         Ok(start)
     }

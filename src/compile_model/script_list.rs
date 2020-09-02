@@ -1,3 +1,5 @@
+use std::iter;
+
 use std::collections::{
     HashMap,
     BTreeSet
@@ -6,6 +8,7 @@ use std::collections::{
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
 use crate::*;
+use crate::util::*;
 
 use crate::compile_model::feature_list::{
     FeatureRecord,
@@ -246,10 +249,6 @@ impl ScriptList {
         buf.append(
             &try_as_u16!(self.0.len(), "ScriptList".into(), "record_count")?)?;
 
-        let mut record_offset = buf.bytes.len();
-        buf.bytes.resize(record_offset +
-            (self.0.len() * ScriptRecord::PACKED_LEN), 0u8);
-
         let tag_to_feature_index: TagToFeatureIndex = 
             feature_list.0.keys().enumerate()
                 .map(|(i, tag)| (tag.clone(), i as u16))
@@ -257,31 +256,32 @@ impl ScriptList {
 
         let dflt = script_tag!(D,F,L,T);
 
-        if let Some(script) = self.0.get(&dflt) {
-            let record = ScriptRecord {
-                tag: dflt,
-                script_offset: try_as_u16!(script.ttf_encode(buf, &tag_to_feature_index)? - start,
-                    "ScriptList[DFLT]".into(), "script_offset")?
+        let scripts =
+            if let Some(script) = self.0.get(&dflt) {
+                Either2::A(iter::once((&dflt, script))
+                    .chain(self.0.iter()
+                        .filter_map(|(tag, script)|
+                            if tag == &dflt {
+                                None
+                            } else {
+                                Some((tag, script))
+                            }))
+                )
+            } else {
+                Either2::B(self.0.iter())
             };
 
-            buf.encode_at(&record, record_offset)?;
-            record_offset += ScriptRecord::PACKED_LEN;
-        }
+        let record_offset = buf.bytes.len();
+        buf.bytes.resize(record_offset +
+            (self.0.len() * ScriptRecord::PACKED_LEN), 0u8);
 
-        for (tag, script) in &self.0 {
-            if tag == &dflt {
-                continue
-            }
-
-            let record = ScriptRecord {
-                tag: *tag,
-                script_offset: try_as_u16!(script.ttf_encode(buf, &tag_to_feature_index)? - start,
-                    format!("ScriptList[{}]", tag), "script_offset")?
-            };
-
-            buf.encode_at(&record, record_offset)?;
-            record_offset += ScriptRecord::PACKED_LEN;
-        }
+        buf.encode_pool(start, record_offset, scripts,
+            |script_offset, &(&tag, _)| ScriptRecord {
+                tag,
+                script_offset,
+            },
+            |buf, &(_, script)|
+                script.ttf_encode(buf, &tag_to_feature_index))?;
 
         Ok(start)
     }
