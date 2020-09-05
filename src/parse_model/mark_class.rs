@@ -6,6 +6,8 @@ use combine::{
     error::ParseError
 };
 
+use ascii::AsAsciiStr;
+
 use crate::parser::*;
 use crate::glyph_class::*;
 use crate::glyph::*;
@@ -15,8 +17,15 @@ use super::class_name::*;
 use super::anchor::*;
 use super::util::*;
 
+
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct MarkClassName(pub GlyphNameStorage);
+
+impl From<&MarkClassName> for String {
+    fn from(name: &MarkClassName) -> String {
+        name.0.as_ascii_str().unwrap().as_str().into()
+    }
+}
 
 impl fmt::Debug for MarkClassName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

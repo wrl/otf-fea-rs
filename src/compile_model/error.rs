@@ -11,6 +11,9 @@ pub enum CompileError {
     #[error("mark classes cannot be defined or amended after first reference in a position statement")]
     MarkClassNotAllowed,
 
+    #[error("unknown mark class \"{0}\"")]
+    UnknownMarkClass(String),
+
     #[error(transparent)]
     GlyphOrderError(#[from] GlyphOrderError),
 

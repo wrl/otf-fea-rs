@@ -176,12 +176,31 @@ fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::posit
     }
 }
 
+fn handle_mark_to_mark_position(ctx: &mut CompilerState, _block: &Block, m2m: &pm::position::MarkToMark) -> CompileResult<()> {
+    ctx.mark_class_statements_allowed = false;
+
+    let pm::position::MarkToMark {
+        anchors,
+        ..
+    } = m2m;
+
+    for (anchor, mark_class_name) in anchors {
+        let mark_class = ctx.mark_class_table.get(mark_class_name)
+            .ok_or_else(|| CompileError::UnknownMarkClass(mark_class_name.into()))?;
+
+        println!("{:?} {:#?}", anchor, mark_class);
+    }
+
+    Ok(())
+}
+
 fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
     match p {
         Pair(pair) => handle_pair_position(ctx, block, pair),
-        _ => panic!()
+        MarkToMark(m2m) => handle_mark_to_mark_position(ctx, block, m2m),
+        p => panic!("unhandled position statement: {:#?}", p)
     }
 }
 
