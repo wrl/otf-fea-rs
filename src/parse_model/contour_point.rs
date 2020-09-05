@@ -8,7 +8,7 @@ use crate::parser::FeaRsStream;
 use super::util::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ContourPoint(pub isize);
+pub struct ContourPoint(pub usize);
 
 #[inline]
 pub(crate) fn contour_point<Input>() -> impl Parser<FeaRsStream<Input>, Output = ContourPoint>
@@ -18,5 +18,5 @@ pub(crate) fn contour_point<Input>() -> impl Parser<FeaRsStream<Input>, Output =
     literal_ignore_case("contourpoint")
         .skip(required_whitespace())
         .with(number())
-        .map(|x| ContourPoint(x as isize))
+        .map(|x| ContourPoint(x as usize))
 }
