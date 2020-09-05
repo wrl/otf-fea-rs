@@ -18,6 +18,7 @@ use super::device::*;
 use super::glyph::*;
 use super::util::*;
 
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct AnchorName(pub GlyphNameStorage);
 
 impl fmt::Debug for AnchorName {
@@ -38,7 +39,7 @@ pub struct AnchorDefinition {
     pub anchor: Anchor
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Anchor {
     Coord {
         x: Metric,

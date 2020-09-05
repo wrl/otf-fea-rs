@@ -1,5 +1,3 @@
-use std::cmp;
-
 use combine::{
     Parser,
     Stream,
@@ -10,7 +8,7 @@ use crate::parser::FeaRsStream;
 use super::device::*;
 use super::util::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DeviceAdjustedMetric {
     metric: Metric,
     device: Device
@@ -25,7 +23,7 @@ impl DeviceAdjustedMetric {
     }
 }
 
-#[derive(Debug, cmp::PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Metric(pub f64);
 
 #[inline]

@@ -1,5 +1,3 @@
-use std::cmp;
-
 use combine::{
     Parser,
     Stream,
@@ -9,7 +7,7 @@ use combine::{
 use crate::parser::FeaRsStream;
 use super::util::*;
 
-#[derive(Debug, cmp::PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ContourPoint(pub isize);
 
 #[inline]

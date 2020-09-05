@@ -13,13 +13,13 @@ use combine::{
 use crate::parser::FeaRsStream;
 use super::util::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DeviceAdjustment {
     ppem_size: isize,
     pixel_adjustment: isize
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Device {
     Adjustments(Vec<DeviceAdjustment>),
     Null

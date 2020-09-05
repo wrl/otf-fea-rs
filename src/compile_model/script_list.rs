@@ -251,6 +251,11 @@ impl ScriptList {
                 .map(|(i, tag)| (tag.clone(), i as u16))
                 .collect();
 
+        // this block is a hack to put the default script tag first
+        // unfortunately, the chain results in an iterator which doesn't implement
+        // ExactSizeIterator, which doesn't work with encode_pool().
+        // might be able to do a hack wrapping struct here.
+        //
         // let dflt = script_tag!(D,F,L,T);
         //
         // let scripts =

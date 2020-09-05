@@ -6,7 +6,7 @@ use combine::{
     error::ParseError
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 use crate::glyph::*;
 
@@ -15,6 +15,7 @@ use super::class_name::*;
 use super::anchor::*;
 use super::util::*;
 
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct MarkClassName(pub GlyphNameStorage);
 
 impl fmt::Debug for MarkClassName {

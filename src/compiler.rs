@@ -316,6 +316,24 @@ fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
     }
 }
 
+fn handle_mark_class_statement(ctx: &mut CompilerState, mark_class: &pm::MarkClass) -> CompileResult<()> {
+    if !ctx.mark_class_statements_allowed {
+        return Err(CompileError::MarkClassNotAllowed);
+    }
+
+    let pm::MarkClass {
+        glyph_class,
+        anchor,
+        class_name
+    } = mark_class;
+
+    ctx.mark_class_table.entry(class_name.clone())
+        .or_default()
+        .push((glyph_class.clone(), anchor.clone()));
+
+    Ok(())
+}
+
 fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) -> CompileResult<()> {
     use pm::TopLevelStatement::*;
 
@@ -326,6 +344,8 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
 
         FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
         LookupDefinition(ref ld) => handle_lookup_definition(ctx, ld)?,
+
+        MarkClass(ref mc) => handle_mark_class_statement(ctx, mc)?,
 
         s => {
             println!("unhandled {:#?}\n", s);

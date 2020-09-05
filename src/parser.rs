@@ -12,14 +12,16 @@ use combine::{
 use combine::stream::{
     buffered,
     read,
-    easy,
-
-    position::SourcePosition,
+    easy
 };
 
 use ascii::ToAsciiChar;
 
 use crate::parse_model::*;
+
+
+pub use combine::stream::position::SourcePosition;
+
 
 /****************************************************************************
  * parser state

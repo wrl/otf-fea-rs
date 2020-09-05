@@ -15,7 +15,7 @@ use combine::{
 
 use combine::error::ParseError;
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 
 use super::glyph_class::*;
