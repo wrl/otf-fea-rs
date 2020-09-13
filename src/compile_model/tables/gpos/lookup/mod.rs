@@ -10,6 +10,9 @@ pub use pair_glyphs::*;
 mod pair_class;
 pub use pair_class::*;
 
+mod mark_to_mark;
+pub use mark_to_mark::*;
+
 
 #[derive(Debug)]
 pub enum Pair {
@@ -48,10 +51,12 @@ macro_rules! impl_subtable_for {
 
 #[derive(Debug)]
 pub enum GPOSLookup {
-    Pair(Lookup<Pair>)
+    Pair(Lookup<Pair>),
+    MarkToMark(Lookup<MarkToMark>)
 }
 
 impl_subtable_for!(Pair);
+impl_subtable_for!(MarkToMark);
 
 impl TTFDecode for GPOSLookup {
     fn ttf_decode(bytes: &[u8]) -> DecodeResult<Self> {
@@ -67,7 +72,8 @@ impl TTFDecode for GPOSLookup {
 impl TTFEncode for GPOSLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
-            GPOSLookup::Pair(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2)
+            GPOSLookup::Pair(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2),
+            l => panic!("unimplemented encode for {:?}", l)
         }
     }
 }

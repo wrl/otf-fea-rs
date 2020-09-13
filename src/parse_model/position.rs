@@ -74,8 +74,8 @@ pub struct Ligature {
 // GPOS type 6
 #[derive(Debug)]
 pub struct MarkToMark {
-    pub glyph_class: GlyphClass,
-    pub anchors: Vec<(Anchor, MarkClassName)>
+    pub base_mark: GlyphClass,
+    pub marks: Vec<(Anchor, MarkClassName)>
 }
 
 #[derive(Debug)]
@@ -228,10 +228,10 @@ fn mark_to_mark<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         .skip(required_whitespace())
 
         .with(mark_to())
-        .map(|(glyph_class, anchors)| {
+        .map(|(base_mark, marks)| {
             MarkToMark {
-                glyph_class,
-                anchors
+                base_mark,
+                marks
             }.into()
         })
 }

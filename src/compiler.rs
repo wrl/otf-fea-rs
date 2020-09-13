@@ -176,15 +176,20 @@ fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::posit
     }
 }
 
-fn handle_mark_to_mark_position(ctx: &mut CompilerState, _block: &Block, m2m: &pm::position::MarkToMark) -> CompileResult<()> {
+fn handle_mark_to_mark_position(ctx: &mut CompilerState, block: &Block, m2m: &pm::position::MarkToMark) -> CompileResult<()> {
     ctx.mark_class_statements_allowed = false;
 
     let pm::position::MarkToMark {
-        anchors,
-        ..
+        base_mark,
+        marks
     } = m2m;
 
-    for (anchor, mark_class_name) in anchors {
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<gpos::MarkToMark> = block.find_or_insert_lookup(gpos);
+
+    let subtable = lookup.get_subtable(block.subtable_breaks);
+
+    for (anchor, mark_class_name) in marks {
         let mark_class = ctx.mark_class_table.get(mark_class_name)
             .ok_or_else(|| CompileError::UnknownMarkClass(mark_class_name.into()))?;
 

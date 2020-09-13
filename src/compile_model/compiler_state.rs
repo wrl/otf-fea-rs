@@ -15,6 +15,8 @@ use crate::parse_model::{
 use super::tables;
 
 
+pub type MarkClassData = Vec<(GlyphClass, Anchor)>;
+
 pub struct CompilerState {
     pub glyph_order: GlyphOrder,
 
@@ -26,7 +28,7 @@ pub struct CompilerState {
     // feature file. Once any position statement has referenced a mark class, no more mark
     // statements are allowed.
     pub mark_class_statements_allowed: bool,
-    pub mark_class_table: HashMap<MarkClassName, Vec<(GlyphClass, Anchor)>>,
+    pub mark_class_table: HashMap<MarkClassName, MarkClassData>,
 
     pub tables_encoded: Vec<(Tag, Vec<u8>)>
 }
