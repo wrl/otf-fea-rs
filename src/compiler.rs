@@ -125,7 +125,6 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
         }
     }
 
-    block.insert_into_script(gpos, &script_tag!(D,F,L,T));
     Ok(())
 }
 
@@ -164,7 +163,6 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
 
     subtable.add_pair(classes, value_records)?;
 
-    block.insert_into_script(gpos, &script_tag!(D,F,L,T));
     Ok(())
 }
 
@@ -221,6 +219,9 @@ fn handle_mark_to_mark_position(ctx: &mut CompilerState, block: &Block, m2m: &pm
 fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Position) -> CompileResult<()> {
     use pm::Position::*;
 
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
+    block.insert_into_script(gpos, &script_tag!(D,F,L,T));
+
     match p {
         Pair(pair) => handle_pair_position(ctx, block, pair),
         MarkToBase(m2b) => handle_mark_to_base_position(ctx, block, m2b),
@@ -245,7 +246,6 @@ fn handle_multiple_substitution(ctx: &mut CompilerState, block: &Block, sub: &pm
     //        overwrite as we're doing now?
     subtable.insert(glyph, sequence);
 
-    block.insert_into_script(gsub, &script_tag!(D,F,L,T));
     Ok(())
 }
 
@@ -265,12 +265,14 @@ fn handle_alternate_substitution(ctx: &mut CompilerState, block: &Block, sub: &p
     //        overwrite as we're doing now?
     subtable.insert(glyph, replacement);
 
-    block.insert_into_script(gsub, &script_tag!(D,F,L,T));
     Ok(())
 }
 
 fn handle_substitute_statement(ctx: &mut CompilerState, block: &Block, s: &pm::Substitute) -> CompileResult<()> {
     use pm::Substitute::*;
+
+    let gsub = ctx.gsub.get_or_insert_with(|| tables::GSUB::new());
+    block.insert_into_script(gsub, &script_tag!(D,F,L,T));
 
     match s {
         Multiple(m) => handle_multiple_substitution(ctx, block, m),

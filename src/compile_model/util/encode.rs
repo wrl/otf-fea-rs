@@ -46,8 +46,8 @@ impl EncodeBuf {
 
     pub(crate) fn defer_header_encode<Header, HF, PF, PR>(&mut self, header_func: HF, encode_pool: PF) -> EncodeResult<usize>
         where Header: EncodeBE,
-              HF: Fn(&mut EncodeBuf) -> EncodeResult<Header>,
-              PF: Fn(&mut EncodeBuf) -> EncodeResult<PR>
+              HF: FnOnce(&mut EncodeBuf) -> EncodeResult<Header>,
+              PF: FnOnce(&mut EncodeBuf) -> EncodeResult<PR>
     {
         let start = self.bytes.len();
         self.bytes.resize(start + Header::PACKED_LEN, 0u8);

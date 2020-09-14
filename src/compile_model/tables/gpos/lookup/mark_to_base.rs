@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
+use endian_codec::{PackedSize, EncodeBE, DecodeBE};
+
 use crate::glyph_class::*;
 use crate::glyph_order::*;
 
 use crate::compile_model::compiler_state::*;
 use crate::compile_model::tables::gpos::*;
+use crate::compile_model::util::encode::*;
 use crate::compile_model::coverage::*;
 
 use crate::parse_model::MarkClassName;
@@ -23,7 +26,10 @@ impl MarkToBase {
         for (glyph_class, anchor) in mark_class {
             for glyph in glyph_class.iter_glyphs(glyph_order) {
                 let was_present = self.marks
-                    .insert(glyph?, MarkRecord(class_id, anchor.into()))
+                    .insert(glyph?, MarkRecord {
+                        class_id,
+                        anchor: anchor.into()
+                    })
                     .is_some();
                 if was_present {
                     panic!("glyph class overlap in mark to base");
@@ -54,5 +60,39 @@ impl MarkToBase {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug, PackedSize, DecodeBE, EncodeBE)]
+struct MarkBasePosFormat1Header {
+    format: u16,
+    mark_coverage_offset: u16,
+    base_coverage_offset: u16,
+    mark_class_count: u16,
+    mark_array_offset: u16,
+    base_array_offset: u16
+}
+
+impl TTFEncode for MarkToBase {
+    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        let start = buf.bytes.len();
+        let marks = self.marks.values();
+
+        buf.defer_header_encode(
+            move |buf| Ok(MarkBasePosFormat1Header {
+                format: 1,
+                mark_coverage_offset: (buf.append(&self.marks)? - start) as u16,
+                base_coverage_offset: (buf.append(&self.bases)? - start) as u16,
+                mark_class_count: self.classes.len() as u16,
+                mark_array_offset: (marks.ttf_encode_mark_array(buf)? - start) as u16,
+                base_array_offset: 0
+            }),
+
+            |_| {
+                // we don't actually have any fixed items after the header for mark to base.
+                // all the data is referenced by offsets in the header.
+
+                Ok(())
+            })
     }
 }

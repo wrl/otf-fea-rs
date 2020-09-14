@@ -1,5 +1,3 @@
-use std::ops;
-
 use endian_codec::{EncodeBE, DecodeBE, PackedSize};
 
 use crate::compile_model::util::encode::*;
@@ -7,10 +5,13 @@ use super::Anchor;
 
 
 #[derive(Debug)]
-pub struct MarkRecord(pub u16, pub Anchor);
+pub struct MarkRecord {
+    pub class_id: u16,
+    pub anchor: Anchor
+}
 
 pub trait MarkArrayTTFEncode {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize>;
+    fn ttf_encode_mark_array(self, buf: &mut EncodeBuf) -> EncodeResult<usize>;
 }
 
 #[derive(EncodeBE, DecodeBE, PackedSize)]
@@ -29,21 +30,21 @@ struct MarkRecordEncoded {
 // are unsupported.
 //
 // so, we're stuck with this sub-optimal bespoke trait just used here.
-impl<'a, T> MarkArrayTTFEncode for T
-    where T: ops::Deref<Target = [&'a MarkRecord]>
+impl<'a, I> MarkArrayTTFEncode for I
+    where I: Iterator<Item = &'a MarkRecord> + ExactSizeIterator
 {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+    fn ttf_encode_mark_array(self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
         buf.append(&(self.len() as u16))?;
 
         // FIXME: should dedup on the anchor
-        buf.encode_pool(start, self.iter(),
+        buf.encode_pool(start, self,
             |anchor_offset, record| MarkRecordEncoded {
-                class_id: record.0,
+                class_id: record.class_id,
                 anchor_offset
             },
-            |buf, record| buf.append(&record.1))?;
+            |buf, record| buf.append(&record.anchor))?;
 
         Ok(start)
     }
