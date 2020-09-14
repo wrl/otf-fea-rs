@@ -180,14 +180,14 @@ fn handle_mark_to_mark_position(ctx: &mut CompilerState, block: &Block, m2m: &pm
     ctx.mark_class_statements_allowed = false;
 
     let pm::position::MarkToMark {
-        base_mark,
-        marks
+        marks,
+        ..
     } = m2m;
 
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<gpos::MarkToMark> = block.find_or_insert_lookup(gpos);
 
-    let subtable = lookup.get_subtable(block.subtable_breaks);
+    let _subtable = lookup.get_subtable(block.subtable_breaks);
 
     for (anchor, mark_class_name) in marks {
         let mark_class = ctx.mark_class_table.get(mark_class_name)

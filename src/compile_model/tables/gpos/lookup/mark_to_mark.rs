@@ -12,6 +12,6 @@ pub struct MarkToMark {
 }
 
 impl MarkToMark {
-    pub fn add_mark(&mut self, glyph_order: &GlyphOrder, base_mark: &GlyphClass, mark: (&Anchor, &MarkClassName)) {
+    pub fn add_mark(&mut self, _glyph_order: &GlyphOrder, _base_mark: &GlyphClass, _mark: (&Anchor, &MarkClassName)) {
     }
 }
