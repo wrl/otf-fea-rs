@@ -176,6 +176,25 @@ fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::posit
     }
 }
 
+fn handle_mark_to_base_position(ctx: &mut CompilerState, block: &Block, m2b: &pm::position::MarkToBase) -> CompileResult<()> {
+    ctx.mark_class_statements_allowed = false;
+
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<gpos::MarkToBase> = block.find_or_insert_lookup(gpos);
+
+    let subtable = lookup.get_subtable(block.subtable_breaks);
+
+    for (anchor, mark_class_name) in &m2b.marks {
+        let mark_class = ctx.mark_class_table.get(mark_class_name)
+            .ok_or_else(|| CompileError::UnknownMarkClass(mark_class_name.into()))?;
+
+        subtable.add_mark_class(&ctx.glyph_order, &m2b.base, &anchor.into(),
+            mark_class_name, mark_class)?;
+    }
+
+    Ok(())
+}
+
 fn handle_mark_to_mark_position(ctx: &mut CompilerState, block: &Block, m2m: &pm::position::MarkToMark) -> CompileResult<()> {
     ctx.mark_class_statements_allowed = false;
 
@@ -204,6 +223,7 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
 
     match p {
         Pair(pair) => handle_pair_position(ctx, block, pair),
+        MarkToBase(m2b) => handle_mark_to_base_position(ctx, block, m2b),
         MarkToMark(m2m) => handle_mark_to_mark_position(ctx, block, m2m),
         p => panic!("unhandled position statement: {:#?}", p)
     }
@@ -475,6 +495,16 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
         handle_top_level(&mut ctx, &s)?;
     }
 
+    if let Some(gpos) = ctx.gpos.as_ref() {
+        println!("{:#?}", gpos);
+    }
+
+    if let Some(gsub) = ctx.gsub.as_ref() {
+        println!("{:#?}", gsub);
+    }
+
+    println!();
+
     // FIXME: "add head table" should be a compiler option
     //
     // if ctx.head_table.is_none() {
@@ -499,14 +529,6 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
     encode_table!(gsub, tag!(G,S,U,B));
 
     actually_compile(&mut ctx, out);
-
-    if let Some(gpos) = ctx.gpos.as_ref() {
-        println!("{:#?}", gpos);
-    }
-
-    if let Some(gsub) = ctx.gsub.as_ref() {
-        println!("{:#?}", gsub);
-    }
 
     Ok(())
 }

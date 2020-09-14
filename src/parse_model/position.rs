@@ -60,8 +60,8 @@ pub struct Cursive {
 // GPOS type 4
 #[derive(Debug)]
 pub struct MarkToBase {
-    pub glyph_class: GlyphClass,
-    pub anchors: Vec<(Anchor, MarkClassName)>
+    pub base: GlyphClass,
+    pub marks: Vec<(Anchor, MarkClassName)>
 }
 
 // GPOS type 5
@@ -212,10 +212,10 @@ fn mark_to_base<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
         .skip(required_whitespace())
 
         .with(mark_to())
-        .map(|(glyph_class, anchors)| {
+        .map(|(base, marks)| {
             MarkToBase {
-                glyph_class,
-                anchors
+                base,
+                marks
             }.into()
         })
 }

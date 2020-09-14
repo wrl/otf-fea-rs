@@ -1,11 +1,7 @@
-use std::convert::TryFrom;
-
-use crate::compile_model::error::*;
-
 use crate::parse_model as pm;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Anchor {
     Coord {
         x: i16,
@@ -21,13 +17,11 @@ pub enum Anchor {
     // TODO: DeviceAdjustedCoord
 }
 
-impl TryFrom<&pm::Anchor> for Anchor {
-    type Error = CompileError;
-
-    fn try_from(parsed: &pm::Anchor) -> CompileResult<Self> {
+impl From<&pm::Anchor> for Anchor {
+    fn from(parsed: &pm::Anchor) -> Self {
         use pm::Anchor::*;
 
-        Ok(match parsed {
+        match parsed {
             Coord { x, y } =>
                 Self::Coord {
                     x: x.0 as i16,
@@ -49,6 +43,6 @@ impl TryFrom<&pm::Anchor> for Anchor {
                 },
 
             a => panic!("anchor try_from unimplemented for {:?}", a)
-        })
+        }
     }
 }

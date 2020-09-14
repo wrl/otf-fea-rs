@@ -44,8 +44,14 @@ fn decode_coverage<'a>(bytes: &'a [u8]) -> DecodeResult<impl Iterator<Item = u16
     Ok(glyphs_iter)
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CoverageLookup<T>(pub BTreeMap<u16, T>);
+
+impl<T> Default for CoverageLookup<T> {
+    fn default() -> Self {
+        Self(BTreeMap::new())
+    }
+}
 
 impl<T> ops::Deref for CoverageLookup<T> {
     type Target = BTreeMap<u16, T>;

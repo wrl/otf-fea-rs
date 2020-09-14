@@ -15,7 +15,8 @@ use crate::parse_model::{
 use super::tables;
 
 
-pub type MarkClassData = Vec<(GlyphClass, Anchor)>;
+pub type MarkClassGlyphClass = (GlyphClass, Anchor);
+pub type MarkClassData = Vec<MarkClassGlyphClass>;
 
 pub struct CompilerState {
     pub glyph_order: GlyphOrder,

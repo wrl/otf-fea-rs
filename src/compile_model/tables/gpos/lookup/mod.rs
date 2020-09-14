@@ -10,6 +10,9 @@ pub use pair_glyphs::*;
 mod pair_class;
 pub use pair_class::*;
 
+mod mark_to_base;
+pub use mark_to_base::*;
+
 mod mark_to_mark;
 pub use mark_to_mark::*;
 
@@ -52,10 +55,12 @@ macro_rules! impl_subtable_for {
 #[derive(Debug)]
 pub enum GPOSLookup {
     Pair(Lookup<Pair>),
-    MarkToMark(Lookup<MarkToMark>)
+    MarkToBase(Lookup<MarkToBase>),
+    MarkToMark(Lookup<MarkToMark>),
 }
 
 impl_subtable_for!(Pair);
+impl_subtable_for!(MarkToBase);
 impl_subtable_for!(MarkToMark);
 
 impl TTFDecode for GPOSLookup {
