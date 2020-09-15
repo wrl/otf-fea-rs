@@ -36,23 +36,23 @@ impl TTFEncode for Alternate {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
-        buf.defer_header_encode(
+        buf.encode_pool_with_header(
             |buf| Ok(AlternateSubstFormat1Header {
                 format: 1,
                 coverage_offset: (self.0.ttf_encode(buf)? - start) as u16,
                 set_count: self.len() as u16
             }),
 
-            |buf| buf.encode_pool(start, self.values(),
-                |offset, _| offset,
-                |buf, &set| {
-                    buf.append(&(set.len() as u16))?;
+            self.values(),
+            |offset, _| offset,
+            |buf, &set| {
+                buf.append(&(set.len() as u16))?;
 
-                    for glyph_id in set {
-                        buf.append(glyph_id)?;
-                    }
+                for glyph_id in set {
+                    buf.append(glyph_id)?;
+                }
 
-                    Ok(())
-                }))
+                Ok(())
+            })
     }
 }

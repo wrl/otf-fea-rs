@@ -66,8 +66,9 @@ impl EncodeBuf {
         self.encode_at(&header, start)
     }
 
-    pub(crate) fn encode_pool<'a, Item, I, Record, RF, IWF, IWFR>(&mut self,
-        table_start: usize, items: I, record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
+    fn encode_pool_internal<'a, Item, I, Record, RF, IWF, IWFR>
+        (&mut self, table_start: usize, mut record_offset: usize, items: I, record_for_offset: RF, write_item: IWF)
+            -> EncodeResult<()>
 
         where Item: 'a,
               I: Iterator<Item = Item> + ExactSizeIterator,
@@ -75,9 +76,6 @@ impl EncodeBuf {
               RF: Fn(u16, &Item) -> Record,
               IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>
     {
-        let mut record_offset = self.bytes.len();
-        self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
-
         let mut dedup = HashMap::new();
 
         for item in items {
@@ -122,6 +120,45 @@ impl EncodeBuf {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn encode_pool_with_header<'a, Header, HF, Item, I, Record, RF, IWF, IWFR>
+        (&mut self, header_func: HF, items: I, record_for_offset: RF, write_item: IWF)
+            -> EncodeResult<usize>
+
+        where Item: 'a,
+              I: Iterator<Item = Item> + ExactSizeIterator,
+              Record: EncodeBE,
+              RF: Fn(u16, &Item) -> Record,
+              IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>,
+              Header: EncodeBE,
+              HF: FnOnce(&mut EncodeBuf) -> EncodeResult<Header>
+    {
+        let table_start = self.bytes.len();
+        let record_offset = table_start + Header::PACKED_LEN;
+        self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
+
+        let header = header_func(self)?;
+        self.encode_at(&header, table_start)?;
+
+        self.encode_pool_internal(table_start, record_offset, items, record_for_offset, write_item)?;
+
+        Ok(table_start)
+    }
+
+    pub(crate) fn encode_pool<'a, Item, I, Record, RF, IWF, IWFR>(&mut self,
+        table_start: usize, items: I, record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
+
+        where Item: 'a,
+              I: Iterator<Item = Item> + ExactSizeIterator,
+              Record: EncodeBE,
+              RF: Fn(u16, &Item) -> Record,
+              IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>
+    {
+        let record_offset = self.bytes.len();
+        self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
+
+        self.encode_pool_internal(table_start, record_offset, items, record_for_offset, write_item)
     }
 }
 

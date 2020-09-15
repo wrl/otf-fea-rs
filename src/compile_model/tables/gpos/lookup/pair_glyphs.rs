@@ -140,7 +140,7 @@ impl TTFEncode for PairGlyphs {
                         vr.1 | smallest.1)
             });
 
-        buf.defer_header_encode(
+        buf.encode_pool_with_header(
             |buf| Ok(PairPosFormat1Header {
                 format: 1,
                 coverage_offset: (self.0.ttf_encode(buf)? - start) as u16,
@@ -149,16 +149,16 @@ impl TTFEncode for PairGlyphs {
                 pair_set_count: self.len() as u16
             }),
 
-            |buf| buf.encode_pool(start, self.values(),
-                |offset, _| offset,
-                |buf, &set| {
-                    buf.append(&(set.len() as u16))?;
+            self.values(),
+            |offset, _| offset,
+            |buf, &set| {
+                buf.append(&(set.len() as u16))?;
 
-                    for pair in set {
-                        pair.encode_with_vf(buf, value_formats)?;
-                    }
+                for pair in set {
+                    pair.encode_with_vf(buf, value_formats)?;
+                }
 
-                    Ok(())
-                }))
+                Ok(())
+            })
     }
 }

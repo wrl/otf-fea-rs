@@ -37,23 +37,24 @@ impl TTFEncode for Multiple {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
-        buf.defer_header_encode(
+        buf.encode_pool_with_header(
             |buf| Ok(MultipleSubstFormat1Header {
                 format: 1,
                 coverage_offset: (self.0.ttf_encode(buf)? - start) as u16,
                 sequence_count: self.len() as u16
             }),
 
-            |buf| buf.encode_pool(start, self.values(),
-                |offset, _| offset,
-                |buf, &seq| {
-                    buf.append(&(seq.len() as u16))?;
+            self.values(),
 
-                    for glyph_id in seq {
-                        buf.append(glyph_id)?;
-                    }
+            |offset, _| offset,
+            |buf, &seq| {
+                buf.append(&(seq.len() as u16))?;
 
-                    Ok(())
-                }))
+                for glyph_id in seq {
+                    buf.append(glyph_id)?;
+                }
+
+                Ok(())
+            })
     }
 }

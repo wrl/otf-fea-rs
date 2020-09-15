@@ -73,6 +73,7 @@ impl MarkToBase {
         let mut record_offset = buf.bytes.len();
         buf.bytes.resize(record_offset + (nrecords * u16::PACKED_LEN), 0u8);
 
+        // FIXME: use buf.encode_pool() for dedup
         for base in self.bases.values() {
             for class_id in class_id_range.clone() {
                 let mark_anchor_offset = match base.get(&class_id) {
