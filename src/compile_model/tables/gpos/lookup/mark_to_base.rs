@@ -61,9 +61,35 @@ impl MarkToBase {
 
         Ok(())
     }
+
+    fn encode_base_array(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        let start = buf.bytes.len();
+
+        let class_id_range = 0..(self.classes.len() as u16);
+        let nrecords = self.classes.len() * self.bases.len();
+
+        buf.append(&(self.bases.len() as u16))?;
+
+        let mut record_offset = buf.bytes.len();
+        buf.bytes.resize(record_offset + (nrecords * u16::PACKED_LEN), 0u8);
+
+        for base in self.bases.values() {
+            for class_id in class_id_range.clone() {
+                let mark_anchor_offset = match base.get(&class_id) {
+                    Some(anchor) => buf.append(anchor)? - start,
+                    None => 0
+                };
+
+                buf.encode_at(&(mark_anchor_offset as u16), record_offset)?;
+                record_offset += u16::PACKED_LEN;
+            }
+        }
+
+        Ok(start)
+    }
 }
 
-#[derive(Debug, PackedSize, DecodeBE, EncodeBE)]
+#[derive(PackedSize, DecodeBE, EncodeBE)]
 struct MarkBasePosFormat1Header {
     format: u16,
     mark_coverage_offset: u16,
@@ -76,6 +102,7 @@ struct MarkBasePosFormat1Header {
 impl TTFEncode for MarkToBase {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
+
         let marks = self.marks.values();
 
         buf.defer_header_encode(
@@ -85,7 +112,7 @@ impl TTFEncode for MarkToBase {
                 base_coverage_offset: (buf.append(&self.bases)? - start) as u16,
                 mark_class_count: self.classes.len() as u16,
                 mark_array_offset: (marks.ttf_encode_mark_array(buf)? - start) as u16,
-                base_array_offset: 0
+                base_array_offset: (self.encode_base_array(buf)? - start) as u16
             }),
 
             |_| {
