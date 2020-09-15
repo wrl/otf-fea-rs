@@ -1,6 +1,15 @@
 use std::any::type_name;
-use std::hash::Hash;
-use std::collections::HashMap;
+use std::ops::Range;
+use std::hash::{
+    Hash,
+    Hasher,
+    BuildHasher
+};
+
+use hashbrown::{
+    HashMap,
+    hash_map::RawEntryMut
+};
 
 use endian_codec::EncodeBE;
 
@@ -70,12 +79,46 @@ impl EncodeBuf {
         let mut record_offset = self.bytes.len();
         self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
 
+        let mut dedup = HashMap::new();
+
         for item in items {
-            let item_offset = (self.bytes.len() - table_start) as u16;
+            let item_start = self.bytes.len();
 
             write_item(self, &item)?;
 
-            self.encode_at(&record_for_offset(item_offset, &item), record_offset)?;
+            let item_span = item_start..self.bytes.len();
+
+            let item_encoded_hash = {
+                let mut hasher = dedup.hasher().build_hasher();
+                hasher.write(&self.bytes[item_span.clone()]);
+                hasher.finish()
+            };
+
+            let entry = dedup.raw_entry_mut()
+                .from_hash(item_encoded_hash,
+                    |span: &Range<usize>| {
+                        self.bytes[span.clone()]
+                            .eq(&self.bytes[item_span.clone()])
+                    });
+
+            let item_offset = match entry {
+                RawEntryMut::Occupied(e) => {
+                    self.bytes.truncate(item_start);
+                    e.key().start
+                }
+
+                RawEntryMut::Vacant(e) => {
+                    e.insert_hashed_nocheck(item_encoded_hash, item_span.clone(), ());
+                    item_start
+                }
+            };
+
+            let item_offset = (item_offset - table_start) as u16;
+
+            self.encode_at(
+                &record_for_offset(item_offset, &item),
+                record_offset)?;
+
             record_offset += Record::PACKED_LEN;
         }
 

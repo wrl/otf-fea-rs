@@ -16,6 +16,8 @@ chrono = "0.4"
 encoding_rs = "0.8"
 bitflags = "1.2"
 
+hashbrown = "0.9"
+
 [dependencies.arrayvec]
 version = "0.5"
 features = ["array-sizes-33-128"]
