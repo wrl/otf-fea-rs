@@ -149,9 +149,9 @@ impl TTFEncode for PairGlyphs {
                 pair_set_count: self.len() as u16
             }),
 
-            |buf| buf.encode_pool_dedup(start, self.values(),
+            |buf| buf.encode_pool(start, self.values(),
                 |offset, _| offset,
-                |buf, set| {
+                |buf, &set| {
                     buf.append(&(set.len() as u16))?;
 
                     for pair in set {

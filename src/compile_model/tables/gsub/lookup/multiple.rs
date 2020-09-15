@@ -44,9 +44,9 @@ impl TTFEncode for Multiple {
                 sequence_count: self.len() as u16
             }),
 
-            |buf| buf.encode_pool_dedup(start, self.values(),
+            |buf| buf.encode_pool(start, self.values(),
                 |offset, _| offset,
-                |buf, seq| {
+                |buf, &seq| {
                     buf.append(&(seq.len() as u16))?;
 
                     for glyph_id in seq {
