@@ -103,15 +103,23 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<gpos::Pair> = block.find_or_insert_lookup(gpos);
 
-    let subtable: &mut gpos::PairGlyphs = lookup.get_subtable_variant(block.subtable_breaks);
     let vertical = block.is_vertical();
+
+    let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
+    let vr2 = ValueRecord::from_parsed(&value_records.1, vertical);
+
+    let value_formats = (
+        vr1.smallest_possible_format(),
+        vr2.smallest_possible_format()
+    );
+
+    let subtable = lookup.get_subtable_variant_filter(block.subtable_breaks,
+        |pg: &gpos::PairGlyphs| pg.value_formats_match(&value_formats),
+        || gpos::PairGlyphs::new_with_value_formats(value_formats));
 
     for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
         let pairs = subtable.entry(first_glyph?)
             .or_default();
-
-        let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
-        let vr2 = ValueRecord::from_parsed(&value_records.1, vertical);
 
         for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
             let second_glyph = second_glyph?;

@@ -17,12 +17,42 @@ pub struct PairValueRecord {
 pub type PairSet = Vec<PairValueRecord>;
 
 #[derive(Debug)]
-pub struct PairGlyphs(pub CoverageLookup<PairSet>);
+pub struct PairGlyphs {
+    pub sets: CoverageLookup<PairSet>,
+    pub common_value_formats: Option<(u16, u16)>
+}
 
+
+impl PairGlyphs {
+    pub fn new() -> Self {
+        Self {
+            sets: CoverageLookup::new(),
+            common_value_formats: None
+        }
+    }
+
+    pub fn new_with_value_formats(formats: (u16, u16)) -> Self {
+        Self {
+            sets: CoverageLookup::new(),
+            common_value_formats: Some(formats)
+        }
+    }
+
+    pub fn value_formats_match(&self, other: &(u16, u16)) -> bool {
+        match self.common_value_formats {
+            // FIXME: should None be always-matching or never-matching?
+            None => true,
+
+            Some(vf) => {
+                (vf.0 & other.0) == other.0 && (vf.1 & other.1) == other.1
+            }
+        }
+    }
+}
 
 impl Default for PairGlyphs {
     fn default() -> Self {
-        Self(CoverageLookup::new())
+        Self::new()
     }
 }
 
@@ -30,13 +60,13 @@ impl ops::Deref for PairGlyphs {
     type Target = CoverageLookup<PairSet>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.sets
     }
 }
 
 impl ops::DerefMut for PairGlyphs {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.sets
     }
 }
 
@@ -106,7 +136,12 @@ impl PairGlyphs {
     #[inline]
     fn decode_from_format(bytes: &[u8], coverage_bytes: &[u8], format: u16) -> DecodeResult<Self> {
         match format {
-            1 => Self::decode_pairs(bytes, coverage_bytes).map(PairGlyphs),
+            1 => Self::decode_pairs(bytes, coverage_bytes)
+                .map(|sets| PairGlyphs {
+                    sets,
+                    common_value_formats: None
+                }),
+
             _ => return Err(DecodeError::InvalidValue("format",
                     "GPOS subtable".into()))
         }
@@ -143,7 +178,7 @@ impl TTFEncode for PairGlyphs {
         buf.encode_pool_with_header(
             |buf| Ok(PairPosFormat1Header {
                 format: 1,
-                coverage_offset: (self.0.ttf_encode(buf)? - start) as u16,
+                coverage_offset: (self.sets.ttf_encode(buf)? - start) as u16,
                 value_format_1: value_formats.0,
                 value_format_2: value_formats.1,
                 pair_set_count: self.len() as u16

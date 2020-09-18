@@ -37,6 +37,30 @@ impl<T> Lookup<T> {
         }
     }
 
+    pub fn get_subtable_variant_filter<V, P, N>(&mut self, skip: usize, pred: P, new: N) -> &mut V
+        where V: VariantExt<T> + Default + Into<T>,
+              P: Fn(&V) -> bool,
+              N: FnOnce() -> V
+    {
+        let idx = self.subtables.iter().enumerate()
+            .filter_map(|(idx, subtable)| {
+                match V::get_variant(subtable) {
+                    Some(v) if pred(v) => Some(idx),
+                    _ => None
+                }
+            })
+            .skip(skip)
+            .next()
+
+            .unwrap_or_else(|| {
+                let idx = self.subtables.len();
+                self.subtables.push(new().into());
+                idx
+            });
+
+        V::get_variant_mut(&mut self.subtables[idx]).unwrap()
+    }
+
     pub fn get_subtable_variant<V>(&mut self, skip: usize) -> &mut V
         where V: VariantExt<T> + Default + Into<T>
     {
