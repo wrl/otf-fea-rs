@@ -85,12 +85,20 @@ impl EncodeBuf {
 
             let item_span = item_start..self.bytes.len();
 
+            // okay, so we're hashing the encoded item. however, we can't just store the slice
+            // itself in the dedup hash map, because there's a chance that the buf will need to be
+            // reallocated as it grows, and the address may not be stable.
+            //
+            // so, we store the Range representing the item start/end indices, but we still have to
+            // hash the actual bytes.
             let item_encoded_hash = {
                 let mut hasher = dedup.hasher().build_hasher();
                 hasher.write(&self.bytes[item_span.clone()]);
                 hasher.finish()
             };
 
+            // now we have the hash, but we have to check for slice equality. luckily, hashbrown
+            // has this `raw_entry()` API which lets us drive the search process ourselves.
             let entry = dedup.raw_entry_mut()
                 .from_hash(item_encoded_hash,
                     |span: &Range<usize>| {
@@ -100,11 +108,18 @@ impl EncodeBuf {
 
             let item_offset = match entry {
                 RawEntryMut::Occupied(e) => {
+                    // if we have a matching slice, we'll back up the encode buffer to "erase" the
+                    // copy that we just encoded, then re-use the starting offset from the
+                    // duplicate item.
                     self.bytes.truncate(item_start);
                     e.key().start
                 }
 
                 RawEntryMut::Vacant(e) => {
+                    // if this is a unique item, we insert the Range into the dedup map, re-using
+                    // the hash we calculated above. the key is the unit struct () since we don't
+                    // need to actually store any associated data. we could have used a HashSet,
+                    // but it doesn't have the raw_entry() API.
                     e.insert_hashed_nocheck(item_encoded_hash, item_span.clone(), ());
                     item_start
                 }
