@@ -14,6 +14,12 @@ pub enum CompileError {
     #[error("unknown mark class \"{0}\"")]
     UnknownMarkClass(String),
 
+    #[error("tried to compile an invalid anchor type {0}")]
+    InvalidAnchor(&'static str),
+
+    #[error("undefined {0} {1}")]
+    UndefinedReference(&'static str, String),
+
     #[error(transparent)]
     GlyphOrderError(#[from] GlyphOrderError),
 

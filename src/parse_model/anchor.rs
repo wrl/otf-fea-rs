@@ -21,6 +21,12 @@ use super::util::*;
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct AnchorName(pub GlyphNameStorage);
 
+impl From<&AnchorName> for String {
+    fn from(name: &AnchorName) -> String {
+        name.0.as_str().into()
+    }
+}
+
 impl fmt::Debug for AnchorName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "AnchorName(\"")?;

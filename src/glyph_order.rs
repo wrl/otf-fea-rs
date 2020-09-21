@@ -20,7 +20,7 @@ pub enum GlyphOrderError {
 pub struct GlyphOrder(HashMap<GlyphRef, u16>);
 
 impl GlyphOrder {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self(HashMap::new())
     }
 

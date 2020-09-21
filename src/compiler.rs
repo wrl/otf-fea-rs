@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::iter;
 
 use endian_codec::{PackedSize, EncodeBE};
@@ -13,7 +14,23 @@ use crate::parse_model as pm;
 
 
 /**
- * feature definitions
+ * utilities
+ */
+
+#[inline]
+fn feature_is_vertical(tag: &FeatureTag) -> bool {
+    match tag {
+        feature_tag!(v,k,r,n)
+            | feature_tag!(v,p,a,l)
+            | feature_tag!(v,h,a,l)
+            | feature_tag!(v,a,l,t) => true,
+
+        _ => false
+    }
+}
+
+/**
+ * block/scope
  */
 
 use crate::compile_model::lookup::*;
@@ -52,17 +69,6 @@ enum BlockIdent<'a> {
     Lookup(&'a pm::LookupName)
 }
 
-fn feature_is_vertical(tag: &FeatureTag) -> bool {
-    match tag {
-        feature_tag!(v,k,r,n)
-            | feature_tag!(v,p,a,l)
-            | feature_tag!(v,h,a,l)
-            | feature_tag!(v,a,l,t) => true,
-
-        _ => false
-    }
-}
-
 impl<'a> Block<'a> {
     fn is_vertical(&self) -> bool {
         match self.ident {
@@ -93,6 +99,10 @@ impl<'a> Block<'a> {
             .insert(*feature_tag);
     }
 }
+
+/**
+ * feature definitions
+ */
 
 fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
     let pm::position::Pair {
@@ -142,9 +152,6 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
         value_records
     } = pair;
 
-    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
-    let lookup: &mut Lookup<gpos::Pair> = block.find_or_insert_lookup(gpos);
-
     let vertical = block.is_vertical();
 
     let classes = (
@@ -158,6 +165,9 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     );
 
     let mut skip = block.subtable_breaks;
+
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<gpos::Pair> = block.find_or_insert_lookup(gpos);
 
     let subtable = loop {
         let subtable: &mut gpos::PairClass = lookup.get_subtable_variant(skip);
@@ -182,19 +192,39 @@ fn handle_pair_position(ctx: &mut CompilerState, block: &Block, pair: &pm::posit
     }
 }
 
+fn handle_cursive_position(ctx: &mut CompilerState, block: &Block, cursive: &pm::position::Cursive) -> CompileResult<()> {
+    let pm::position::Cursive {
+        glyph_class,
+        entry,
+        exit
+    } = cursive;
+
+    let entry: gpos::Anchor = ctx.lookup_anchor(entry)?;
+    let exit: gpos::Anchor = ctx.lookup_anchor(exit)?;
+
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<gpos::Cursive> = block.find_or_insert_lookup(gpos);
+    let subtable = lookup.get_subtable(block.subtable_breaks);
+
+    for glyph_id in glyph_class.iter_glyphs(&ctx.glyph_order) {
+        subtable.add_rule(glyph_id?, entry.clone(), exit.clone());
+    }
+
+    Ok(())
+}
+
 fn handle_mark_to_base_position(ctx: &mut CompilerState, block: &Block, m2b: &pm::position::MarkToBase) -> CompileResult<()> {
     ctx.mark_class_statements_allowed = false;
 
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<gpos::MarkToBase> = block.find_or_insert_lookup(gpos);
-
     let subtable = lookup.get_subtable(block.subtable_breaks);
 
     for (anchor, mark_class_name) in &m2b.marks {
         let mark_class = ctx.mark_class_table.get(mark_class_name)
             .ok_or_else(|| CompileError::UnknownMarkClass(mark_class_name.into()))?;
 
-        subtable.add_mark_class(&ctx.glyph_order, &m2b.base, &anchor.into(),
+        subtable.add_mark_class(&ctx.glyph_order, &m2b.base, &anchor.try_into()?,
             mark_class_name, mark_class)?;
     }
 
@@ -211,7 +241,6 @@ fn handle_mark_to_mark_position(ctx: &mut CompilerState, block: &Block, m2m: &pm
 
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<gpos::MarkToMark> = block.find_or_insert_lookup(gpos);
-
     let _subtable = lookup.get_subtable(block.subtable_breaks);
 
     for (anchor, mark_class_name) in marks {
@@ -221,7 +250,8 @@ fn handle_mark_to_mark_position(ctx: &mut CompilerState, block: &Block, m2m: &pm
         println!("{:?} {:#?}", anchor, mark_class);
     }
 
-    Ok(())
+    panic!("unimplemented");
+    // Ok(())
 }
 
 fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Position) -> CompileResult<()> {
@@ -232,8 +262,11 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
 
     match p {
         Pair(pair) => handle_pair_position(ctx, block, pair),
+        Cursive(cursive) => handle_cursive_position(ctx, block, cursive),
         MarkToBase(m2b) => handle_mark_to_base_position(ctx, block, m2b),
         MarkToMark(m2m) => handle_mark_to_mark_position(ctx, block, m2m),
+
+
         p => panic!("unhandled position statement: {:#?}", p)
     }
 }
@@ -383,7 +416,19 @@ fn handle_mark_class_statement(ctx: &mut CompilerState, mark_class: &pm::MarkCla
 
     ctx.mark_class_table.entry(class_name.clone())
         .or_default()
-        .push((glyph_class.clone(), anchor.clone()));
+        .push((glyph_class.clone(), anchor.try_into()?));
+
+    Ok(())
+}
+
+fn handle_anchor_definition(ctx: &mut CompilerState, anchor_def: &pm::AnchorDefinition) -> CompileResult<()> {
+    let pm::AnchorDefinition {
+        name,
+        anchor
+    } = anchor_def;
+
+    ctx.anchor_table.entry(name.clone())
+        .or_insert(anchor.try_into()?);
 
     Ok(())
 }
@@ -398,6 +443,7 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
 
         FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
         LookupDefinition(ref ld) => handle_lookup_definition(ctx, ld)?,
+        AnchorDefinition(ref ad) => handle_anchor_definition(ctx, ad)?,
 
         MarkClass(ref mc) => handle_mark_class_statement(ctx, mc)?,
 
@@ -524,7 +570,7 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
     macro_rules! encode_table {
         ($table:ident, $tag:expr) => {
             if let Some(table) = ctx.$table.as_ref() {
-                let mut buf = EncodeBuf::new();
+                let mut buf = EncodeBuf::new_with_glyph_order(&ctx.glyph_order);
                 table.ttf_encode(&mut buf).unwrap();
 
                 ctx.tables_encoded.push((

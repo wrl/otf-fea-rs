@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 use crate::{
     GlyphOrder,
@@ -7,11 +8,10 @@ use crate::{
 
 use crate::glyph_class::*;
 
-use crate::parse_model::{
-    MarkClassName,
-    Anchor
-};
+use crate::compile_model::error::*;
+use crate::parse_model as pm;
 
+use super::tables::gpos::Anchor;
 use super::tables;
 
 
@@ -29,7 +29,9 @@ pub struct CompilerState {
     // feature file. Once any position statement has referenced a mark class, no more mark
     // statements are allowed.
     pub mark_class_statements_allowed: bool,
-    pub mark_class_table: HashMap<MarkClassName, MarkClassData>,
+    pub mark_class_table: HashMap<pm::MarkClassName, MarkClassData>,
+
+    pub anchor_table: HashMap<pm::AnchorName, Anchor>,
 
     pub tables_encoded: Vec<(Tag, Vec<u8>)>
 }
@@ -46,7 +48,21 @@ impl CompilerState {
             mark_class_statements_allowed: true,
             mark_class_table: HashMap::new(),
 
+            anchor_table: HashMap::new(),
+
             tables_encoded: Vec::new(),
+        }
+    }
+
+    pub fn lookup_anchor(&self, parsed: &pm::Anchor) -> CompileResult<Anchor> {
+        use pm::Anchor::*;
+
+        match parsed {
+            Named(name) => self.anchor_table.get(name)
+                .map(|a| a.clone())
+                .ok_or_else(|| CompileError::UndefinedReference("anchor", name.into())),
+
+            anchor => anchor.try_into()
         }
     }
 }

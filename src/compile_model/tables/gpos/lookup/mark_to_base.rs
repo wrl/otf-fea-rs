@@ -28,7 +28,7 @@ impl MarkToBase {
                 let was_present = self.marks
                     .insert(glyph?, MarkRecord {
                         class_id,
-                        anchor: anchor.into()
+                        anchor: anchor.clone(),
                     })
                     .is_some();
                 if was_present {

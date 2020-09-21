@@ -7,6 +7,8 @@ use endian_codec::{PackedSize, DecodeBE};
 
 #[macro_use]
 extern crate otf_fea_rs;
+use otf_fea_rs::GlyphOrder;
+
 use otf_fea_rs::compile_model::util::decode::*;
 use otf_fea_rs::compile_model::util::encode::*;
 use otf_fea_rs::compile_model::*;
@@ -56,7 +58,9 @@ fn display_name(table_data: &[u8]) {
 fn display_gpos(table_data: &[u8]) {
     let table = tables::GPOS::ttf_decode(table_data).unwrap();
 
-    let mut buf = EncodeBuf::new();
+    let order = GlyphOrder::new();
+
+    let mut buf = EncodeBuf::new_with_glyph_order(&order);
     table.ttf_encode(&mut buf).unwrap();
 
     let bytes = buf.as_bytes();

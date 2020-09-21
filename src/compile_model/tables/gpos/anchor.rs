@@ -1,7 +1,10 @@
+use std::convert::TryFrom;
+
 use endian_codec::{EncodeBE, DecodeBE, PackedSize};
 
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util::decode::*;
+use crate::compile_model::error::*;
 use crate::parse_model as pm;
 
 #[derive(Debug, Clone)]
@@ -15,16 +18,18 @@ pub enum Anchor {
         x: i16,
         y: i16,
         contour_point: u16
-    }
+    },
 
     // TODO: DeviceAdjustedCoord
 }
 
-impl From<&pm::Anchor> for Anchor {
-    fn from(parsed: &pm::Anchor) -> Self {
+impl TryFrom<&pm::Anchor> for Anchor {
+    type Error = CompileError;
+
+    fn try_from(parsed: &pm::Anchor) -> Result<Self, Self::Error> {
         use pm::Anchor::*;
 
-        match parsed {
+        Ok(match parsed {
             Coord { x, y } =>
                 Self::Coord {
                     x: x.0 as i16,
@@ -45,8 +50,12 @@ impl From<&pm::Anchor> for Anchor {
                     y: 0
                 },
 
-            a => panic!("anchor try_from unimplemented for {:?}", a)
-        }
+            DeviceAdjustedCoord { .. } =>
+                return Err(CompileError::InvalidAnchor("DeviceAdjustedCoord")),
+
+            Named(_) =>
+                return Err(CompileError::InvalidAnchor("Named")),
+        })
     }
 }
 

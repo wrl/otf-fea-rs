@@ -6,8 +6,6 @@ use combine::{
     error::ParseError
 };
 
-use ascii::AsAsciiStr;
-
 use crate::parser::*;
 use crate::glyph_class::*;
 use crate::glyph::*;
@@ -23,7 +21,7 @@ pub struct MarkClassName(pub GlyphNameStorage);
 
 impl From<&MarkClassName> for String {
     fn from(name: &MarkClassName) -> String {
-        name.0.as_ascii_str().unwrap().as_str().into()
+        name.0.as_str().into()
     }
 }
 

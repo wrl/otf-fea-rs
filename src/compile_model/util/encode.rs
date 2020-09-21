@@ -12,20 +12,24 @@ use hashbrown::{
 
 use endian_codec::EncodeBE;
 
+
+use crate::glyph_order::*;
 pub use crate::compile_model::error::{
     EncodeError,
     EncodeResult
 };
 
 
-pub struct EncodeBuf {
-    pub(crate) bytes: Vec<u8>
+pub struct EncodeBuf<'a> {
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) _glyph_order: &'a GlyphOrder
 }
 
-impl EncodeBuf {
-    pub fn new() -> Self {
+impl<'a> EncodeBuf<'a> {
+    pub fn new_with_glyph_order(glyph_order: &'a GlyphOrder) -> Self {
         Self {
-            bytes: Vec::new()
+            bytes: Vec::new(),
+            _glyph_order: glyph_order,
         }
     }
 
@@ -66,11 +70,11 @@ impl EncodeBuf {
         self.encode_at(&header, start)
     }
 
-    fn encode_pool_internal<'a, Item, I, Record, RF, IWF, IWFR>
+    fn encode_pool_internal<'b, Item, I, Record, RF, IWF, IWFR>
         (&mut self, table_start: usize, mut record_offset: usize, items: I, record_for_offset: RF, write_item: IWF)
             -> EncodeResult<()>
 
-        where Item: 'a,
+        where Item: 'b,
               I: Iterator<Item = Item> + ExactSizeIterator,
               Record: EncodeBE,
               RF: Fn(u16, &Item) -> Record,
@@ -137,11 +141,11 @@ impl EncodeBuf {
         Ok(())
     }
 
-    pub(crate) fn encode_pool_with_header<'a, Header, HF, Item, I, Record, RF, IWF, IWFR>
+    pub(crate) fn encode_pool_with_header<'b, Header, HF, Item, I, Record, RF, IWF, IWFR>
         (&mut self, header_func: HF, items: I, record_for_offset: RF, write_item: IWF)
             -> EncodeResult<usize>
 
-        where Item: 'a,
+        where Item: 'b,
               I: Iterator<Item = Item> + ExactSizeIterator,
               Record: EncodeBE,
               RF: Fn(u16, &Item) -> Record,
@@ -161,10 +165,10 @@ impl EncodeBuf {
         Ok(table_start)
     }
 
-    pub(crate) fn encode_pool<'a, Item, I, Record, RF, IWF, IWFR>(&mut self,
+    pub(crate) fn encode_pool<'b, Item, I, Record, RF, IWF, IWFR>(&mut self,
         table_start: usize, items: I, record_for_offset: RF, write_item: IWF) -> EncodeResult<()>
 
-        where Item: 'a,
+        where Item: 'b,
               I: Iterator<Item = Item> + ExactSizeIterator,
               Record: EncodeBE,
               RF: Fn(u16, &Item) -> Record,

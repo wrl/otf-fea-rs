@@ -10,6 +10,9 @@ pub use pair_glyphs::*;
 mod pair_class;
 pub use pair_class::*;
 
+pub mod cursive;
+pub use cursive::Cursive;
+
 mod mark_to_base;
 pub use mark_to_base::*;
 
@@ -55,11 +58,13 @@ macro_rules! impl_subtable_for {
 #[derive(Debug)]
 pub enum GPOSLookup {
     Pair(Lookup<Pair>),
+    Cursive(Lookup<Cursive>),
     MarkToBase(Lookup<MarkToBase>),
     MarkToMark(Lookup<MarkToMark>),
 }
 
 impl_subtable_for!(Pair);
+impl_subtable_for!(Cursive);
 impl_subtable_for!(MarkToBase);
 impl_subtable_for!(MarkToMark);
 

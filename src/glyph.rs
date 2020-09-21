@@ -5,6 +5,7 @@ use thiserror::Error;
 use ascii::{
     AsciiChar,
     AsciiStr,
+    AsAsciiStr,
     AsAsciiStrError
 };
 
@@ -24,6 +25,16 @@ pub enum GlyphError {
 }
 
 pub(crate) type GlyphNameStorage = ArrayVec::<[AsciiChar; 63]>;
+
+pub(crate) trait GlyphNameStorageToStr {
+    fn as_str(&self) -> &str;
+}
+
+impl GlyphNameStorageToStr for GlyphNameStorage {
+    fn as_str(&self) -> &str {
+        self.as_ascii_str().unwrap().as_str()
+    }
+}
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct GlyphName(pub GlyphNameStorage);
