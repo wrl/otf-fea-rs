@@ -8,6 +8,9 @@ pub use class_def::ClassDef;
 mod coverage;
 pub use coverage::CoverageLookup;
 
+mod device;
+pub use device::*;
+
 mod error;
 pub use error::*;
 

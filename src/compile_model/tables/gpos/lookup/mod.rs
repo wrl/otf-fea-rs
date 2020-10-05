@@ -83,6 +83,7 @@ impl TTFEncode for GPOSLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
             GPOSLookup::Pair(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2),
+            GPOSLookup::Cursive(lookup) => lookup.ttf_encode_with_lookup_type(buf, 3),
             GPOSLookup::MarkToBase(lookup) => lookup.ttf_encode_with_lookup_type(buf, 4),
             l => panic!("unimplemented encode for {:?}", l)
         }

@@ -10,8 +10,8 @@ use super::util::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeviceAdjustedMetric {
-    metric: Metric,
-    device: Device
+    pub metric: Metric,
+    pub device: Device
 }
 
 impl DeviceAdjustedMetric {

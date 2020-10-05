@@ -324,6 +324,8 @@ fn handle_substitute_statement(ctx: &mut CompilerState, block: &Block, s: &pm::S
 }
 
 fn handle_lookup_reference(ctx: &mut CompilerState, block: &Block, name: &pm::LookupName) -> CompileResult<()> {
+    // FIXME: also needs to happen for gsub
+
     let gpos = match ctx.gpos.as_mut() {
         None => return Ok(()),
         Some(gpos) => gpos

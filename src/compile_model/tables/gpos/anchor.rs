@@ -20,7 +20,10 @@ pub enum Anchor {
         contour_point: u16
     },
 
-    // TODO: DeviceAdjustedCoord
+    DeviceAdjustedCoord {
+        x: i16,
+        y: i16
+    }
 }
 
 impl TryFrom<&pm::Anchor> for Anchor {
@@ -50,8 +53,12 @@ impl TryFrom<&pm::Anchor> for Anchor {
                     y: 0
                 },
 
-            DeviceAdjustedCoord { .. } =>
-                return Err(CompileError::InvalidAnchor("DeviceAdjustedCoord")),
+            // FIXME: propagate device information
+            DeviceAdjustedCoord { x, y } =>
+                Self::Coord {
+                    x: x.metric.0 as i16,
+                    y: y.metric.0 as i16
+                },
 
             Named(_) =>
                 return Err(CompileError::InvalidAnchor("Named")),
@@ -110,6 +117,9 @@ impl TTFEncode for Anchor {
                     y,
                     contour_point
                 }),
+
+            &Self::DeviceAdjustedCoord { .. } =>
+                panic!("unimplemented device encode")
         }
     }
 }
