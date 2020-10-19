@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::cmp::Ordering;
+use std::borrow::Cow;
 
 use endian_codec::{PackedSize, EncodeBE};
 
@@ -30,22 +31,24 @@ impl Ord for EncodedTableTag {
     }
 }
 
-pub struct EncodedTables {
-    tables: BTreeMap<EncodedTableTag, Vec<u8>>,
+pub struct EncodedTables<'a> {
+    tables: BTreeMap<EncodedTableTag, Cow<'a, [u8]>>,
     pub(crate) head: Option<tables::Head>
 }
 
+#[inline]
 fn table_len<T: PackedSize>(_: &T) -> usize {
-    return util::align_len(T::PACKED_LEN);
+    util::align_len(T::PACKED_LEN)
 }
 
+#[inline]
 fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
     let start = v.len();
     v.resize(util::align_len(start + table_len(p)), 0u8);
     p.encode_as_be_bytes(&mut v[start..]);
 }
 
-impl EncodedTables {
+impl<'a> EncodedTables<'a> {
     pub fn new(head: Option<tables::Head>) -> Self {
         Self {
             tables: BTreeMap::new(),
@@ -53,17 +56,13 @@ impl EncodedTables {
         }
     }
 
-    pub fn add_table(&mut self, tag: Tag, encoded: Vec<u8>) {
-        self.tables.insert(EncodedTableTag(tag), encoded);
+    pub fn add_table(&mut self, tag: Tag, mut encoded: Vec<u8>) {
+        encoded.shrink_to_fit();
+        self.tables.insert(EncodedTableTag(tag), encoded.into());
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&Tag, &Vec<u8>)> + 'a {
-        self.tables.iter()
-            .map(|(tag, bytes)| (&tag.0, bytes))
-    }
-
-    pub fn len(&self) -> usize {
-        self.tables.len()
+    pub fn add_borrowed_table(&mut self, tag: Tag, encoded: &'a [u8]) {
+        self.tables.insert(EncodedTableTag(tag), encoded.into());
     }
 
     pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) {
