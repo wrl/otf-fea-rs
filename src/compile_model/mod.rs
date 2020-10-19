@@ -48,5 +48,6 @@ pub use value_record::{
 mod ttf_table;
 pub use ttf_table::*;
 
-mod compiler_state;
-pub use compiler_state::CompilerState;
+pub(crate) mod compiler_state;
+pub(crate) use compiler_state::CompilerState;
+pub use compiler_state::CompilerOutput;

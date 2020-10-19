@@ -33,8 +33,30 @@ pub struct CompilerState {
 
     pub anchor_table: HashMap<pm::AnchorName, Anchor>,
     pub glyph_class_table: HashMap<GlyphClassName, GlyphClass>,
+}
+
+pub struct CompilerOutput {
+    pub glyph_order: GlyphOrder,
+
+    pub head: Option<tables::Head>,
+    pub gpos: Option<tables::GPOS>,
+    pub gsub: Option<tables::GSUB>,
 
     pub tables_encoded: Vec<(Tag, Vec<u8>)>
+}
+
+impl From<CompilerState> for CompilerOutput {
+    fn from(state: CompilerState) -> Self {
+        CompilerOutput {
+            glyph_order: state.glyph_order,
+
+            head: state.head,
+            gpos: state.gpos,
+            gsub: state.gsub,
+
+            tables_encoded: Vec::new()
+        }
+    }
 }
 
 impl CompilerState {
@@ -51,8 +73,6 @@ impl CompilerState {
 
             anchor_table: HashMap::new(),
             glyph_class_table: HashMap::new(),
-
-            tables_encoded: Vec::new(),
         }
     }
 

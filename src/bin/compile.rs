@@ -64,11 +64,14 @@ fn main() {
 
     let f = File::open(&in_path).unwrap();
 
-    let statements = parser::parse_file(f).unwrap();
-    let mut buf: Vec<u8> = Vec::new();
-
     let glyph_order = fealib_builder_glyph_order();
-    compiler::compile(glyph_order, &statements, &mut buf);
+    let parsed = parser::parse_file(f).unwrap();
+
+    let mut compiled = compiler::compile(glyph_order, &parsed).unwrap();
+    compiled.encode_tables();
+
+    let mut buf: Vec<u8> = Vec::new();
+    compiled.encode_ttf_file(&mut buf);
 
     let mut f = File::create(&out_path).unwrap();
     f.write(&buf).unwrap();

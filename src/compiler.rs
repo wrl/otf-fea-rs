@@ -417,8 +417,8 @@ fn handle_table(ctx: &mut CompilerState, table: &pm::Table) {
         pm::TableTag::head =>
             ctx.head = Some(tables::Head::from_parsed_table(statements)),
         pm::TableTag::name => {
-            let table = tables::Name::from_parsed_table(statements);
-            ctx.tables_encoded.push((tag!(n,a,m,e), table.to_be()));
+            // let table = tables::Name::from_parsed_table(statements);
+            // ctx.tables_encoded.push((tag!(n,a,m,e), table.to_be()));
         }
 
         _ => panic!()
@@ -499,77 +499,119 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
     p.encode_as_be_bytes(&mut v[start..]);
 }
 
-fn prepare_head(ctx: &mut CompilerState) {
-    let mut head = match ctx.head {
-        Some(ref mut head) => head,
-        None => return
-    };
-
-    // all stuff to get a clean diff between our output and `spec9c1.ttf`
-    head.magic_number = 0;
-    head.created = 3406620153.into();
-    head.modified = 3647951938.into();
-    head.font_direction_hint = 0;
-
-    let mut encoded = vec![0u8; tables::Head::PACKED_LEN];
-    head.encode_as_be_bytes(&mut encoded);
-
-    ctx.tables_encoded.insert(0, (
-        tag!(h,e,a,d),
-        encoded
-    ));
-}
-
-fn actually_compile(ctx: &mut CompilerState, buf: &mut Vec<u8>) {
-    prepare_head(ctx);
-
-    let offset_table = TTFOffsetTable::new(
-        TTFVersion::TTF, ctx.tables_encoded.len() as u16);
-    write_into(buf, &offset_table);
-
-    let mut offset = util::align_len(buf.len() +
-        (ctx.tables_encoded.len() * TTFTableRecord::PACKED_LEN));
-    let mut running_checksum = 0u32;
-
-    for (tag, encoded) in ctx.tables_encoded.iter() {
-        let checksum = util::checksum(encoded);
-
-        let record = TTFTableRecord {
-            tag: *tag,
-            checksum,
-            offset_from_start_of_file: offset as u32,
-            length: encoded.len() as u32
+impl CompilerOutput {
+    fn prepare_head(&mut self) {
+        let mut head = match self.head {
+            Some(ref mut head) => head,
+            None => return
         };
 
-        write_into(buf, &record);
+        // all stuff to get a clean diff between our output and `spec9c1.ttf`
+        head.magic_number = 0;
+        head.created = 3406620153.into();
+        head.modified = 3647951938.into();
+        head.font_direction_hint = 0;
 
-        offset += util::align_len(encoded.len());
-        running_checksum = running_checksum.overflowing_add(checksum).0;
+        let mut encoded = vec![0u8; tables::Head::PACKED_LEN];
+        head.encode_as_be_bytes(&mut encoded);
+
+        self.tables_encoded.insert(0, (
+                tag!(h,e,a,d),
+                encoded
+        ));
     }
 
-    buf.resize(util::align_len(buf.len()), 0u8);
+    pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) {
+        self.prepare_head();
 
-    if let Some(ref mut head) = ctx.head {
-        head.checksum_adjustment = {
-            let whole_file_checksum = util::checksum(&buf);
+        let offset_table = TTFOffsetTable::new(
+            TTFVersion::TTF, self.tables_encoded.len() as u16);
+        write_into(buf, &offset_table);
 
-            0xB1B0AFBAu32
-                .overflowing_sub(
-                    whole_file_checksum
-                        .overflowing_add(running_checksum).0)
-                .0
-        };
+        let mut offset = util::align_len(buf.len() +
+            (self.tables_encoded.len() * TTFTableRecord::PACKED_LEN));
+        let mut running_checksum = 0u32;
 
-        head.encode_as_be_bytes(&mut ctx.tables_encoded[0].1);
-    }
+        for (tag, encoded) in self.tables_encoded.iter() {
+            let checksum = util::checksum(encoded);
 
-    for (_, encoded) in ctx.tables_encoded.iter() {
-        buf.extend(encoded.iter());
+            let record = TTFTableRecord {
+                tag: *tag,
+                checksum,
+                offset_from_start_of_file: offset as u32,
+                length: encoded.len() as u32
+            };
+
+            write_into(buf, &record);
+
+            offset += util::align_len(encoded.len());
+            running_checksum = running_checksum.overflowing_add(checksum).0;
+        }
+
         buf.resize(util::align_len(buf.len()), 0u8);
+
+        if let Some(ref mut head) = self.head {
+            head.checksum_adjustment = {
+                let whole_file_checksum = util::checksum(&buf);
+
+                0xB1B0AFBAu32
+                    .overflowing_sub(
+                        whole_file_checksum
+                        .overflowing_add(running_checksum).0)
+                    .0
+            };
+
+            head.encode_as_be_bytes(&mut self.tables_encoded[0].1);
+        }
+
+        for (_, encoded) in self.tables_encoded.iter() {
+            buf.extend(encoded.iter());
+            buf.resize(util::align_len(buf.len()), 0u8);
+        }
+    }
+
+    pub fn encode_tables(&mut self) {
+        macro_rules! encode_table {
+            ($table:ident, $tag:expr) => {
+                if let Some(table) = self.$table.as_ref() {
+                    let mut buf = EncodeBuf::new_with_glyph_order(&self.glyph_order);
+                    table.ttf_encode(&mut buf).unwrap();
+
+                    self.tables_encoded.push((
+                            $tag,
+                            buf.bytes
+                    ));
+                }
+            }
+        }
+
+        encode_table!(gpos, tag!(G,P,O,S));
+        encode_table!(gsub, tag!(G,S,U,B));
+    }
+
+    pub fn encode(&mut self, out: &mut Vec<u8>) {
+        if let Some(gpos) = self.gpos.as_ref() {
+            println!("{:#?}", gpos);
+        }
+
+        if let Some(gsub) = self.gsub.as_ref() {
+            println!("{:#?}", gsub);
+        }
+
+        println!();
+
+        // FIXME: "add head table" should be a compiler option
+        //
+        // if self.head_table.is_none() {
+        //     self.head_table = Some(tables::Head::new());
+        // }
+
+        self.encode_ttf_file(out);
     }
 }
 
-pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec<u8>) -> CompileResult<()>
+pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I)
+    -> CompileResult<CompilerOutput>
     where I: Iterator<Item = &'a pm::TopLevelStatement>
 {
     let mut ctx = CompilerState::new();
@@ -580,45 +622,11 @@ pub fn compile_iter<'a, I>(glyph_order: GlyphOrder, statements: I, out: &mut Vec
         handle_top_level(&mut ctx, &s)?;
     }
 
-    if let Some(gpos) = ctx.gpos.as_ref() {
-        println!("{:#?}", gpos);
-    }
-
-    if let Some(gsub) = ctx.gsub.as_ref() {
-        println!("{:#?}", gsub);
-    }
-
-    println!();
-
-    // FIXME: "add head table" should be a compiler option
-    //
-    // if ctx.head_table.is_none() {
-    //     ctx.head_table = Some(tables::Head::new());
-    // }
-
-    macro_rules! encode_table {
-        ($table:ident, $tag:expr) => {
-            if let Some(table) = ctx.$table.as_ref() {
-                let mut buf = EncodeBuf::new_with_glyph_order(&ctx.glyph_order);
-                table.ttf_encode(&mut buf).unwrap();
-
-                ctx.tables_encoded.push((
-                    $tag,
-                    buf.bytes
-                ));
-            }
-        }
-    }
-
-    encode_table!(gpos, tag!(G,P,O,S));
-    encode_table!(gsub, tag!(G,S,U,B));
-
-    actually_compile(&mut ctx, out);
-
-    Ok(())
+    Ok(ctx.into())
 }
 
-pub fn compile(glyph_order: GlyphOrder, statements: &[pm::TopLevelStatement],
-        out: &mut Vec<u8>) {
-    compile_iter(glyph_order, statements.iter(), out).unwrap()
+#[inline]
+pub fn compile(glyph_order: GlyphOrder, statements: &[pm::TopLevelStatement])
+    -> CompileResult<CompilerOutput> {
+    compile_iter(glyph_order, statements.iter())
 }
