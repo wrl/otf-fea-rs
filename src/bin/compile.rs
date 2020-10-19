@@ -68,10 +68,19 @@ fn main() {
     let parsed = parser::parse_file(f).unwrap();
 
     let mut compiled = compiler::compile(glyph_order, &parsed).unwrap();
-    compiled.encode_tables();
+
+    if let Some(ref mut head) = compiled.head {
+        // all stuff to get a clean diff between our output and `spec9c1.ttf`
+        head.magic_number = 0;
+        head.created = 3406620153.into();
+        head.modified = 3647951938.into();
+        head.font_direction_hint = 0;
+    }
+
+    let mut tables = compiled.encode_tables();
 
     let mut buf: Vec<u8> = Vec::new();
-    compiled.encode_ttf_file(&mut buf);
+    tables.encode_ttf_file(&mut buf);
 
     let mut f = File::create(&out_path).unwrap();
     f.write(&buf).unwrap();

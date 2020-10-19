@@ -1,15 +1,12 @@
 use std::convert::TryInto;
 use std::iter;
 
-use endian_codec::{PackedSize, EncodeBE};
-
 use crate::*;
 use crate::glyph_class::*;
 use crate::util::*;
 
 use crate::compile_model::*;
 use crate::compile_model::util::encode::*;
-use crate::compile_model::util;
 
 use crate::parse_model as pm;
 
@@ -489,124 +486,25 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
  * todo: move this out into a separate file
  */
 
-fn table_len<T: PackedSize>(_: &T) -> usize {
-    return util::align_len(T::PACKED_LEN);
-}
-
-fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
-    let start = v.len();
-    v.resize(util::align_len(start + table_len(p)), 0u8);
-    p.encode_as_be_bytes(&mut v[start..]);
-}
-
 impl CompilerOutput {
-    fn prepare_head(&mut self) {
-        let mut head = match self.head {
-            Some(ref mut head) => head,
-            None => return
-        };
+    pub fn encode_tables(&mut self) -> EncodedTables {
+        let mut encoded = EncodedTables::new(self.head.clone());
 
-        // all stuff to get a clean diff between our output and `spec9c1.ttf`
-        head.magic_number = 0;
-        head.created = 3406620153.into();
-        head.modified = 3647951938.into();
-        head.font_direction_hint = 0;
-
-        let mut encoded = vec![0u8; tables::Head::PACKED_LEN];
-        head.encode_as_be_bytes(&mut encoded);
-
-        self.tables_encoded.insert(0, (
-                tag!(h,e,a,d),
-                encoded
-        ));
-    }
-
-    pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) {
-        self.prepare_head();
-
-        let offset_table = TTFOffsetTable::new(
-            TTFVersion::TTF, self.tables_encoded.len() as u16);
-        write_into(buf, &offset_table);
-
-        let mut offset = util::align_len(buf.len() +
-            (self.tables_encoded.len() * TTFTableRecord::PACKED_LEN));
-        let mut running_checksum = 0u32;
-
-        for (tag, encoded) in self.tables_encoded.iter() {
-            let checksum = util::checksum(encoded);
-
-            let record = TTFTableRecord {
-                tag: *tag,
-                checksum,
-                offset_from_start_of_file: offset as u32,
-                length: encoded.len() as u32
-            };
-
-            write_into(buf, &record);
-
-            offset += util::align_len(encoded.len());
-            running_checksum = running_checksum.overflowing_add(checksum).0;
-        }
-
-        buf.resize(util::align_len(buf.len()), 0u8);
-
-        if let Some(ref mut head) = self.head {
-            head.checksum_adjustment = {
-                let whole_file_checksum = util::checksum(&buf);
-
-                0xB1B0AFBAu32
-                    .overflowing_sub(
-                        whole_file_checksum
-                        .overflowing_add(running_checksum).0)
-                    .0
-            };
-
-            head.encode_as_be_bytes(&mut self.tables_encoded[0].1);
-        }
-
-        for (_, encoded) in self.tables_encoded.iter() {
-            buf.extend(encoded.iter());
-            buf.resize(util::align_len(buf.len()), 0u8);
-        }
-    }
-
-    pub fn encode_tables(&mut self) {
         macro_rules! encode_table {
             ($table:ident, $tag:expr) => {
                 if let Some(table) = self.$table.as_ref() {
                     let mut buf = EncodeBuf::new_with_glyph_order(&self.glyph_order);
                     table.ttf_encode(&mut buf).unwrap();
 
-                    self.tables_encoded.push((
-                            $tag,
-                            buf.bytes
-                    ));
+                    encoded.add_table($tag, buf.bytes);
                 }
             }
         }
 
         encode_table!(gpos, tag!(G,P,O,S));
         encode_table!(gsub, tag!(G,S,U,B));
-    }
 
-    pub fn encode(&mut self, out: &mut Vec<u8>) {
-        if let Some(gpos) = self.gpos.as_ref() {
-            println!("{:#?}", gpos);
-        }
-
-        if let Some(gsub) = self.gsub.as_ref() {
-            println!("{:#?}", gsub);
-        }
-
-        println!();
-
-        // FIXME: "add head table" should be a compiler option
-        //
-        // if self.head_table.is_none() {
-        //     self.head_table = Some(tables::Head::new());
-        // }
-
-        self.encode_ttf_file(out);
+        encoded
     }
 }
 

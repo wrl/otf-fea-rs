@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use crate::{
-    GlyphOrder,
-    Tag
-};
+use crate::GlyphOrder;
 
 use crate::glyph_class::*;
 
@@ -40,9 +37,7 @@ pub struct CompilerOutput {
 
     pub head: Option<tables::Head>,
     pub gpos: Option<tables::GPOS>,
-    pub gsub: Option<tables::GSUB>,
-
-    pub tables_encoded: Vec<(Tag, Vec<u8>)>
+    pub gsub: Option<tables::GSUB>
 }
 
 impl From<CompilerState> for CompilerOutput {
@@ -53,8 +48,6 @@ impl From<CompilerState> for CompilerOutput {
             head: state.head,
             gpos: state.gpos,
             gsub: state.gsub,
-
-            tables_encoded: Vec::new()
         }
     }
 }
