@@ -80,7 +80,7 @@ fn main() {
     let mut tables = compiled.encode_tables();
 
     let mut buf: Vec<u8> = Vec::new();
-    tables.encode_ttf_file(&mut buf);
+    tables.encode_ttf_file(&mut buf).unwrap();
 
     let mut f = File::create(&out_path).unwrap();
     f.write(&buf).unwrap();

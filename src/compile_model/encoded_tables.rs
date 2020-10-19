@@ -8,6 +8,7 @@ use crate::*;
 use crate::Tag;
 use crate::compile_model::*;
 use crate::compile_model::util;
+use crate::compile_model::util::encode::*;
 
 use super::tables;
 
@@ -65,7 +66,7 @@ impl<'a> EncodedTables<'a> {
         self.tables.insert(EncodedTableTag(tag), encoded.into());
     }
 
-    pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) {
+    pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) -> EncodeResult<()> {
         let offset_table = TTFOffsetTable::new(TTFVersion::TTF, self.tables.len() as u16);
         write_into(buf, &offset_table);
 
@@ -101,12 +102,20 @@ impl<'a> EncodedTables<'a> {
                         .overflowing_add(running_checksum).0)
                     .0
             };
+
+            let empty_glyph_order = GlyphOrder::new();
+            let mut encoder = EncodeBuf::new_with_glyph_order(&empty_glyph_order);
+            head.ttf_encode(&mut encoder)?;
+
+            self.tables.insert(EncodedTableTag(tag!(h,e,a,d)), encoder.bytes.into());
         }
 
         for (_, encoded) in self.tables.iter() {
             buf.extend(encoded.iter());
             buf.resize(util::align_len(buf.len()), 0u8);
         }
+
+        Ok(())
     }
 }
 
