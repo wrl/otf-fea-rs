@@ -4,6 +4,9 @@ use crate::compile_model::lookup::*;
 use crate::util::variant::*;
 
 
+mod single;
+pub use single::*;
+
 mod pair_glyphs;
 pub use pair_glyphs::*;
 
@@ -57,12 +60,14 @@ macro_rules! impl_subtable_for {
 
 #[derive(Debug)]
 pub enum GPOSLookup {
+    Single(Lookup<Single>),
     Pair(Lookup<Pair>),
     Cursive(Lookup<Cursive>),
     MarkToBase(Lookup<MarkToBase>),
     MarkToMark(Lookup<MarkToMark>),
 }
 
+impl_subtable_for!(Single);
 impl_subtable_for!(Pair);
 impl_subtable_for!(Cursive);
 impl_subtable_for!(MarkToBase);
@@ -82,6 +87,7 @@ impl TTFDecode for GPOSLookup {
 impl TTFEncode for GPOSLookup {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
+            GPOSLookup::Single(lookup) => lookup.ttf_encode_with_lookup_type(buf, 1),
             GPOSLookup::Pair(lookup) => lookup.ttf_encode_with_lookup_type(buf, 2),
             GPOSLookup::Cursive(lookup) => lookup.ttf_encode_with_lookup_type(buf, 3),
             GPOSLookup::MarkToBase(lookup) => lookup.ttf_encode_with_lookup_type(buf, 4),

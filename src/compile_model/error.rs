@@ -14,6 +14,9 @@ pub enum CompileError {
     #[error("unknown mark class \"{0}\"")]
     UnknownMarkClass(String),
 
+    #[error("unknown glyph class \"{0}\"")]
+    UnknownGlyphClass(String),
+
     #[error("tried to compile an invalid anchor type {0}")]
     InvalidAnchor(&'static str),
 

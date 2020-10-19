@@ -187,7 +187,18 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
                 ..Self::zero()
             },
 
-            DeviceAdjusted { .. } => panic!(),
+            // FIXME: device
+            DeviceAdjusted {
+                x_placement, y_placement,
+                x_advance, y_advance
+            } => Self {
+                x_placement: metric_to_i16_checked(&x_placement.metric),
+                y_placement: metric_to_i16_checked(&y_placement.metric),
+                x_advance: metric_to_i16_checked(&x_advance.metric),
+                y_advance: metric_to_i16_checked(&y_advance.metric),
+
+                ..Self::zero()
+            },
 
             Null => Self::zero(),
         }

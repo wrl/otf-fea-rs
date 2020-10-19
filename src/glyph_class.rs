@@ -1,7 +1,9 @@
 use std::fmt;
 use std::iter;
+use std::collections::HashMap;
 
 use crate::glyph_order::*;
+use crate::compile_model::*;
 use crate::glyph::*;
 use crate::util::*;
 
@@ -96,6 +98,50 @@ impl GlyphClass {
                 }
         )
     }
+
+    pub fn iter_glyphs_lookup<'a>(&'a self, glyph_order: &'a GlyphOrder,
+            gc_table: &'a HashMap<GlyphClassName, GlyphClass>)
+            -> impl Iterator<Item = Result<u16, CompileError>> + 'a {
+        use GlyphClassItem::*;
+
+        self.0.iter()
+            .flat_map(move |i: &GlyphClassItem|
+                match i {
+                    Single(glyph) => {
+                        Either3::A(iter::once(
+                            glyph_order.id_for_glyph(glyph)
+                                .map_err(|e| e.into())
+                        ))
+                    },
+
+                    Range { start, end } => {
+                        let start = match glyph_order.id_for_glyph(start) {
+                            Ok(id) => id,
+                            Err(e) => return Either3::A(iter::once(Err(e.into())))
+                        };
+
+                        let end = match glyph_order.id_for_glyph(end) {
+                            Ok(id) => id,
+                            Err(e) => return Either3::A(iter::once(Err(e.into())))
+                        };
+
+                        Either3::B((start..end+1).map(Ok))
+                    },
+
+                    ClassRef(name) => match gc_table.get(name) {
+                        // FIXME: recursive glyph classes
+                        Some(gc) => Either3::C(
+                            gc.iter_glyphs(glyph_order)
+                                .map(|r| r.map_err(|e| e.into()))
+                        ),
+
+                        None => Either3::A(iter::once(Err(
+                            CompileError::UnknownGlyphClass(name.into())
+                        )))
+                    }
+                }
+        )
+    }
 }
 
 /////////////////////////
@@ -104,6 +150,12 @@ impl GlyphClass {
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct GlyphClassName(pub GlyphNameStorage);
+
+impl From<&GlyphClassName> for String {
+    fn from(name: &GlyphClassName) -> String {
+        name.0.as_str().into()
+    }
+}
 
 impl fmt::Debug for GlyphClassName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

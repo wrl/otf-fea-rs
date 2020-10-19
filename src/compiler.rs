@@ -4,6 +4,7 @@ use std::iter;
 use endian_codec::{PackedSize, EncodeBE};
 
 use crate::*;
+use crate::glyph_class::*;
 use crate::util::*;
 
 use crate::compile_model::*;
@@ -103,6 +104,22 @@ impl<'a> Block<'a> {
 /**
  * feature definitions
  */
+
+fn handle_single_adjustment_position(ctx: &mut CompilerState, block: &Block,
+    pos: &pm::position::SingleAdjustment) -> CompileResult<()> {
+
+    let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
+    let lookup: &mut Lookup<gpos::Single> = block.find_or_insert_lookup(gpos);
+    let subtable = lookup.get_subtable(block.subtable_breaks);
+
+    let vr = ValueRecord::from_parsed(&pos.value_record, block.is_vertical());
+
+    for glyph in pos.glyph_class.iter_glyphs_lookup(&ctx.glyph_order, &ctx.glyph_class_table) {
+        subtable.add_glyph(glyph?, vr.clone());
+    }
+
+    Ok(())
+}
 
 fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm::position::Pair) -> CompileResult<()> {
     let pm::position::Pair {
@@ -261,8 +278,11 @@ fn handle_position_statement(ctx: &mut CompilerState, block: &Block, p: &pm::Pos
     block.insert_into_script(gpos, &script_tag!(D,F,L,T));
 
     match p {
+        SingleAdjustment(adj) => handle_single_adjustment_position(ctx, block, adj),
+
         Pair(pair) => handle_pair_position(ctx, block, pair),
         Cursive(cursive) => handle_cursive_position(ctx, block, cursive),
+
         MarkToBase(m2b) => handle_mark_to_base_position(ctx, block, m2b),
         MarkToMark(m2m) => handle_mark_to_mark_position(ctx, block, m2m),
 
@@ -435,6 +455,12 @@ fn handle_anchor_definition(ctx: &mut CompilerState, anchor_def: &pm::AnchorDefi
     Ok(())
 }
 
+fn handle_glyph_class_definition(ctx: &mut CompilerState, cls: &NamedGlyphClass) -> CompileResult<()> {
+    ctx.glyph_class_table.insert(cls.name.clone(), cls.glyph_class.clone());
+
+    Ok(())
+}
+
 fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) -> CompileResult<()> {
     use pm::TopLevelStatement::*;
 
@@ -446,6 +472,7 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
         FeatureDefinition(ref fd) => handle_feature_definition(ctx, fd)?,
         LookupDefinition(ref ld) => handle_lookup_definition(ctx, ld)?,
         AnchorDefinition(ref ad) => handle_anchor_definition(ctx, ad)?,
+        NamedGlyphClass(ref gc) => handle_glyph_class_definition(ctx, gc)?,
 
         MarkClass(ref mc) => handle_mark_class_statement(ctx, mc)?,
 

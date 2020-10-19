@@ -32,6 +32,7 @@ pub struct CompilerState {
     pub mark_class_table: HashMap<pm::MarkClassName, MarkClassData>,
 
     pub anchor_table: HashMap<pm::AnchorName, Anchor>,
+    pub glyph_class_table: HashMap<GlyphClassName, GlyphClass>,
 
     pub tables_encoded: Vec<(Tag, Vec<u8>)>
 }
@@ -49,6 +50,7 @@ impl CompilerState {
             mark_class_table: HashMap::new(),
 
             anchor_table: HashMap::new(),
+            glyph_class_table: HashMap::new(),
 
             tables_encoded: Vec::new(),
         }

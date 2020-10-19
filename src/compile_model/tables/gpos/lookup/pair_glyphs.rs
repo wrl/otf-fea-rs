@@ -164,16 +164,21 @@ impl TTFEncode for PairGlyphs {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
-        let value_formats = self.values()
-            .map(|records| {
-                records.iter().fold((0u16, 0u16), |vr, pair|
-                    (vr.0 | pair.records.0.smallest_possible_format(),
-                        vr.1 | pair.records.1.smallest_possible_format()))
-            })
-            .fold((0u16, 0u16), |vr, smallest| {
-                    (vr.0 | smallest.0,
-                        vr.1 | smallest.1)
-            });
+        let value_formats = match self.common_value_formats {
+            Some(vf) => vf,
+            None => {
+                self.values()
+                    .map(|records| {
+                        records.iter().fold((0u16, 0u16), |vr, pair|
+                            (vr.0 | pair.records.0.smallest_possible_format(),
+                            vr.1 | pair.records.1.smallest_possible_format()))
+                    })
+                    .fold((0u16, 0u16), |vr, smallest| {
+                        (vr.0 | smallest.0,
+                         vr.1 | smallest.1)
+                    })
+            }
+        };
 
         buf.encode_pool_with_header(
             |buf| Ok(PairPosFormat1Header {
