@@ -8,7 +8,7 @@ use crate::compile_model::value_record::*;
 use crate::compile_model::coverage::*;
 
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PairValueRecord {
     pub second_glyph: u16,
     pub records: (ValueRecord, ValueRecord)

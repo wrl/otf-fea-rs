@@ -8,7 +8,7 @@ use crate::compile_model::error::*;
 
 use crate::parse_model as pm;
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct ValueRecord {
     pub x_placement: i16,
     pub y_placement: i16,

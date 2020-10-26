@@ -15,8 +15,8 @@ use super::util::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeviceAdjustment {
-    ppem_size: isize,
-    pixel_adjustment: isize
+    pub ppem_size: isize,
+    pub pixel_adjustment: isize
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -8,6 +8,14 @@ pub type CompileResult<T> = Result<T, CompileError>;
 
 #[derive(Debug, Error)]
 pub enum CompileError {
+    #[error("{ty} Overflow ({scope}::{item} is {value})")]
+    Overflow {
+        ty: &'static str,
+        scope: String,
+        item: &'static str,
+        value: usize
+    },
+
     #[error("mark classes cannot be defined or amended after first reference in a position statement")]
     MarkClassNotAllowed,
 
