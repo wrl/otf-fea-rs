@@ -109,7 +109,7 @@ fn handle_single_adjustment_position(ctx: &mut CompilerState, block: &Block,
     let lookup: &mut Lookup<gpos::Single> = block.find_or_insert_lookup(gpos);
     let subtable = lookup.get_subtable(block.subtable_breaks);
 
-    let vr = ValueRecord::from_parsed(&pos.value_record, block.is_vertical());
+    let vr = ValueRecord::from_parsed(&pos.value_record, block.is_vertical())?;
 
     for glyph in pos.glyph_class.iter_glyphs_lookup(&ctx.glyph_order, &ctx.glyph_class_table) {
         subtable.add_glyph(glyph?, vr.clone());
@@ -129,8 +129,8 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
 
     let vertical = block.is_vertical();
 
-    let vr1 = ValueRecord::from_parsed(&value_records.0, vertical);
-    let vr2 = ValueRecord::from_parsed(&value_records.1, vertical);
+    let vr1 = ValueRecord::from_parsed(&value_records.0, vertical)?;
+    let vr2 = ValueRecord::from_parsed(&value_records.1, vertical)?;
 
     let value_formats = (
         vr1.smallest_possible_format(),
@@ -174,8 +174,8 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     );
 
     let value_records = (
-        ValueRecord::from_parsed(&value_records.0, vertical),
-        ValueRecord::from_parsed(&value_records.1, vertical)
+        ValueRecord::from_parsed(&value_records.0, vertical)?,
+        ValueRecord::from_parsed(&value_records.1, vertical)?
     );
 
     let mut skip = block.subtable_breaks;

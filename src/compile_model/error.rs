@@ -55,6 +55,9 @@ pub enum EncodeError {
         value: usize
     },
 
+    #[error("value record format includes fields which are not presetn")]
+    ValueRecordFormatMismatch,
+
     #[error("{0} referenced tag {1}, which is not in the feature list")]
     TagNotInFeatureList(&'static str, FeatureTag),
 
