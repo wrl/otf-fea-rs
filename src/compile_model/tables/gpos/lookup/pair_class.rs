@@ -143,8 +143,8 @@ impl TTFEncode for PairClass {
             |buf| {
                 for x in &classes.0 {
                     // class 2 id 0
-                    null_vr.encode_to_format(buf, value_formats.0)?;
-                    null_vr.encode_to_format(buf, value_formats.1)?;
+                    null_vr.encode_to_format(buf, value_formats.0, start)?;
+                    null_vr.encode_to_format(buf, value_formats.1, start)?;
 
                     for y in &classes.1 {
                         // FIXME: clone. why the hell?
@@ -153,8 +153,8 @@ impl TTFEncode for PairClass {
                             None => (&null_vr, &null_vr)
                         };
 
-                        intersect.0.encode_to_format(buf, value_formats.0)?;
-                        intersect.1.encode_to_format(buf, value_formats.1)?;
+                        intersect.0.encode_to_format(buf, value_formats.0, start)?;
+                        intersect.1.encode_to_format(buf, value_formats.1, start)?;
                     }
                 }
 

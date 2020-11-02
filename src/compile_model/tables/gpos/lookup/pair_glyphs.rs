@@ -81,11 +81,12 @@ impl PairValueRecord {
         }
     }
 
-    fn encode_with_vf(&self, buf: &mut EncodeBuf, value_formats: (u16, u16)) -> EncodeResult<()> {
+    fn encode_with_vf(&self, buf: &mut EncodeBuf, value_formats: (u16, u16), pair_set_start: usize)
+            -> EncodeResult<()> {
         buf.append(&self.second_glyph)?;
 
-        self.records.0.encode_to_format(buf, value_formats.0)?;
-        self.records.1.encode_to_format(buf, value_formats.1)?;
+        self.records.0.encode_to_format(buf, value_formats.0, pair_set_start)?;
+        self.records.1.encode_to_format(buf, value_formats.1, pair_set_start)?;
 
         Ok(())
     }
@@ -192,10 +193,12 @@ impl TTFEncode for PairGlyphs {
             self.values(),
             |offset, _| offset,
             |buf, &set| {
+                let pair_set_start = buf.bytes.len();
+
                 buf.append(&(set.len() as u16))?;
 
                 for pair in set {
-                    pair.encode_with_vf(buf, value_formats)?;
+                    pair.encode_with_vf(buf, value_formats, pair_set_start)?;
                 }
 
                 Ok(())

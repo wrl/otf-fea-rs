@@ -46,7 +46,7 @@ impl TTFEncode for Single {
         buf.bytes.resize(start + SinglePosFormat1Header::PACKED_LEN, 0u8);
 
         for vr in self.glyphs.values() {
-            vr.encode_to_format(buf, value_format)?;
+            vr.encode_to_format(buf, value_format, start)?;
         }
 
         let header = SinglePosFormat1Header {

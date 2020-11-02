@@ -144,7 +144,8 @@ impl ValueRecord {
     }
 
     #[allow(unused_assignments)]
-    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16) -> EncodeResult<()> {
+    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16, _parent_table_start: usize)
+            -> EncodeResult<()> {
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
