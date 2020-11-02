@@ -86,6 +86,11 @@ macro_rules! pack_ppem_base {
 }
 
 impl Device {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.adjustments.is_empty()
+    }
+
     fn pack_eights(&self, start_ppem: u16, end_ppem: u16, buf: &mut EncodeBuf) -> EncodeResult<()> {
         let mut range = start_ppem ..= end_ppem;
         let mut done = false;

@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 use std::fmt;
 
+use endian_codec::PackedSize;
+
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::device::*;
@@ -144,7 +146,7 @@ impl ValueRecord {
     }
 
     #[allow(unused_assignments)]
-    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16, _parent_table_start: usize)
+    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16, parent_table_start: usize)
             -> EncodeResult<()> {
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
@@ -154,20 +156,30 @@ impl ValueRecord {
             }
         }
 
-        macro_rules! write_if_device_in_format {
-            ($shift:expr, $var:ident) => {
-                if (format & (1u16 << $shift)) != 0 {
-                    let dev = self.$var.as_ref()
-                        .ok_or(EncodeError::ValueRecordFormatMismatch)?;
-                    buf.append(dev)?;
-                }
-            }
-        }
-
         write_if_in_format!(0, x_placement);
         write_if_in_format!(1, y_placement);
         write_if_in_format!(2, x_advance);
         write_if_in_format!(3, y_advance);
+
+        let mut device_offset = buf.bytes.len();
+        buf.bytes.resize(device_offset
+            + (((format & 0xF0).count_ones() as usize) * u16::PACKED_LEN), 0u8);
+
+        macro_rules! write_if_device_in_format {
+            ($shift:expr, $var:ident) => {
+                if (format & (1u16 << $shift)) != 0 {
+                    let offset = match self.$var.as_ref() {
+                        Some(dev) if !dev.is_empty() =>
+                            (buf.append(dev)? - parent_table_start) as u16,
+
+                        _ => 0u16
+                    };
+
+                    buf.encode_at(&offset, device_offset)?;
+                    device_offset += u16::PACKED_LEN;
+                }
+            }
+        }
 
         write_if_device_in_format!(4, x_placement_device);
         write_if_device_in_format!(5, y_placement_device);
