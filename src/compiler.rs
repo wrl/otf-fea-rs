@@ -107,12 +107,17 @@ fn handle_single_adjustment_position(ctx: &mut CompilerState, block: &Block,
 
     let gpos = ctx.gpos.get_or_insert_with(|| tables::GPOS::new());
     let lookup: &mut Lookup<gpos::Single> = block.find_or_insert_lookup(gpos);
-    let subtable = lookup.get_subtable(block.subtable_breaks);
 
     let vr = ValueRecord::from_parsed(&pos.value_record, block.is_vertical())?;
 
     for glyph in pos.glyph_class.iter_glyphs_lookup(&ctx.glyph_order, &ctx.glyph_class_table) {
-        subtable.add_glyph(glyph?, vr.clone());
+        let glyph = glyph?;
+
+        let subtable = lookup.get_subtable_filter(block.subtable_breaks,
+            |subtable| subtable.can_add(glyph, &vr),
+            || gpos::Single::default());
+
+        subtable.add_glyph(glyph, vr.clone());
     }
 
     Ok(())

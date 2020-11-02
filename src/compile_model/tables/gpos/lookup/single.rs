@@ -7,7 +7,7 @@ use crate::compile_model::coverage::*;
 
 #[derive(Debug)]
 pub struct Single {
-    pub glyphs: CoverageLookup<ValueRecord>
+    glyphs: CoverageLookup<ValueRecord>
 }
 
 impl Single {
@@ -19,6 +19,13 @@ impl Single {
 
     pub fn add_glyph(&mut self, glyph: u16, value_record: ValueRecord) {
         self.glyphs.insert(glyph, value_record);
+    }
+
+    pub fn can_add(&self, glyph: u16, value_record: &ValueRecord) -> bool {
+        match self.glyphs.get(&glyph) {
+            Some(vr) if vr != value_record => false,
+            _ => true
+        }
     }
 }
 

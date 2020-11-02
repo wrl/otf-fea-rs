@@ -81,6 +81,30 @@ impl<T> Lookup<T> {
         V::get_variant_mut(&mut self.subtables[idx]).unwrap()
     }
 
+    pub fn get_subtable_filter<P, N>(&mut self, skip: usize, pred: P, new: N) -> &mut T
+        where P: Fn(&T) -> bool,
+              N: FnOnce() -> T
+    {
+        let idx = self.subtables.iter().enumerate()
+            .filter_map(|(idx, subtable)| {
+                if pred(subtable) {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .skip(skip)
+            .next()
+
+            .unwrap_or_else(|| {
+                let idx = self.subtables.len();
+                self.subtables.push(new().into());
+                idx
+            });
+
+        &mut self.subtables[idx]
+    }
+
     pub fn get_subtable(&mut self, skip: usize) -> &mut T
         where T: Default
     {
