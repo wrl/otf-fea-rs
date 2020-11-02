@@ -69,11 +69,11 @@ macro_rules! pack_ppem_base {
         match $range.next() {
             Some(ppem) => match $self.adjustments.get(&ppem) {
                 Some(adj) => {
-                    let adj = *adj as u16;
+                    let adj = *adj as u8;
                     let sign = ((adj & (1 << 7)) != 0) as u16;
-                    let mask = (1 << ($bits - 2)) - 1;
+                    let mask = (1 << ($bits - 1)) - 1;
 
-                    (adj & mask) | (sign << ($bits - 1))
+                    ((adj as u16) & mask) | (sign << ($bits - 1))
                 },
                 None => 0u16
             },
