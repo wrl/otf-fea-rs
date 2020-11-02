@@ -7,31 +7,20 @@ use crate::compile_model::coverage::*;
 
 #[derive(Debug)]
 pub struct Single {
-    glyphs: CoverageLookup<ValueRecord>
+    glyphs: CoverageLookup<()>,
+    value_record: ValueRecord
 }
 
 impl Single {
-    pub fn new() -> Self {
+    pub fn new(value_record: ValueRecord) -> Self {
         Self {
-            glyphs: CoverageLookup::new()
+            glyphs: CoverageLookup::new(),
+            value_record,
         }
     }
 
-    pub fn add_glyph(&mut self, glyph: u16, value_record: ValueRecord) {
-        self.glyphs.insert(glyph, value_record);
-    }
-
-    pub fn can_add(&self, glyph: u16, value_record: &ValueRecord) -> bool {
-        match self.glyphs.get(&glyph) {
-            Some(vr) if vr != value_record => false,
-            _ => true
-        }
-    }
-}
-
-impl Default for Single {
-    fn default() -> Self {
-        Self::new()
+    pub fn add_glyph(&mut self, glyph: u16) {
+        self.glyphs.insert(glyph, ());
     }
 }
 
@@ -46,22 +35,19 @@ impl TTFEncode for Single {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
-        let value_format = self.glyphs.values()
-            .map(|vr| vr.smallest_possible_format())
-            .fold(0u16, |vr, smallest| vr | smallest);
+        let value_format = self.value_record.smallest_possible_format();
 
-        buf.bytes.resize(start + SinglePosFormat1Header::PACKED_LEN, 0u8);
+        buf.defer_header_encode(
+            |buf| Ok(SinglePosFormat1Header {
+                format: 1,
+                coverage_offset: (self.glyphs.ttf_encode(buf)? - start) as u16,
+                value_format
+            }),
 
-        for vr in self.glyphs.values() {
-            vr.encode_to_format(buf, value_format, start)?;
-        }
+            |buf| {
+                self.value_record.encode_to_format(buf, value_format, start)
+            })?;
 
-        let header = SinglePosFormat1Header {
-            format: 1,
-            coverage_offset: (self.glyphs.ttf_encode(buf)? - start) as u16,
-            value_format
-        };
-
-        buf.encode_at(&header, start)
+        Ok(start)
    }
 }
