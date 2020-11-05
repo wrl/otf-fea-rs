@@ -5,7 +5,10 @@ use combine::{
 };
 
 use crate::parser::*;
-use crate::*;
+use crate::{
+    ScriptTag,
+    LanguageTag
+};
 
 use super::language::*;
 use super::script::*;

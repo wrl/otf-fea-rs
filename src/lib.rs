@@ -4,10 +4,12 @@ pub use glyph_order::{
     IntoGlyphOrder
 };
 
-pub mod parser;
-
 #[macro_use]
 pub mod parse_model;
+pub mod parser;
+
+mod positioned;
+pub use positioned::*;
 
 pub mod compiler;
 pub mod compile_model;

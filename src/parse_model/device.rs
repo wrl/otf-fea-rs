@@ -13,6 +13,10 @@ use combine::{
 use crate::parser::*;
 use super::util::*;
 
+use crate::Positioned;
+use super::positioned::*;
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeviceAdjustment {
     pub ppem_size: Positioned<isize>,
