@@ -7,11 +7,19 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::error::*;
 use crate::parse_model as pm;
 
+use crate::SourceSpan;
+use crate::compile_model::CompiledEntry;
+
+
+
 #[derive(Debug, Clone)]
 pub enum Anchor {
     Coord {
         x: i16,
-        y: i16
+        y: i16,
+
+        x_span: Option<SourceSpan>,
+        y_span: Option<SourceSpan>
     },
 
     ContourCoord {
@@ -36,7 +44,10 @@ impl TryFrom<&pm::Anchor> for Anchor {
             Coord { x, y } =>
                 Self::Coord {
                     x: x.value as i16,
-                    y: y.value as i16
+                    y: y.value as i16,
+
+                    x_span: Some(x.span.clone()),
+                    y_span: Some(y.span.clone())
                 },
 
             ContourCoord { x, y, contour_point } =>
@@ -50,14 +61,20 @@ impl TryFrom<&pm::Anchor> for Anchor {
             Null =>
                 Self::Coord {
                     x: 0,
-                    y: 0
+                    y: 0,
+
+                    x_span: None,
+                    y_span: None,
                 },
 
             // FIXME: propagate device information
             DeviceAdjustedCoord { x, y } =>
                 Self::Coord {
                     x: x.metric.value as i16,
-                    y: y.metric.value as i16
+                    y: y.metric.value as i16,
+
+                    x_span: None,
+                    y_span: None,
                 },
 
             Named(_) =>
@@ -77,7 +94,10 @@ impl From<AnchorFormat1> for Anchor {
     fn from(encoded: AnchorFormat1) -> Self {
         Self::Coord {
             x: encoded.x,
-            y: encoded.y
+            y: encoded.y,
+
+            x_span: None,
+            y_span: None
         }
     }
 }
@@ -103,12 +123,25 @@ impl From<AnchorFormat2> for Anchor {
 impl TTFEncode for Anchor {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         match self {
-            &Self::Coord { x, y } =>
-                buf.append(&AnchorFormat1 {
+            &Self::Coord { x, y, ref x_span, ref y_span } => {
+                let start = buf.append(&AnchorFormat1 {
                     format: 1,
                     x,
                     y
-                }),
+                })?;
+
+                if let Some(x_span) = x_span {
+                    let x_loc = start + u16::PACKED_LEN; // skip `format`
+                    buf.add_source_map_entry(x_span, CompiledEntry::I16(x_loc));
+                }
+
+                if let Some(y_span) = y_span {
+                    let y_loc = start + (u16::PACKED_LEN * 2); // skip `format` and `x`
+                    buf.add_source_map_entry(y_span, CompiledEntry::I16(y_loc));
+                }
+
+                Ok(start)
+            },
 
             &Self::ContourCoord { x, y, contour_point } =>
                 buf.append(&AnchorFormat2 {

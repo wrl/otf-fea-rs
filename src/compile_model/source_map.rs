@@ -8,7 +8,7 @@ use crate::SourceSpan;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum CompiledEntry {
-    U16(usize)
+    I16(usize)
 }
 
 pub type SourceMap = HashMap<SourceSpan, HashSet<CompiledEntry>>;

@@ -13,7 +13,12 @@ use hashbrown::{
 use endian_codec::EncodeBE;
 
 
-use crate::compile_model::SourceMap;
+use crate::compile_model::{
+    SourceMap,
+    CompiledEntry
+};
+
+use crate::SourceSpan;
 
 use crate::glyph_order::*;
 pub use crate::compile_model::error::{
@@ -39,6 +44,13 @@ impl<'a> EncodeBuf<'a> {
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         &*self.bytes
+    }
+
+    #[inline]
+    pub(crate) fn add_source_map_entry(&mut self, span: &SourceSpan, entry: CompiledEntry) {
+        self.source_map.entry(span.clone())
+            .or_default()
+            .insert(entry);
     }
 
     #[inline]
