@@ -213,3 +213,28 @@ pub(crate) fn keyword<Input>() -> impl Parser<Input, Output = String>
     // from_utf8_unchecked() is safe here because letter() only matches ASCII chars.
     many1(letter()).map(|x| unsafe { String::from_utf8_unchecked(x) })
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Positioned<T> {
+    pub value: T,
+
+    pub start: SourcePosition,
+    pub end: SourcePosition
+}
+
+#[inline]
+pub(crate) fn positioned<Input, T, P>(p: P) -> impl Parser<Input, Output = Positioned<T>>
+    where Input: Stream<Token = u8, Position = SourcePosition>,
+          Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+          P: Parser<Input, Output = T>
+{
+    combine::position()
+        .and(p)
+        .and(combine::position())
+
+        .map(|((start, value), end)| Positioned {
+            value,
+            start,
+            end
+        })
+}

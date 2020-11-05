@@ -23,20 +23,20 @@ impl TryFrom<&pm::Device> for Device {
 
         if let pm::Device::Adjustments(ref parsed_adj) = parsed {
             for adj in parsed_adj {
-                let ppem_size = u16::try_from(adj.ppem_size)
+                let ppem_size = u16::try_from(adj.ppem_size.value)
                     .map_err(|_| CompileError::Overflow {
                         ty: "u16",
                         scope: "Device".into(),
                         item: "ppem_size",
-                        value: adj.ppem_size as usize
+                        value: adj.ppem_size.value as usize
                     })?;
 
-                let pixel_adjustment = i8::try_from(adj.pixel_adjustment)
+                let pixel_adjustment = i8::try_from(adj.pixel_adjustment.value)
                     .map_err(|_| CompileError::Overflow {
                         ty: "i8",
                         scope: "Device".into(),
                         item: "pixel_adjustment",
-                        value: adj.pixel_adjustment as usize
+                        value: adj.pixel_adjustment.value as usize
                     })?;
 
                 adjustments.insert(ppem_size, pixel_adjustment);

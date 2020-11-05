@@ -35,14 +35,14 @@ impl TryFrom<&pm::Anchor> for Anchor {
         Ok(match parsed {
             Coord { x, y } =>
                 Self::Coord {
-                    x: x.0 as i16,
-                    y: y.0 as i16
+                    x: x.value as i16,
+                    y: y.value as i16
                 },
 
             ContourCoord { x, y, contour_point } =>
                 Self::ContourCoord {
-                    x: x.0 as i16,
-                    y: y.0 as i16,
+                    x: x.value as i16,
+                    y: y.value as i16,
                     contour_point: contour_point.0 as u16
                 },
 
@@ -56,8 +56,8 @@ impl TryFrom<&pm::Anchor> for Anchor {
             // FIXME: propagate device information
             DeviceAdjustedCoord { x, y } =>
                 Self::Coord {
-                    x: x.metric.0 as i16,
-                    y: y.metric.0 as i16
+                    x: x.metric.value as i16,
+                    y: y.metric.value as i16
                 },
 
             Named(_) =>

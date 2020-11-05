@@ -198,7 +198,7 @@ pub trait ValueRecordFromParsed<T>: Sized {
 #[inline]
 fn metric_to_i16_checked(x: &pm::Metric) -> CompileResult<i16> {
     // FIXME: actually check
-    Ok(x.0.trunc() as i16)
+    Ok(x.value.trunc() as i16)
 }
 
 impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {

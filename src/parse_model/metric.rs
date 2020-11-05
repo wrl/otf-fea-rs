@@ -23,14 +23,12 @@ impl DeviceAdjustedMetric {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Metric(pub f64);
+pub type Metric = Positioned<f64>;
 
 #[inline]
 pub(crate) fn metric<Input>() -> impl Parser<FeaRsStream<Input>, Output = Metric>
     where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
-    decimal_number()
-        .map(|x| Metric(x))
+    positioned(decimal_number())
 }

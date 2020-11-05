@@ -15,8 +15,8 @@ use super::util::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeviceAdjustment {
-    pub ppem_size: isize,
-    pub pixel_adjustment: isize
+    pub ppem_size: Positioned<isize>,
+    pub pixel_adjustment: Positioned<isize>
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,9 +47,9 @@ pub(crate) fn device<Input>() -> impl Parser<FeaRsStream<Input>, Output = Device
                 .map(|_| Device::Null),
 
             sep_by(optional_whitespace()
-                .with(number())
+                .with(positioned(number()))
                     .skip(required_whitespace())
-                    .and(number())
+                    .and(positioned(number()))
                     .skip(optional_whitespace())
                     .map(|(ppem_size, pixel_adjustment)| {
                         DeviceAdjustment {
