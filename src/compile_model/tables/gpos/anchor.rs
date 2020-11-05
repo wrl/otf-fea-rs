@@ -25,7 +25,10 @@ pub enum Anchor {
     ContourCoord {
         x: i16,
         y: i16,
-        contour_point: u16
+        contour_point: u16,
+
+        x_span: Option<SourceSpan>,
+        y_span: Option<SourceSpan>
     },
 
     DeviceAdjustedCoord {
@@ -54,7 +57,10 @@ impl TryFrom<&pm::Anchor> for Anchor {
                 Self::ContourCoord {
                     x: x.value as i16,
                     y: y.value as i16,
-                    contour_point: contour_point.0 as u16
+                    contour_point: contour_point.0 as u16,
+
+                    x_span: Some(x.span.clone()),
+                    y_span: Some(y.span.clone())
                 },
 
             // FIXME: is "Null means 0,0" valid?
@@ -115,7 +121,10 @@ impl From<AnchorFormat2> for Anchor {
         Self::ContourCoord {
             x: encoded.x,
             y: encoded.y,
-            contour_point: encoded.contour_point
+            contour_point: encoded.contour_point,
+
+            x_span: None,
+            y_span: None
         }
     }
 }
@@ -143,13 +152,26 @@ impl TTFEncode for Anchor {
                 Ok(start)
             },
 
-            &Self::ContourCoord { x, y, contour_point } =>
-                buf.append(&AnchorFormat2 {
+            &Self::ContourCoord { x, y, contour_point , ref x_span, ref y_span } => {
+                let start = buf.append(&AnchorFormat2 {
                     format: 1,
                     x,
                     y,
                     contour_point
-                }),
+                })?;
+
+                if let Some(x_span) = x_span {
+                    let x_loc = start + u16::PACKED_LEN; // skip `format`
+                    buf.add_source_map_entry(x_span, CompiledEntry::I16(x_loc));
+                }
+
+                if let Some(y_span) = y_span {
+                    let y_loc = start + (u16::PACKED_LEN * 2); // skip `format` and `x`
+                    buf.add_source_map_entry(y_span, CompiledEntry::I16(y_loc));
+                }
+
+                Ok(start)
+            },
 
             &Self::DeviceAdjustedCoord { .. } =>
                 panic!("unimplemented device encode")
