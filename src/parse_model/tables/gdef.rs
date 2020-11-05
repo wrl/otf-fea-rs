@@ -13,7 +13,7 @@ use combine::{
     }
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 
 use crate::parse_model::glyph_class::*;
@@ -47,7 +47,7 @@ pub struct LigatureCaretByIndex {
 }
 
 fn gcdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
-where Input: Stream<Token = u8>,
+where Input: Stream<Token = u8, Position = SourcePosition>,
       Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     sep_by(glyph_class_or_class_ref(),
@@ -80,7 +80,7 @@ where Input: Stream<Token = u8>,
 }
 
 fn attach_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
-where Input: Stream<Token = u8>,
+where Input: Stream<Token = u8, Position = SourcePosition>,
       Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_class_or_glyph()
@@ -94,7 +94,7 @@ where Input: Stream<Token = u8>,
 }
 
 fn ligature_caret<Input>() -> impl Parser<FeaRsStream<Input>, Output = (GlyphClass, Vec<usize>)>
-where Input: Stream<Token = u8>,
+where Input: Stream<Token = u8, Position = SourcePosition>,
       Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_class_or_glyph()
@@ -104,7 +104,7 @@ where Input: Stream<Token = u8>,
 }
 
 pub(crate) fn gdef_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()

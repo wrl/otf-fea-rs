@@ -13,7 +13,7 @@ use combine::{
     choice
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::Tag;
 
 use super::util::*;
@@ -23,7 +23,7 @@ use super::tag::*;
 pub struct Anonymous(pub Tag);
 
 pub(crate) fn anonymous<Input>() -> impl Parser<FeaRsStream<Input>, Output = Anonymous>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()

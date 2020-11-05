@@ -44,7 +44,7 @@ pub(crate) use crate::util::{
     Either3
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 
 pub use combine::stream::StreamErrorFor;
 pub use combine::error::StreamError;
@@ -59,7 +59,7 @@ macro_rules! parse_bail (
 
 #[inline]
 pub(crate) fn literal_ignore_case<Input>(lit: &str) -> impl Parser<Input, Output = std::str::Bytes>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     tokens_cmp(lit.bytes(), |l, r| l.eq_ignore_ascii_case(&r))
@@ -67,7 +67,7 @@ pub(crate) fn literal_ignore_case<Input>(lit: &str) -> impl Parser<Input, Output
 
 #[inline]
 pub(crate) fn literal<Input>(lit: &str) -> impl Parser<Input, Output = std::str::Bytes>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     tokens_cmp(lit.bytes(), |l, r| l.eq(&r))
@@ -75,7 +75,7 @@ pub(crate) fn literal<Input>(lit: &str) -> impl Parser<Input, Output = std::str:
 
 #[inline]
 pub(crate) fn comment<Input>() -> impl Parser<Input, Output = ()>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     token(b'#').map(|_| ())
@@ -85,7 +85,7 @@ pub(crate) fn comment<Input>() -> impl Parser<Input, Output = ()>
 
 #[inline]
 pub(crate) fn optional_whitespace<Input>() -> impl Parser<Input, Output = ()>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     many(choice((
@@ -98,7 +98,7 @@ pub(crate) fn optional_whitespace<Input>() -> impl Parser<Input, Output = ()>
 
 #[inline]
 pub(crate) fn required_whitespace<Input>() -> impl Parser<FeaRsStream<Input>, Output = ()>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     space()
@@ -107,7 +107,7 @@ pub(crate) fn required_whitespace<Input>() -> impl Parser<FeaRsStream<Input>, Ou
 }
 
 pub(crate) fn uinteger<Input>() -> impl Parser<FeaRsStream<Input>, Output = usize>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()
@@ -126,7 +126,7 @@ pub(crate) fn uinteger<Input>() -> impl Parser<FeaRsStream<Input>, Output = usiz
 }
 
 pub(crate) fn hex_uint<Input>() -> impl Parser<FeaRsStream<Input>, Output = usize>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()
@@ -147,7 +147,7 @@ pub(crate) fn hex_uint<Input>() -> impl Parser<FeaRsStream<Input>, Output = usiz
 }
 
 pub(crate) fn number<Input>() -> impl Parser<FeaRsStream<Input>, Output = isize>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()
@@ -177,7 +177,7 @@ pub(crate) fn number<Input>() -> impl Parser<FeaRsStream<Input>, Output = isize>
 }
 
 pub(crate) fn decimal_number<Input>() -> impl Parser<FeaRsStream<Input>, Output = f64>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()
@@ -207,7 +207,7 @@ where
 
 #[inline]
 pub(crate) fn keyword<Input>() -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     // from_utf8_unchecked() is safe here because letter() only matches ASCII chars.

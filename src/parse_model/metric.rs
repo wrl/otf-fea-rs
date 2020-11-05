@@ -4,7 +4,7 @@ use combine::{
     error::ParseError
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use super::device::*;
 use super::util::*;
 
@@ -28,7 +28,7 @@ pub struct Metric(pub f64);
 
 #[inline]
 pub(crate) fn metric<Input>() -> impl Parser<FeaRsStream<Input>, Output = Metric>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     decimal_number()

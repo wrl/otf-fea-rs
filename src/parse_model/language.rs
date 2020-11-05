@@ -11,7 +11,7 @@ use combine::{
     value
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::LanguageTag;
 
 use super::util::*;
@@ -25,7 +25,7 @@ pub struct Language {
 }
 
 pub(crate) fn language_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = LanguageTag>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     tag_storage()
@@ -33,7 +33,7 @@ pub(crate) fn language_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = 
 }
 
 pub(crate) fn language<Input>() -> impl Parser<FeaRsStream<Input>, Output = Language>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("language")

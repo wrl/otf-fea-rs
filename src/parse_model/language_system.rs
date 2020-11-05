@@ -4,7 +4,7 @@ use combine::{
     error::ParseError
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::*;
 
 use super::language::*;
@@ -18,7 +18,7 @@ pub struct LanguageSystem {
 }
 
 pub(crate) fn language_system<Input>() -> impl Parser<FeaRsStream<Input>, Output = LanguageSystem>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("languagesystem")

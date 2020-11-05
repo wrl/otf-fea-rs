@@ -8,7 +8,7 @@ use combine::{
     parser::byte::space,
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use super::util::*;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct Parameters {
 }
 
 pub(crate) fn parameters<Input>() -> impl Parser<FeaRsStream<Input>, Output = Parameters>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("parameters")

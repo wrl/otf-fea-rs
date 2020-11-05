@@ -9,7 +9,7 @@ use combine::{
     satisfy
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 
 use crate::parse_model::block::*;
 use crate::parse_model::util::*;
@@ -101,7 +101,7 @@ pub struct Table {
 }
 
 fn table_statement<Input>(tag: &TableTag) -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     dispatch!(tag;
@@ -114,7 +114,7 @@ fn table_statement<Input>(tag: &TableTag) -> impl Parser<FeaRsStream<Input>, Out
 }
 
 fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     fn char_valid(x: u8) -> bool {
@@ -146,7 +146,7 @@ fn table_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableTag>
 }
 
 pub(crate) fn table<Input>() -> impl Parser<FeaRsStream<Input>, Output = Table>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("table")

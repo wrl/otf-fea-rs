@@ -10,7 +10,7 @@ use combine::{
     choice
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use super::util::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,12 +27,12 @@ pub enum Device {
 
 #[inline]
 pub(crate) fn device<Input>() -> impl Parser<FeaRsStream<Input>, Output = Device>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     #[inline]
     pub(crate) fn close<Input>() -> impl Parser<FeaRsStream<Input>, Output = ()>
-        where Input: Stream<Token = u8>,
+        where Input: Stream<Token = u8, Position = SourcePosition>,
               Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
     {
         token(b'>')

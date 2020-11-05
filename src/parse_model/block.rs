@@ -24,7 +24,7 @@ use combine::{
     dispatch
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 
 use super::util::*;
@@ -78,12 +78,12 @@ cvt_to_statement!(Script);
 cvt_to_statement!(Substitute);
 
 pub(crate) fn block_statement<Input, Ident>(_: &Ident) -> FnOpaque<FeaRsStream<Input>, BlockStatement>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     #[inline]
     fn rule<Input>() -> impl Parser<FeaRsStream<Input>, Output = BlockStatement>
-        where Input: Stream<Token = u8>,
+        where Input: Stream<Token = u8, Position = SourcePosition>,
               Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
     {
         choice((
@@ -160,7 +160,7 @@ pub enum BlockOrReference<Ident, Statement> {
 #[inline]
 pub(crate) fn block_statements<Input, Statement, P>(statement_parser: P)
         -> impl Parser<FeaRsStream<Input>, Output = Vec<Statement>>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           P: Parser<FeaRsStream<Input>, Output = Statement>
 {
@@ -176,7 +176,7 @@ pub(crate) fn block_statements<Input, Statement, P>(statement_parser: P)
 pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>
             (ident_parser: IF, statement_parser: SF)
         -> impl Parser<FeaRsStream<Input>, Output = BlockOrReference<Ident, Statement>>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           IF: Fn() -> IP,
           IP: Parser<FeaRsStream<Input>, Output = Ident>,
@@ -223,7 +223,7 @@ pub(crate) fn block_or_reference<Input, Ident, IF, IP, Statement, SF, SP>
 pub(crate) fn block<Input, Ident, IF, IP, Statement, SF, SP>
             (ident_parser: IF, statement_parser: SF)
         -> impl Parser<FeaRsStream<Input>, Output = Block<Ident, Statement>>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           IF: Fn() -> IP,
           IP: Parser<FeaRsStream<Input>, Output = Ident>,

@@ -45,7 +45,7 @@ pub struct MarkClass {
 }
 
 pub(crate) fn mark_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = MarkClass>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("markClass")

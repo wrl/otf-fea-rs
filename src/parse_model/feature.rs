@@ -4,7 +4,7 @@ use combine::{
     error::ParseError,
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::tag::*;
 
 use super::util::*;
@@ -12,7 +12,7 @@ use super::block::*;
 use super::tag::*;
 
 pub(crate) fn feature_tag<Input>() -> impl Parser<FeaRsStream<Input>, Output = FeatureTag>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     tag_storage()
@@ -26,7 +26,7 @@ pub struct FeatureDefinition {
 }
 
 pub(crate) fn feature_definition<Input>() -> impl Parser<FeaRsStream<Input>, Output = FeatureDefinition>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("feature")
@@ -45,7 +45,7 @@ pub(crate) fn feature_definition<Input>() -> impl Parser<FeaRsStream<Input>, Out
 pub struct FeatureReference(pub FeatureTag);
 
 pub(crate) fn feature_reference<Input>() -> impl Parser<FeaRsStream<Input>, Output = FeatureReference>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("feature")

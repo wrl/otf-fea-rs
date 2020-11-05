@@ -10,7 +10,7 @@ use combine::{
     choice
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use super::class_name::*;
 use super::util::*;
 
@@ -39,7 +39,7 @@ impl LookupFlag {
 }
 
 pub(crate) fn lookup_flag<Input>() -> impl Parser<FeaRsStream<Input>, Output = LookupFlag>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("lookupflag")

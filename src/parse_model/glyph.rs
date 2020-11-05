@@ -14,12 +14,12 @@ use combine::{
 use arrayvec::ArrayVec;
 
 use crate::glyph::*;
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 
 use super::util::*;
 
 pub(crate) fn glyph_name_unwrapped<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphNameStorage>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     parser(move |input: &mut FeaRsStream<Input>| {
@@ -72,7 +72,7 @@ pub(crate) fn glyph_name_unwrapped<Input>() -> impl Parser<FeaRsStream<Input>, O
 }
 
 pub(crate) fn glyph_ref<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphRef>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     choice((

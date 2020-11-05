@@ -7,7 +7,7 @@ use combine::{
     value
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 
 use crate::parse_model::table::*;
 use crate::parse_model::util::*;
@@ -23,7 +23,7 @@ pub struct NameId {
 }
 
 fn nameid<Input>() -> impl Parser<FeaRsStream<Input>, Output = NameId>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     number()
@@ -44,7 +44,7 @@ fn nameid<Input>() -> impl Parser<FeaRsStream<Input>, Output = NameId>
 }
 
 pub(crate) fn name_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TableStatement>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     combine::position()

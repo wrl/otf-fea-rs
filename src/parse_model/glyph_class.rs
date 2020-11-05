@@ -8,7 +8,7 @@ use combine::{
     token
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 
 use super::class_name::*;
@@ -17,7 +17,7 @@ use super::util::*;
 
 
 pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClass>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     // alright, this one gets ugly.
@@ -117,7 +117,7 @@ pub(crate) fn glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = G
 }
 
 pub(crate) fn glyph_class_or_class_ref<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClass>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     choice((
@@ -128,7 +128,7 @@ pub(crate) fn glyph_class_or_class_ref<Input>() -> impl Parser<FeaRsStream<Input
 }
 
 pub(crate) fn glyph_class_or_glyph<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClass>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     choice((
@@ -144,7 +144,7 @@ pub(crate) fn glyph_class_or_glyph<Input>() -> impl Parser<FeaRsStream<Input>, O
 /////////////////////////
 
 pub(crate) fn glyph_class_name<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphClassName>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     class_name()
@@ -152,7 +152,7 @@ pub(crate) fn glyph_class_name<Input>() -> impl Parser<FeaRsStream<Input>, Outpu
 }
 
 pub(crate) fn named_glyph_class<Input>() -> impl Parser<FeaRsStream<Input>, Output = NamedGlyphClass>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     class_name()

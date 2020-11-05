@@ -19,13 +19,14 @@ use encoding_rs::{
 use combine::stream::StreamErrorFor;
 use combine::error::StreamError;
 
+use crate::parser::*;
 use crate::parse_model::util::*;
 
 #[inline]
 fn string_escaped<Input, Escaped, UP, UPF, Unescape>
     (unescape_parser: UPF, unescape: Unescape)
         -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
           UPF: Fn() -> UP,
           UP: Parser<Input, Output = Escaped>,
@@ -88,7 +89,7 @@ fn unescape_mac((a, b): (u8, u8)) -> Vec<u8> {
 }
 
 fn mac_escape_sequence<Input>() -> impl Parser<Input, Output = (u8, u8)>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     token(b'\\')
@@ -96,7 +97,7 @@ fn mac_escape_sequence<Input>() -> impl Parser<Input, Output = (u8, u8)>
 }
 
 pub(crate) fn string_mac_escaped<Input>() -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     string_escaped(mac_escape_sequence, unescape_mac)
@@ -117,7 +118,7 @@ fn unescape_win((a, b, c, d): (u8, u8, u8, u8)) -> Vec<u8> {
 }
 
 fn win_escape_sequence<Input>() -> impl Parser<Input, Output = (u8, u8, u8, u8)>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     token(b'\\')
@@ -129,7 +130,7 @@ fn win_escape_sequence<Input>() -> impl Parser<Input, Output = (u8, u8, u8, u8)>
 }
 
 pub(crate) fn string_win_escaped<Input>() -> impl Parser<Input, Output = String>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     string_escaped(win_escape_sequence, unescape_win)

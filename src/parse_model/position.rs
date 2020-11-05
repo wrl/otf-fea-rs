@@ -20,7 +20,7 @@ use combine::{
     value
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 
 use super::value_record::*;
@@ -102,7 +102,7 @@ position_from_variant!(Ligature);
 position_from_variant!(MarkToMark);
 
 fn cursive<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("cursive")
@@ -123,12 +123,12 @@ fn cursive<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 }
 
 fn ligature<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     #[inline]
     pub(crate) fn ligature_component<Input>() -> impl Parser<FeaRsStream<Input>, Output = LigatureComponent>
-        where Input: Stream<Token = u8>,
+        where Input: Stream<Token = u8, Position = SourcePosition>,
               Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
     {
         many1(
@@ -189,7 +189,7 @@ fn ligature<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 }
 
 fn mark_to<Input>() -> impl Parser<FeaRsStream<Input>, Output = (GlyphClass, Vec<(Anchor, MarkClassName)>)>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_class_or_glyph()
@@ -205,7 +205,7 @@ fn mark_to<Input>() -> impl Parser<FeaRsStream<Input>, Output = (GlyphClass, Vec
 }
 
 fn mark_to_base<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("base")
@@ -221,7 +221,7 @@ fn mark_to_base<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 }
 
 fn mark_to_mark<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("mark")
@@ -237,7 +237,7 @@ fn mark_to_mark<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 }
 
 fn single_or_pair<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_class_or_glyph()
@@ -284,7 +284,7 @@ fn single_or_pair<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
 }
 
 pub(crate) fn position<Input>() -> impl Parser<FeaRsStream<Input>, Output = Position>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     #[derive(Debug, Clone)]

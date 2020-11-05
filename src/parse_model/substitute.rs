@@ -13,7 +13,7 @@ use combine::{
     choice
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 use crate::glyph::*;
 
@@ -83,7 +83,7 @@ fn into_first_glyph_class(items: Vec<GlyphPatternItem>) -> Option<GlyphClass>
 }
 
 pub(crate) fn substitute<Input>() -> impl Parser<FeaRsStream<Input>, Output = Substitute>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     #[derive(PartialEq, Eq)]

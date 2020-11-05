@@ -7,7 +7,7 @@ use combine::{
     choice
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use super::metric::*;
 use super::device::*;
 use super::util::*;
@@ -41,7 +41,7 @@ pub enum ValueRecord {
 
 #[inline]
 fn placement_advance<Input>() -> impl Parser<FeaRsStream<Input>, Output = ValueRecord>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     metric()
@@ -89,7 +89,7 @@ fn placement_advance<Input>() -> impl Parser<FeaRsStream<Input>, Output = ValueR
 }
 
 pub(crate) fn value_record<Input>() -> impl Parser<FeaRsStream<Input>, Output = ValueRecord>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     choice((

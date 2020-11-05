@@ -12,7 +12,7 @@ use combine::{
     choice
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph_class::*;
 
 use super::value_record::*;
@@ -56,7 +56,7 @@ impl GlyphPattern {
 
 // eats trailing whitespace because otherwise we'd have to lookahead *all* of the whitespace
 pub(crate) fn glyph_pattern<Input>() -> impl Parser<FeaRsStream<Input>, Output = GlyphPattern>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     #[derive(Debug)]

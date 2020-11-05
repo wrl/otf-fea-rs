@@ -8,7 +8,7 @@ use combine::{
     token,
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph::*;
 
 use super::glyph::*;
@@ -29,7 +29,7 @@ impl fmt::Debug for ClassName {
 
 #[inline]
 pub(crate) fn class_name<Input>() -> impl Parser<FeaRsStream<Input>, Output = ClassName>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     token(b'@')

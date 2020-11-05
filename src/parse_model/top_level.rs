@@ -38,7 +38,7 @@ pub enum TopLevelStatement {
 }
 
 pub(crate) fn top_level_statement<Input>() -> impl Parser<FeaRsStream<Input>, Output = TopLevelStatement>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     look_ahead(take_until(space()))

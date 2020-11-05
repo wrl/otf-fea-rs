@@ -6,7 +6,7 @@ use combine::{
     error::ParseError
 };
 
-use crate::parser::FeaRsStream;
+use crate::parser::*;
 use crate::glyph::*;
 
 use super::block::*;
@@ -40,7 +40,7 @@ impl fmt::Display for LookupName {
 
 #[inline]
 pub(crate) fn lookup_block_label<Input>() -> impl Parser<FeaRsStream<Input>, Output = LookupName>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     glyph_name_unwrapped()
@@ -54,7 +54,7 @@ pub struct LookupDefinition {
 }
 
 pub(crate) fn lookup_definition<Input>() -> impl Parser<FeaRsStream<Input>, Output = LookupDefinition>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("lookup")
@@ -73,7 +73,7 @@ pub(crate) fn lookup_definition<Input>() -> impl Parser<FeaRsStream<Input>, Outp
 pub struct Lookup(pub LookupName);
 
 pub(crate) fn lookup<Input>() -> impl Parser<FeaRsStream<Input>, Output = Lookup>
-    where Input: Stream<Token = u8>,
+    where Input: Stream<Token = u8, Position = SourcePosition>,
           Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
 {
     literal_ignore_case("lookup")
@@ -89,7 +89,7 @@ pub enum LookupRefOrDefinition {
 
 impl LookupRefOrDefinition {
     pub(crate) fn parse<Input>() -> impl Parser<FeaRsStream<Input>, Output = Self>
-        where Input: Stream<Token = u8>,
+        where Input: Stream<Token = u8, Position = SourcePosition>,
               Input::Error: ParseError<Input::Token, Input::Range, Input::Position>
     {
         literal_ignore_case("lookup")
