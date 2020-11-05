@@ -32,8 +32,13 @@ impl Ord for EncodedTableTag {
     }
 }
 
+pub struct EncodedTable<'a> {
+    pub bytes: Cow<'a, [u8]>,
+    pub source_map: SourceMap
+}
+
 pub struct EncodedTables<'a> {
-    tables: BTreeMap<EncodedTableTag, Cow<'a, [u8]>>,
+    tables: BTreeMap<EncodedTableTag, EncodedTable<'a>>,
     pub(crate) head: Option<tables::Head>
 }
 
@@ -57,13 +62,19 @@ impl<'a> EncodedTables<'a> {
         }
     }
 
-    pub fn add_table(&mut self, tag: Tag, mut encoded: Vec<u8>) {
+    pub fn add_table(&mut self, tag: Tag, mut encoded: Vec<u8>, source_map: SourceMap) {
         encoded.shrink_to_fit();
-        self.tables.insert(EncodedTableTag(tag), encoded.into());
+        self.tables.insert(EncodedTableTag(tag), EncodedTable {
+            bytes: encoded.into(),
+            source_map
+        });
     }
 
     pub fn add_borrowed_table(&mut self, tag: Tag, encoded: &'a [u8]) {
-        self.tables.insert(EncodedTableTag(tag), encoded.into());
+        self.tables.insert(EncodedTableTag(tag), EncodedTable {
+            bytes: encoded.into(),
+            source_map: SourceMap::new()
+        });
     }
 
     pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) -> EncodeResult<()> {
@@ -75,18 +86,18 @@ impl<'a> EncodedTables<'a> {
         let mut running_checksum = 0u32;
 
         for (tag, encoded) in self.tables.iter() {
-            let checksum = util::checksum(encoded);
+            let checksum = util::checksum(&encoded.bytes);
 
             let record = TTFTableRecord {
                 tag: tag.0,
                 checksum,
                 offset_from_start_of_file: offset as u32,
-                length: encoded.len() as u32
+                length: encoded.bytes.len() as u32
             };
 
             write_into(buf, &record);
 
-            offset += util::align_len(encoded.len());
+            offset += util::align_len(encoded.bytes.len());
             running_checksum = running_checksum.overflowing_add(checksum).0;
         }
 
@@ -107,11 +118,14 @@ impl<'a> EncodedTables<'a> {
             let mut encoder = EncodeBuf::new_with_glyph_order(&empty_glyph_order);
             head.ttf_encode(&mut encoder)?;
 
-            self.tables.insert(EncodedTableTag(tag!(h,e,a,d)), encoder.bytes.into());
+            self.tables.insert(EncodedTableTag(tag!(h,e,a,d)), EncodedTable {
+                bytes: encoder.bytes.into(),
+                source_map: SourceMap::new()
+            });
         }
 
         for (_, encoded) in self.tables.iter() {
-            buf.extend(encoded.iter());
+            buf.extend(encoded.bytes.iter());
             buf.resize(util::align_len(buf.len()), 0u8);
         }
 

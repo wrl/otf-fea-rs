@@ -13,6 +13,8 @@ use hashbrown::{
 use endian_codec::EncodeBE;
 
 
+use crate::compile_model::SourceMap;
+
 use crate::glyph_order::*;
 pub use crate::compile_model::error::{
     EncodeError,
@@ -21,6 +23,7 @@ pub use crate::compile_model::error::{
 
 pub struct EncodeBuf<'a> {
     pub(crate) bytes: Vec<u8>,
+    pub(crate) source_map: SourceMap,
     pub(crate) _glyph_order: &'a GlyphOrder
 }
 
@@ -28,6 +31,7 @@ impl<'a> EncodeBuf<'a> {
     pub fn new_with_glyph_order(glyph_order: &'a GlyphOrder) -> Self {
         Self {
             bytes: Vec::new(),
+            source_map: SourceMap::new(),
             _glyph_order: glyph_order,
         }
     }

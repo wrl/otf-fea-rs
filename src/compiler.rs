@@ -507,7 +507,7 @@ impl CompilerOutput {
                     let mut buf = EncodeBuf::new_with_glyph_order(&self.glyph_order);
                     table.ttf_encode(&mut buf).unwrap();
 
-                    encoded.add_table($tag, buf.bytes);
+                    encoded.add_table($tag, buf.bytes, buf.source_map);
                 }
             }
         }
