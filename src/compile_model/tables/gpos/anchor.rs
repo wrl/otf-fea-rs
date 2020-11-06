@@ -62,8 +62,8 @@ impl TryFrom<&pm::Anchor> for Anchor {
             // FIXME: is "Null means 0,0" valid?
             Null =>
                 Self::Coord {
-                    x: MaybePositioned::unpositioned(0),
-                    y: MaybePositioned::unpositioned(0),
+                    x: 0.into(),
+                    y: 0.into()
                 },
 
             // FIXME: propagate device information
@@ -89,8 +89,8 @@ struct AnchorFormat1 {
 impl From<AnchorFormat1> for Anchor {
     fn from(encoded: AnchorFormat1) -> Self {
         Self::Coord {
-            x: MaybePositioned::unpositioned(encoded.x),
-            y: MaybePositioned::unpositioned(encoded.y)
+            x: encoded.x.into(),
+            y: encoded.y.into()
         }
     }
 }
@@ -106,8 +106,8 @@ struct AnchorFormat2 {
 impl From<AnchorFormat2> for Anchor {
     fn from(encoded: AnchorFormat2) -> Self {
         Self::ContourCoord {
-            x: MaybePositioned::unpositioned(encoded.x),
-            y: MaybePositioned::unpositioned(encoded.y),
+            x: encoded.x.into(),
+            y: encoded.y.into(),
             contour_point: encoded.contour_point
         }
     }

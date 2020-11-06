@@ -10,12 +10,14 @@ use crate::compile_model::error::*;
 
 use crate::parse_model as pm;
 
+use crate::MaybePositioned;
+
 #[derive(PartialEq, Eq, Clone)]
 pub struct ValueRecord {
-    pub x_placement: i16,
-    pub y_placement: i16,
-    pub x_advance: i16,
-    pub y_advance: i16,
+    pub x_placement: MaybePositioned<i16>,
+    pub y_placement: MaybePositioned<i16>,
+    pub x_advance: MaybePositioned<i16>,
+    pub y_advance: MaybePositioned<i16>,
 
     pub x_placement_device: Option<Device>,
     pub y_placement_device: Option<Device>,
@@ -29,7 +31,7 @@ impl fmt::Debug for ValueRecord {
 
         macro_rules! debug_if_set {
             ($field:ident) => {
-                if self.$field != 0 {
+                if self.$field.value != 0 {
                     s.field(stringify!($field), &self.$field);
                 }
             }
@@ -61,10 +63,10 @@ impl ValueRecord {
     #[inline]
     pub fn zero() -> Self {
         Self {
-            x_placement: 0,
-            y_placement: 0,
-            x_advance: 0,
-            y_advance: 0,
+            x_placement: 0.into(),
+            y_placement: 0.into(),
+            x_advance: 0.into(),
+            y_advance: 0.into(),
 
             x_placement_device: None,
             y_placement_device: None,
@@ -80,10 +82,10 @@ impl ValueRecord {
     #[allow(unused_assignments)]
     pub fn decode_from_format(bytes: &[u8], format: u16) -> Self {
         let mut ret = Self {
-            x_placement: 0,
-            y_placement: 0,
-            x_advance: 0,
-            y_advance: 0,
+            x_placement: 0.into(),
+            y_placement: 0.into(),
+            x_advance: 0.into(),
+            y_advance: 0.into(),
 
             x_placement_device: None,
             y_placement_device: None,
@@ -96,7 +98,7 @@ impl ValueRecord {
         macro_rules! read_if_in_format {
             ($shift:expr, $var:ident, $t:ty) => {
                 if (format & (1u16 << $shift)) != 0 {
-                    ret.$var = decode_u16_be(bytes, bytes_idx) as $t;
+                    ret.$var.value = decode_u16_be(bytes, bytes_idx) as $t;
                     bytes_idx += 2;
                 }
             }
@@ -122,7 +124,7 @@ impl ValueRecord {
 
         macro_rules! set_bit_if_nonzero {
             ($shift:expr, $var:ident) => {
-                ret |= ((self.$var != 0) as u16) << $shift;
+                ret |= ((self.$var.value != 0) as u16) << $shift;
             }
         }
 
@@ -151,7 +153,7 @@ impl ValueRecord {
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
-                    buf.append(&self.$var)?;
+                    buf.append(&self.$var.value)?;
                 }
             }
         }
@@ -208,12 +210,12 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
 
         Ok(match parsed {
             Advance(metric) if vertical => Self {
-                y_advance: metric_to_i16_checked(metric)?,
+                y_advance: metric_to_i16_checked(metric)?.into(),
                 ..Self::zero()
             },
 
             Advance(metric) => Self {
-                x_advance: metric_to_i16_checked(metric)?,
+                x_advance: metric_to_i16_checked(metric)?.into(),
                 ..Self::zero()
             },
 
@@ -221,10 +223,10 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
                 x_placement, y_placement,
                 x_advance, y_advance
             } => Self {
-                x_placement: metric_to_i16_checked(x_placement)?,
-                y_placement: metric_to_i16_checked(y_placement)?,
-                x_advance: metric_to_i16_checked(x_advance)?,
-                y_advance: metric_to_i16_checked(y_advance)?,
+                x_placement: metric_to_i16_checked(x_placement)?.into(),
+                y_placement: metric_to_i16_checked(y_placement)?.into(),
+                x_advance: metric_to_i16_checked(x_advance)?.into(),
+                y_advance: metric_to_i16_checked(y_advance)?.into(),
 
                 ..Self::zero()
             },
@@ -233,10 +235,10 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
             DeviceAdjusted {
                 x_placement, y_placement, x_advance, y_advance
             } => Self {
-                x_placement: metric_to_i16_checked(&x_placement.metric)?,
-                y_placement: metric_to_i16_checked(&y_placement.metric)?,
-                x_advance: metric_to_i16_checked(&x_advance.metric)?,
-                y_advance: metric_to_i16_checked(&y_advance.metric)?,
+                x_placement: metric_to_i16_checked(&x_placement.metric)?.into(),
+                y_placement: metric_to_i16_checked(&y_placement.metric)?.into(),
+                x_advance: metric_to_i16_checked(&x_advance.metric)?.into(),
+                y_advance: metric_to_i16_checked(&y_advance.metric)?.into(),
 
                 x_placement_device: Some(Device::try_from(&x_placement.device)?),
                 y_placement_device: Some(Device::try_from(&y_placement.device)?),

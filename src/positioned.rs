@@ -31,6 +31,12 @@ impl<T> From<Positioned<T>> for MaybePositioned<T> {
     }
 }
 
+impl<T> From<T> for MaybePositioned<T> {
+    fn from(value: T) -> Self {
+        Self::unpositioned(value)
+    }
+}
+
 impl<T> MaybePositioned<T> {
     pub fn unpositioned(value: T) -> Self {
         Self {
