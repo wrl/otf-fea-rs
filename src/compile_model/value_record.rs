@@ -11,6 +11,8 @@ use crate::compile_model::error::*;
 use crate::parse_model as pm;
 
 use crate::MaybePositioned;
+use crate::compile_model::CompiledEntry;
+
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct ValueRecord {
@@ -153,7 +155,11 @@ impl ValueRecord {
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
-                    buf.append(&self.$var.value)?;
+                    let loc = buf.append(&self.$var.value)?;
+
+                    if let Some(span) = &self.$var.span {
+                        buf.add_source_map_entry(span, CompiledEntry::I16(loc));
+                    }
                 }
             }
         }
