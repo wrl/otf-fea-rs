@@ -204,9 +204,13 @@ pub trait ValueRecordFromParsed<T>: Sized {
 }
 
 #[inline]
-fn metric_to_i16_checked(x: &pm::Metric) -> CompileResult<i16> {
+fn metric_to_i16_checked(m: &pm::Metric) -> CompileResult<MaybePositioned<i16>> {
     // FIXME: actually check
-    Ok(x.value.trunc() as i16)
+
+    Ok(MaybePositioned {
+        value: m.value.trunc() as i16,
+        span: Some(m.span.clone())
+    })
 }
 
 impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
@@ -216,12 +220,12 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
 
         Ok(match parsed {
             Advance(metric) if vertical => Self {
-                y_advance: metric_to_i16_checked(metric)?.into(),
+                y_advance: metric_to_i16_checked(metric)?,
                 ..Self::zero()
             },
 
             Advance(metric) => Self {
-                x_advance: metric_to_i16_checked(metric)?.into(),
+                x_advance: metric_to_i16_checked(metric)?,
                 ..Self::zero()
             },
 
@@ -229,10 +233,10 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
                 x_placement, y_placement,
                 x_advance, y_advance
             } => Self {
-                x_placement: metric_to_i16_checked(x_placement)?.into(),
-                y_placement: metric_to_i16_checked(y_placement)?.into(),
-                x_advance: metric_to_i16_checked(x_advance)?.into(),
-                y_advance: metric_to_i16_checked(y_advance)?.into(),
+                x_placement: metric_to_i16_checked(x_placement)?,
+                y_placement: metric_to_i16_checked(y_placement)?,
+                x_advance: metric_to_i16_checked(x_advance)?,
+                y_advance: metric_to_i16_checked(y_advance)?,
 
                 ..Self::zero()
             },
@@ -241,10 +245,10 @@ impl ValueRecordFromParsed<&pm::ValueRecord> for ValueRecord {
             DeviceAdjusted {
                 x_placement, y_placement, x_advance, y_advance
             } => Self {
-                x_placement: metric_to_i16_checked(&x_placement.metric)?.into(),
-                y_placement: metric_to_i16_checked(&y_placement.metric)?.into(),
-                x_advance: metric_to_i16_checked(&x_advance.metric)?.into(),
-                y_advance: metric_to_i16_checked(&y_advance.metric)?.into(),
+                x_placement: metric_to_i16_checked(&x_placement.metric)?,
+                y_placement: metric_to_i16_checked(&y_placement.metric)?,
+                x_advance: metric_to_i16_checked(&x_advance.metric)?,
+                y_advance: metric_to_i16_checked(&y_advance.metric)?,
 
                 x_placement_device: Some(Device::try_from(&x_placement.device)?),
                 y_placement_device: Some(Device::try_from(&y_placement.device)?),

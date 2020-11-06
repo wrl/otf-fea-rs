@@ -79,6 +79,18 @@ fn main() {
 
     let mut tables = compiled.encode_tables();
 
+    println!();
+    println!("source maps:");
+    println!();
+
+    for (tag, table) in tables.iter_tables() {
+        println!("{}: {:#?}", tag, table.source_map);
+    }
+
+    println!();
+    println!("~~~");
+    println!();
+
     let mut buf: Vec<u8> = Vec::new();
     tables.encode_ttf_file(&mut buf).unwrap();
 

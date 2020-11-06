@@ -77,6 +77,11 @@ impl<'a> EncodedTables<'a> {
         });
     }
 
+    pub fn iter_tables(&self) -> impl Iterator<Item = (&Tag, &EncodedTable)> {
+        self.tables.iter()
+            .map(|(tag, table)| (&tag.0, table))
+    }
+
     pub fn encode_ttf_file(&mut self, buf: &mut Vec<u8>) -> EncodeResult<()> {
         let offset_table = TTFOffsetTable::new(TTFVersion::TTF, self.tables.len() as u16);
         write_into(buf, &offset_table);

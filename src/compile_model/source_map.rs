@@ -6,7 +6,7 @@ use std::collections::{
 use crate::SourceSpan;
 
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CompiledEntry {
     I16(usize)
 }
