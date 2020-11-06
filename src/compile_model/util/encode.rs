@@ -29,7 +29,9 @@ pub use crate::compile_model::error::{
 pub struct EncodeBuf<'a> {
     pub(crate) bytes: Vec<u8>,
     pub(crate) source_map: SourceMap,
-    pub(crate) _glyph_order: &'a GlyphOrder
+    pub(crate) _glyph_order: &'a GlyphOrder,
+
+    should_optimize_filesize: bool
 }
 
 impl<'a> EncodeBuf<'a> {
@@ -38,6 +40,8 @@ impl<'a> EncodeBuf<'a> {
             bytes: Vec::new(),
             source_map: SourceMap::new(),
             _glyph_order: glyph_order,
+
+            should_optimize_filesize: false
         }
     }
 
@@ -47,7 +51,16 @@ impl<'a> EncodeBuf<'a> {
     }
 
     #[inline]
+    pub(crate) fn should_optimize_filesize(&self) -> bool {
+        self.should_optimize_filesize
+    }
+
+    #[inline]
     pub(crate) fn add_source_map_entry(&mut self, span: &SourceSpan, entry: CompiledEntry) {
+        if self.should_optimize_filesize() {
+            return
+        }
+
         self.source_map.entry(span.clone())
             .or_default()
             .insert(entry);
