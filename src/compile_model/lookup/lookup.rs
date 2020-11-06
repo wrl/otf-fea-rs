@@ -38,7 +38,7 @@ impl<T> Lookup<T> {
     }
 
     pub fn get_subtable_variant_filter<V, P, N>(&mut self, skip: usize, pred: P, new: N) -> &mut V
-        where V: VariantExt<T> + Default + Into<T>,
+        where V: VariantExt<T> + Into<T>,
               P: Fn(&V) -> bool,
               N: FnOnce() -> V
     {

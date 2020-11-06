@@ -111,15 +111,18 @@ fn handle_single_adjustment_position(ctx: &mut CompilerState, block: &Block,
     let vr = ValueRecord::from_parsed(&pos.value_record, block.is_vertical())?;
 
     if let Some(glyph) = pos.glyph_class.as_single() {
-        let subtable = lookup.get_subtable_filter(block.subtable_breaks,
-            |_| false,
-            || gpos::Single::new(vr));
+        let glyph_id = ctx.glyph_order.id_for_glyph(glyph)?;
 
-        subtable.add_glyph(ctx.glyph_order.id_for_glyph(glyph)?);
+        let subtable = lookup.get_subtable_variant_filter(block.subtable_breaks,
+            |subtable: &gpos::SingleArray| subtable.can_add(glyph_id, &vr),
+            || gpos::SingleArray::new_with_value_format(
+                vr.smallest_possible_format()));
+
+        subtable.add_glyph(glyph_id, vr);
     } else {
-        let subtable = lookup.get_subtable_filter(block.subtable_breaks,
-            |_| false,
-            || gpos::Single::new(vr));
+        let subtable = lookup.get_subtable_variant_filter(block.subtable_breaks,
+            |_: &gpos::SingleClass| false,
+            || gpos::SingleClass::new(vr).into());
 
         for glyph in pos.glyph_class.iter_glyphs_lookup(&ctx.glyph_order, &ctx.glyph_class_table) {
             subtable.add_glyph(glyph?);

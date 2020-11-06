@@ -73,7 +73,7 @@ impl TTFEncode for SingleArray {
 
         buf.defer_header_encode(
             |buf| Ok(SinglePosFormat2Header {
-                format: 1,
+                format: 2,
                 coverage_offset: (self.glyphs.ttf_encode(buf)? - start) as u16,
                 value_format,
                 value_count: self.glyphs.len() as u16
