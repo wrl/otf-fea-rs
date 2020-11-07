@@ -80,8 +80,14 @@ impl TTFEncode for SingleArray {
             }),
 
             |buf| {
+                let vr_size = ValueRecord::size_for_format(value_format);
+
+                let mut vr_offset = buf.bytes.len();
+                buf.reserve_bytes(vr_size * self.glyphs.len());
+
                 for vr in self.glyphs.values() {
-                    vr.encode_to_format(buf, value_format, start)?;
+                    vr.encode_to_format(buf, value_format, start, vr_offset)?;
+                    vr_offset += vr_size;
                 }
 
                 Ok(())

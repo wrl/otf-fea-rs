@@ -122,6 +122,11 @@ impl TTFEncode for PairClass {
                     vr.1 | pair.1.smallest_possible_format())
             });
 
+        let vr_sizes = (
+            ValueRecord::size_for_format(value_formats.0),
+            ValueRecord::size_for_format(value_formats.1)
+        );
+
         let start = buf.bytes.len();
         let null_vr = ValueRecord::zero();
 
@@ -141,10 +146,15 @@ impl TTFEncode for PairClass {
             }),
 
             |buf| {
+                let mut vr_offset = buf.bytes.len();
+                buf.reserve_bytes(classes.0.len() * classes.1.len() * (vr_sizes.0 + vr_sizes.1));
+
                 for x in &classes.0 {
                     // class 2 id 0
-                    null_vr.encode_to_format(buf, value_formats.0, start)?;
-                    null_vr.encode_to_format(buf, value_formats.1, start)?;
+                    null_vr.encode_to_format(buf, value_formats.0, start, vr_offset)?;
+                    vr_offset += vr_sizes.0;
+                    null_vr.encode_to_format(buf, value_formats.1, start, vr_offset)?;
+                    vr_offset += vr_sizes.1;
 
                     for y in &classes.1 {
                         // FIXME: clone. why the hell?
@@ -153,8 +163,10 @@ impl TTFEncode for PairClass {
                             None => (&null_vr, &null_vr)
                         };
 
-                        intersect.0.encode_to_format(buf, value_formats.0, start)?;
-                        intersect.1.encode_to_format(buf, value_formats.1, start)?;
+                        intersect.0.encode_to_format(buf, value_formats.0, start, vr_offset)?;
+                        vr_offset += vr_sizes.0;
+                        intersect.1.encode_to_format(buf, value_formats.1, start, vr_offset)?;
+                        vr_offset += vr_sizes.1;
                     }
                 }
 

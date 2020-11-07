@@ -80,16 +80,6 @@ impl PairValueRecord {
                     &bytes[2 + first_vr_size..], value_formats.1))
         }
     }
-
-    fn encode_with_vf(&self, buf: &mut EncodeBuf, value_formats: (u16, u16), pair_set_start: usize)
-            -> EncodeResult<()> {
-        buf.append(&self.second_glyph)?;
-
-        self.records.0.encode_to_format(buf, value_formats.0, pair_set_start)?;
-        self.records.1.encode_to_format(buf, value_formats.1, pair_set_start)?;
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -181,6 +171,11 @@ impl TTFEncode for PairGlyphs {
             }
         };
 
+        let vr_sizes = (
+            ValueRecord::size_for_format(value_formats.0),
+            ValueRecord::size_for_format(value_formats.1),
+        );
+
         buf.encode_pool_with_header(
             |buf| Ok(PairPosFormat1Header {
                 format: 1,
@@ -197,8 +192,17 @@ impl TTFEncode for PairGlyphs {
 
                 buf.append(&(set.len() as u16))?;
 
+                let mut c = buf.bytes.len();
+                buf.reserve_bytes((u16::PACKED_LEN + vr_sizes.0 + vr_sizes.1) * set.len());
+
                 for pair in set {
-                    pair.encode_with_vf(buf, value_formats, pair_set_start)?;
+                    buf.encode_at(&pair.second_glyph, c)?;
+                    c += u16::PACKED_LEN;
+
+                    pair.records.0.encode_to_format(buf, value_formats.0, pair_set_start, c)?;
+                    c += vr_sizes.0;
+                    pair.records.1.encode_to_format(buf, value_formats.1, pair_set_start, c)?;
+                    c += vr_sizes.1;
                 }
 
                 Ok(())

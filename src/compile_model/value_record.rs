@@ -121,6 +121,11 @@ impl ValueRecord {
     }
 
     #[inline]
+    pub fn size_for_format(format: u16) -> usize {
+        (format.count_ones() as usize) * u16::PACKED_LEN
+    }
+
+    #[inline]
     pub fn smallest_possible_format(&self) -> u16 {
         let mut ret = 0u16;
 
@@ -150,12 +155,13 @@ impl ValueRecord {
     }
 
     #[allow(unused_assignments)]
-    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16, parent_table_start: usize)
+    pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16, parent_table_start: usize, mut start: usize)
             -> EncodeResult<()> {
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
-                    let loc = buf.append(&self.$var.value)?;
+                    let loc = buf.encode_at(&self.$var.value, start)?;
+                    start += i16::PACKED_LEN;
 
                     if let Some(span) = &self.$var.span {
                         buf.add_source_map_entry(span, CompiledEntry::I16(loc));
@@ -169,10 +175,6 @@ impl ValueRecord {
         write_if_in_format!(2, x_advance);
         write_if_in_format!(3, y_advance);
 
-        let mut device_offset = buf.bytes.len();
-        buf.bytes.resize(device_offset
-            + (((format & 0xF0).count_ones() as usize) * u16::PACKED_LEN), 0u8);
-
         macro_rules! write_if_device_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
@@ -183,8 +185,8 @@ impl ValueRecord {
                         _ => 0u16
                     };
 
-                    buf.encode_at(&offset, device_offset)?;
-                    device_offset += u16::PACKED_LEN;
+                    buf.encode_at(&offset, start)?;
+                    start += u16::PACKED_LEN;
                 }
             }
         }

@@ -56,6 +56,11 @@ impl<'a> EncodeBuf<'a> {
     }
 
     #[inline]
+    pub(crate) fn reserve_bytes(&mut self, to_reserve: usize) {
+        self.bytes.resize(self.bytes.len() + to_reserve, 0u8);
+    }
+
+    #[inline]
     pub(crate) fn add_source_map_entry(&mut self, span: &SourceSpan, entry: CompiledEntry) {
         if self.should_optimize_filesize() {
             return

@@ -45,7 +45,10 @@ impl TTFEncode for SingleClass {
             }),
 
             |buf| {
-                self.value_record.encode_to_format(buf, value_format, start)
+                let c = buf.bytes.len();
+                buf.reserve_bytes(ValueRecord::size_for_format(value_format));
+
+                self.value_record.encode_to_format(buf, value_format, start, c)
             })?;
 
         Ok(start)
