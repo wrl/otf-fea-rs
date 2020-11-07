@@ -154,9 +154,21 @@ impl ValueRecord {
         ret
     }
 
+    #[inline]
+    fn ensure_buf_capacity(buf: &EncodeBuf, format: u16, start: usize) -> EncodeResult<()> {
+        let end = start + Self::size_for_format(format);
+        if end > buf.bytes.len() {
+            return Err(EncodeError::BufferTooSmallForType("ValueRecord"));
+        }
+
+        Ok(())
+    }
+
     #[allow(unused_assignments)]
     pub fn encode_to_format(&self, buf: &mut EncodeBuf, format: u16, parent_table_start: usize, mut start: usize)
             -> EncodeResult<()> {
+        Self::ensure_buf_capacity(buf, format, start)?;
+
         macro_rules! write_if_in_format {
             ($shift:expr, $var:ident) => {
                 if (format & (1u16 << $shift)) != 0 {
