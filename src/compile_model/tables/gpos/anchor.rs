@@ -4,6 +4,7 @@ use endian_codec::{EncodeBE, DecodeBE, PackedSize};
 
 use crate::compile_model::util::encode::*;
 use crate::compile_model::util::decode::*;
+use crate::compile_model::device::*;
 use crate::compile_model::error::*;
 use crate::parse_model as pm;
 
@@ -26,8 +27,11 @@ pub enum Anchor {
     },
 
     DeviceAdjustedCoord {
-        x: i16,
-        y: i16
+        x: MaybePositioned<i16>,
+        y: MaybePositioned<i16>,
+
+        x_device: Option<Device>,
+        y_device: Option<Device>,
     }
 }
 
@@ -86,9 +90,12 @@ impl TryFrom<&pm::Anchor> for Anchor {
 
             // FIXME: propagate device information
             DeviceAdjustedCoord { x, y } =>
-                Self::Coord {
+                Self::DeviceAdjustedCoord {
                     x: metric_to_i16(&x.metric),
-                    y: metric_to_i16(&y.metric)
+                    y: metric_to_i16(&y.metric),
+
+                    x_device: Some(Device::try_from(&x.device)?),
+                    y_device: Some(Device::try_from(&y.device)?)
                 },
 
             Named(_) =>
@@ -129,6 +136,15 @@ impl From<AnchorFormat2> for Anchor {
             contour_point: encoded.contour_point
         }
     }
+}
+
+#[derive(EncodeBE, DecodeBE, PackedSize)]
+struct AnchorFormat3 {
+    format: u16,
+    x: i16,
+    y: i16,
+    x_device_offset: u16,
+    y_device_offset: u16
 }
 
 impl TTFEncode for Anchor {
@@ -175,8 +191,41 @@ impl TTFEncode for Anchor {
                 Ok(start)
             },
 
-            Self::DeviceAdjustedCoord { .. } =>
-                panic!("unimplemented device encode")
+            Self::DeviceAdjustedCoord { x, y, x_device, y_device } => {
+                let start = buf.bytes.len();
+
+                buf.defer_header_encode(
+                    |buf| Ok(AnchorFormat3 {
+                        format: 3,
+                        x: x.value,
+                        y: y.value,
+                        x_device_offset:
+                            match x_device {
+                                Some(dev) if !dev.is_empty() => (buf.append(dev)? - start) as u16,
+                                _ => 0
+                            },
+
+                        y_device_offset:
+                            match y_device {
+                                Some(dev) if !dev.is_empty() => (buf.append(dev)? - start) as u16,
+                                _ => 0
+                            }
+                    }),
+
+                    |_| Ok(()))?;
+
+                if let Some(span) = x.span.as_ref() {
+                    let loc = start + u16::PACKED_LEN; // skip `format`
+                    buf.add_source_map_entry(span, CompiledEntry::I16(loc));
+                }
+
+                if let Some(span) = y.span.as_ref() {
+                    let loc = start + (u16::PACKED_LEN * 2); // skip `format` and `x`
+                    buf.add_source_map_entry(span, CompiledEntry::I16(loc));
+                }
+
+                Ok(start)
+            }
         }
     }
 }

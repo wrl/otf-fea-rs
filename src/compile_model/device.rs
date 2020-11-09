@@ -183,14 +183,18 @@ impl TTFEncode for Device {
         let start_ppem = *self.adjustments.keys().next().unwrap();
         let end_ppem = *self.adjustments.keys().last().unwrap();
 
-        for v in self.adjustments.values() {
-            let v = *v;
+        if buf.should_optimize_filesize() {
+            for v in self.adjustments.values() {
+                let v = *v;
 
-            if v > 7 || v < -8 {
-                format = DeltaFormat::EightBit;
-            } else if v > 1 || v < -2 {
-                format = DeltaFormat::FourBit;
+                if v > 7 || v < -8 {
+                    format = DeltaFormat::EightBit;
+                } else if v > 1 || v < -2 {
+                    format = DeltaFormat::FourBit;
+                }
             }
+        } else {
+            format = DeltaFormat::EightBit;
         }
 
         buf.append(&DeviceHeader {
