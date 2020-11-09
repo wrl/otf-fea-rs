@@ -49,11 +49,6 @@ impl TTFEncode for Cursive {
 
             self.0.values(),
 
-            // FIXME: we're encoding two discrete items into the pool here, but the EncodeBuf pool
-            // funcs assume one pool item per record, where here we have 2.
-            //
-            // as a matter of fact, this doesn't work at all, so.
-            // need to refactor the pool encode funcs.
             |(entry_anchor_offset, exit_anchor_offset), _| EntryExitRecord {
                 entry_anchor_offset,
                 exit_anchor_offset
