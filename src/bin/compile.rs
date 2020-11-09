@@ -65,9 +65,17 @@ fn main() {
     let f = File::open(&in_path).unwrap();
 
     let glyph_order = fealib_builder_glyph_order();
-    let parsed = parser::parse_file(f).unwrap();
 
+    println!();
+    println!("parsing...");
+    let parsed = parser::parse_file(f).unwrap();
+    println!("    parsed successfully!");
+    println!();
+
+    println!("compiling...");
     let mut compiled = compiler::compile(glyph_order, &parsed).unwrap();
+    println!("    compiled successfully!");
+    println!();
 
     if let Some(ref mut head) = compiled.head {
         // all stuff to get a clean diff between our output and `spec9c1.ttf`
