@@ -31,6 +31,24 @@ pub enum Anchor {
     }
 }
 
+impl Anchor {
+    #[inline]
+    pub fn should_encode(&self, buf: &EncodeBuf) -> bool {
+        use Anchor::*;
+
+        let optimize = buf.should_optimize_filesize();
+
+        match self {
+            Coord { x, y } => {
+                (x.value != 0 || (!optimize && x.has_position()))
+                    || (y.value != 0 || (!optimize && y.has_position()))
+            },
+
+            _ => true
+        }
+    }
+}
+
 #[inline]
 fn metric_to_i16(metric: &pm::Metric) -> MaybePositioned<i16> {
     MaybePositioned {
@@ -138,7 +156,7 @@ impl TTFEncode for Anchor {
 
             Self::ContourCoord { x, y, contour_point } => {
                 let start = buf.append(&AnchorFormat2 {
-                    format: 1,
+                    format: 2,
                     x: x.value,
                     y: y.value,
                     contour_point: *contour_point

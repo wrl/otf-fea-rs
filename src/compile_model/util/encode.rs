@@ -212,6 +212,55 @@ impl<'a> EncodeBuf<'a> {
 
         self.encode_pool_internal(table_start, record_offset, items, record_for_offset, write_item)
     }
+
+    // FIXME: will fix these names in the future after i figure out how to reconcile this API with
+    // the rest of the pool methods. very unclear presently.
+    fn encode_pool_2_internal<'b, Item, I, Record, RF, IWF, IWFR>
+        (&mut self, mut record_offset: usize, items: I, record_for_offset: RF, write_item: IWF)
+            -> EncodeResult<()>
+
+        where Item: 'b,
+              I: Iterator<Item = Item> + ExactSizeIterator,
+              Record: EncodeBE,
+              RF: Fn(IWFR, &Item) -> Record,
+              IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>
+    {
+        for item in items {
+            let ret = write_item(self, &item)?;
+
+            self.encode_at(
+                &record_for_offset(ret, &item),
+                record_offset)?;
+
+            record_offset += Record::PACKED_LEN;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn encode_pool_2_with_header<'b, Header, HF, Item, I, Record, RF, IWF, IWFR>
+        (&mut self, header_func: HF, items: I, record_for_offset: RF, write_item: IWF)
+            -> EncodeResult<usize>
+
+        where Item: 'b,
+              I: Iterator<Item = Item> + ExactSizeIterator,
+              Record: EncodeBE,
+              RF: Fn(IWFR, &Item) -> Record,
+              IWF: Fn(&mut EncodeBuf, &Item) -> EncodeResult<IWFR>,
+              Header: EncodeBE,
+              HF: FnOnce(&mut EncodeBuf) -> EncodeResult<Header>
+    {
+        let table_start = self.bytes.len();
+        let record_offset = table_start + Header::PACKED_LEN;
+        self.bytes.resize(record_offset + (items.len() * Record::PACKED_LEN), 0u8);
+
+        let header = header_func(self)?;
+        self.encode_at(&header, table_start)?;
+
+        self.encode_pool_2_internal(record_offset, items, record_for_offset, write_item)?;
+
+        Ok(table_start)
+    }
 }
 
 

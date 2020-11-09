@@ -40,7 +40,7 @@ impl TTFEncode for Cursive {
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
         let start = buf.bytes.len();
 
-        buf.encode_pool_with_header(
+        buf.encode_pool_2_with_header(
             |buf| Ok(CursivePosFormat1Header {
                 format: 1,
                 coverage_offset: (self.0.ttf_encode(buf)? - start) as u16,
@@ -54,15 +54,27 @@ impl TTFEncode for Cursive {
             //
             // as a matter of fact, this doesn't work at all, so.
             // need to refactor the pool encode funcs.
-            |offset, _| EntryExitRecord {
-                entry_anchor_offset: offset,
-                exit_anchor_offset: offset,
+            |(entry_anchor_offset, exit_anchor_offset), _| EntryExitRecord {
+                entry_anchor_offset,
+                exit_anchor_offset
             },
 
             |buf, anchors| {
+                let entry = if anchors.entry.should_encode(buf) {
+                    buf.append(&anchors.entry)? - start
+                } else {
+                    0
+                };
+
+                let exit = if anchors.exit.should_encode(buf) {
+                    buf.append(&anchors.exit)? - start
+                } else {
+                    0
+                };
+
                 Ok((
-                    buf.append(&anchors.entry)?,
-                    buf.append(&anchors.exit)?
+                    entry as u16,
+                    exit as u16
                 ))
             })
     }
