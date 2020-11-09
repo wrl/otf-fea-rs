@@ -8,19 +8,6 @@ pub trait CheckedFrom<T, E>: Sized {
     fn checked_from(scope: impl Into<String>, item: &'static str, t: T) -> Result<Self, E>;
 }
 
-// impl<T> CheckedFrom<T, EncodeError> for T
-//     where T: TryInto<Self> + Into<Self> + Copy + Into<usize>
-// {
-//     fn checked_from(scope: impl Into<String>, item: &'static str, value: T) -> Result<Self, EncodeError> {
-//         Self::try_from(value)
-//             .map_err(|_| EncodeError::U16Overflow {
-//                 scope: scope.into(),
-//                 item,
-//                 value: value.into()
-//             })
-//     }
-// }
-
 impl<F> CheckedFrom<F, EncodeError> for u16
     where F: TryInto<Self> + Into<usize> + Copy
 {
@@ -35,7 +22,7 @@ impl<F> CheckedFrom<F, EncodeError> for u16
 }
 
 impl<T, F> CheckedFrom<F, CompileError> for T
-    where F: TryInto<Self> + Into<usize> + Copy
+    where F: TryInto<Self> + TryInto<isize> + Copy
 {
     fn checked_from(scope: impl Into<String>, item: &'static str, value: F) -> Result<Self, CompileError> {
         value.try_into()
@@ -43,7 +30,7 @@ impl<T, F> CheckedFrom<F, CompileError> for T
                 ty: type_name::<T>(),
                 scope: scope.into(),
                 item,
-                value: value.into()
+                value: value.try_into().unwrap_or(0)
             })
     }
 }

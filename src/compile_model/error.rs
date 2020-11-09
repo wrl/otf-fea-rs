@@ -13,7 +13,7 @@ pub enum CompileError {
         ty: &'static str,
         scope: String,
         item: &'static str,
-        value: usize
+        value: isize
     },
 
     #[error("mark classes cannot be defined or amended after first reference in a position statement")]
