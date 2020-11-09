@@ -1,6 +1,9 @@
 mod checksum;
 pub use checksum::*;
 
+mod checked_from;
+pub use checked_from::*;
+
 pub mod decode;
 pub mod encode;
 

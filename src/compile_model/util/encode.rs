@@ -26,6 +26,7 @@ pub use crate::compile_model::error::{
     EncodeResult
 };
 
+
 pub struct EncodeBuf<'a> {
     pub(crate) bytes: Vec<u8>,
     pub(crate) source_map: SourceMap,

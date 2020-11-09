@@ -1,4 +1,5 @@
 use std::ops::Deref;
+use std::fmt;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7,10 +8,24 @@ pub struct SourcePosition {
     pub column: usize
 }
 
+impl fmt::Display for SourcePosition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "line {}, column {}", self.line, self.column)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SourceSpan {
     pub start: SourcePosition,
     pub end: SourcePosition
+}
+
+impl fmt::Display for SourceSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{} - {}:{}",
+            self.start.line, self.start.column,
+            self.end.line, self.end.column)
+    }
 }
 
 /// A type representing `T` with position information from the source file.
@@ -44,6 +59,16 @@ impl<T> Deref for Positioned<T> {
 pub struct MaybePositioned<T> {
     pub value: T,
     pub span: Option<SourceSpan>
+}
+
+impl<T: fmt::Display> fmt::Display for MaybePositioned<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(span) = &self.span {
+            write!(f, "{} ({})", self.value, span.start)
+        } else {
+            self.value.fmt(f)
+        }
+    }
 }
 
 impl<T> MaybePositioned<T> {
