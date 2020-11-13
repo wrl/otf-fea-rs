@@ -67,7 +67,7 @@ impl<'a> EncodeBuf<'a> {
             return
         }
 
-        self.source_map.entry(span.clone())
+        self.source_map.entry(span.start.clone())
             .or_default()
             .insert(entry);
     }
