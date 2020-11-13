@@ -45,6 +45,7 @@ fn fealib_builder_glyph_order() -> GlyphOrder {
     glyphs
         .split_whitespace().map(GlyphRef::from_name)
         .chain(cids.map(|cid| Ok(GlyphRef::from_cid(cid))))
+        .enumerate()
         .collect_into_glyph_order()
         .unwrap()
 }

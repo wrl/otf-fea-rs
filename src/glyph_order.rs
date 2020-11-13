@@ -36,37 +36,34 @@ pub trait IntoGlyphOrder<T>: Iterator<Item = T> + Sized
     fn collect_into_glyph_order(self) -> Result<GlyphOrder, GlyphOrderError>;
 }
 
-impl<E, I> IntoGlyphOrder<Result<GlyphRef, E>> for I
-    where I: Iterator<Item = Result<GlyphRef, E>> + Sized,
+impl<E, I> IntoGlyphOrder<(u16, Result<GlyphRef, E>)> for I
+    where I: Iterator<Item = (u16, Result<GlyphRef, E>)> + Sized,
           E: Into<GlyphOrderError>
 {
     fn collect_into_glyph_order(self) -> Result<GlyphOrder, GlyphOrderError> {
         let mut map = HashMap::new();
 
-        for (idx, glyph) in self.enumerate() {
-            if idx > (u16::MAX as usize) {
-                return Err(GlyphOrderError::TooManyGlyphs);
-            }
-
-            map.insert(glyph.map_err(|e| e.into())?, idx as u16);
+        for (idx, glyph) in self {
+            map.insert(glyph.map_err(|e| e.into())?, idx);
         }
 
         Ok(GlyphOrder(map))
     }
 }
 
-impl<I> IntoGlyphOrder<GlyphRef> for I
-    where I: Iterator<Item = GlyphRef> + Sized
+impl<E, I> IntoGlyphOrder<(usize, Result<GlyphRef, E>)> for I
+    where I: Iterator<Item = (usize, Result<GlyphRef, E>)> + Sized,
+          E: Into<GlyphOrderError>
 {
     fn collect_into_glyph_order(self) -> Result<GlyphOrder, GlyphOrderError> {
         let mut map = HashMap::new();
 
-        for (idx, glyph) in self.enumerate() {
+        for (idx, glyph) in self {
             if idx > (u16::MAX as usize) {
                 return Err(GlyphOrderError::TooManyGlyphs);
             }
 
-            map.insert(glyph, idx as u16);
+            map.insert(glyph.map_err(|e| e.into())?, idx as u16);
         }
 
         Ok(GlyphOrder(map))

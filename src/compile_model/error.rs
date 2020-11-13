@@ -2,7 +2,10 @@ use thiserror::Error;
 
 use crate::compile_model::tables::gpos::lookup::*;
 use crate::glyph_order::*;
-use crate::FeatureTag;
+use crate::{
+    MaybePositioned,
+    FeatureTag
+};
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
@@ -13,7 +16,7 @@ pub enum CompileError {
         ty: &'static str,
         scope: String,
         item: &'static str,
-        value: isize
+        value: MaybePositioned<isize>
     },
 
     #[error("mark classes cannot be defined or amended after first reference in a position statement")]
@@ -60,7 +63,7 @@ pub enum EncodeError {
     U16Overflow {
         scope: String,
         item: &'static str,
-        value: usize
+        value: MaybePositioned<usize>
     },
 
     #[error("value record format includes fields which are not presetn")]

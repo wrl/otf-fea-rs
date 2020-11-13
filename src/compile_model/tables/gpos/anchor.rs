@@ -12,7 +12,6 @@ use crate::MaybePositioned;
 use crate::compile_model::CompiledEntry;
 
 
-
 #[derive(Debug, Clone)]
 pub enum Anchor {
     Coord {
