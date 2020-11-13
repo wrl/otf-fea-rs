@@ -24,9 +24,7 @@ use otf_fea_rs::{
     parser,
     compiler,
 
-    compile_model::*,
-    compile_model::util::decode::*,
-    compile_model::util::encode::*
+    compile_model::*
 };
 
 use otf_fea_rs::glyph::GlyphRef;
@@ -1072,7 +1070,7 @@ impl State {
     }
 
     #[inline]
-    fn clobber_bits<'a>(&'a mut self, delta: i16) {
+    fn clobber_bits<'a>(&'a mut self, idx: c_uint, delta: i16) {
         let gpos = {
             let tables = unsafe { transmute::<_, &mut EncodedTables<'a>>(&mut self.tables) };
 
@@ -1082,9 +1080,12 @@ impl State {
             }
         };
 
-        let pos = SourcePosition {
-            line: 468,
-            column: 12
+        let pos = match idx {
+            0 => SourcePosition { line: 468, column: 8 },
+            1 => SourcePosition { line: 469, column: 8 },
+            2 => SourcePosition { line: 470, column: 8 },
+            3 => SourcePosition { line: 471, column: 8 },
+            _ => return
         };
 
         let map = match gpos.source_map.get(&pos) {
@@ -1203,11 +1204,11 @@ pub extern "C" fn frs_merge_features(state: *mut State, fea_path: *const i8) -> 
 }
 
 #[no_mangle]
-pub extern "C" fn frs_clobber_bits(state: *mut State, delta: i16) {
+pub extern "C" fn frs_clobber_bits(state: *mut State, idx: c_uint, delta: i16) {
     let state = unsafe { match state.as_mut() {
         Some(s) => s,
         None => return
     }};
 
-    state.clobber_bits(delta);
+    state.clobber_bits(idx, delta);
 }
