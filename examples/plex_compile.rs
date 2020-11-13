@@ -1,4 +1,5 @@
 use std::io::prelude::*;
+use std::borrow::Cow;
 use std::convert::*;
 use std::fs::File;
 use std::ptr;
@@ -9,6 +10,8 @@ use std::os::raw::{
     c_uint,
     c_int
 };
+
+use endian_codec::EncodeBE;
 
 use otf_fea_rs::{
     GlyphOrder,
@@ -22,9 +25,12 @@ use otf_fea_rs::{
     compiler,
 
     compile_model::*,
+    compile_model::util::decode::*,
+    compile_model::util::encode::*
 };
 
 use otf_fea_rs::glyph::GlyphRef;
+
 
 fn plex_glyph_order() -> GlyphOrder {
     let glyphs = [
@@ -1066,10 +1072,14 @@ impl State {
     }
 
     #[inline]
-    fn clobber_bits(&mut self, _delta: i16) {
-        let gpos = match self.tables.get_table(tag!(G,P,O,S)) {
-            Some(t) => t,
-            None => return
+    fn clobber_bits<'a>(&'a mut self, delta: i16) {
+        let gpos = {
+            let tables = unsafe { transmute::<_, &mut EncodedTables<'a>>(&mut self.tables) };
+
+            match tables.get_table_mut(tag!(G,P,O,S)) {
+                Some(t) => t,
+                None => return
+            }
         };
 
         let pos = SourcePosition {
@@ -1077,7 +1087,43 @@ impl State {
             column: 12
         };
 
-        println!("{:#?}", gpos.source_map.get(&pos));
+        let map = match gpos.source_map.get(&pos) {
+            Some(m) => match m.iter().next() {
+                Some(CompiledEntry::I16(o)) => *o,
+                None => {
+                    println!("what");
+                    return
+                }
+            },
+
+            None => {
+                println!("no source map for loc");
+                return
+            }
+        };
+
+        let slice = match gpos.bytes {
+            Cow::Borrowed(_) => {
+                println!("not clobbering borrowed bytes");
+                return
+            },
+
+            Cow::Owned(ref mut bytes) => {
+                &mut bytes[map..map+2]
+            }
+        };
+
+        let cv = {
+            let mut a = [0u8; 2];
+            a.copy_from_slice(slice);
+            i16::from_be_bytes(a)
+        };
+
+        print!("{} ->", cv);
+        let cv = cv.saturating_add(delta);
+        println!(" {}", cv);
+
+        cv.encode_as_be_bytes(slice);
     }
 }
 
