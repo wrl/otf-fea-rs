@@ -1,17 +1,21 @@
 use std::io::prelude::*;
-use std::mem::transmute;
+use std::convert::*;
 use std::fs::File;
-use std::ffi;
 use std::ptr;
+
+use std::os::raw::c_uint;
+use std::mem::transmute;
+use std::ffi;
 
 use otf_fea_rs::{
     GlyphOrder,
     IntoGlyphOrder,
+    Tag,
 
     parser,
     compiler,
 
-    compile_model::*
+    compile_model::*,
 };
 
 use otf_fea_rs::glyph::GlyphRef;
@@ -986,6 +990,7 @@ pub fn recompile(in_fea_path: &str, in_ttf_path: &str) {
 }
 
 pub struct State {
+    #[allow(dead_code)]
     ttf_buf: Vec<u8>,
     tables: EncodedTables<'static>
 }
@@ -1015,6 +1020,17 @@ impl State {
             tables
         })
     }
+
+    #[inline]
+    fn lookup_table(&self, tag: u32) -> Result<&[u8], ()> {
+        let tag = Tag::try_from(tag)
+            .map_err(|_| ())?;
+
+        match self.tables.get_table(tag) {
+            Some(t) => Ok(&t.bytes),
+            _ => Err(())
+        }
+    }
 }
 
 #[no_mangle]
@@ -1033,7 +1049,7 @@ pub unsafe extern "C" fn frs_new(ttf_path: *const i8) -> *mut State {
 
     match State::new_from_ttf(ttf_path_str) {
         Ok(state) => Box::into_raw(Box::new(state)),
-        Err(e) => ptr::null_mut()
+        Err(_) => ptr::null_mut()
     }
 }
 
@@ -1044,4 +1060,30 @@ pub unsafe extern "C" fn frs_destroy(state: *mut State) {
     }
 
     drop(Box::from_raw(state));
+}
+
+#[no_mangle]
+pub extern "C" fn frs_lookup_table(state: *const State, tag: u32, size: *mut c_uint) -> *const u8 {
+    let state = unsafe { match state.as_ref() {
+        Some(s) => s,
+        None => return ptr::null()
+    }};
+
+    match state.lookup_table(tag) {
+        Ok(buf) => if let Ok(sz) = buf.len().try_into() {
+            unsafe {
+                *size = sz;
+            }
+
+            return buf.as_ptr();
+        },
+
+        _ => (),
+    }
+
+    unsafe {
+        *size = 0;
+    }
+
+    ptr::null()
 }

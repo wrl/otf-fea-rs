@@ -62,6 +62,7 @@ impl<'a> EncodedTables<'a> {
         }
     }
 
+    #[inline]
     pub fn add_table(&mut self, tag: Tag, mut encoded: Vec<u8>, source_map: SourceMap) {
         encoded.shrink_to_fit();
         self.tables.insert(EncodedTableTag(tag), EncodedTable {
@@ -70,6 +71,7 @@ impl<'a> EncodedTables<'a> {
         });
     }
 
+    #[inline]
     pub fn add_borrowed_table(&mut self, tag: Tag, encoded: &'a [u8]) {
         self.tables.insert(EncodedTableTag(tag), EncodedTable {
             bytes: encoded.into(),
@@ -77,6 +79,12 @@ impl<'a> EncodedTables<'a> {
         });
     }
 
+    #[inline]
+    pub fn get_table(&self, tag: Tag) -> Option<&EncodedTable> {
+        self.tables.get(&EncodedTableTag(tag))
+    }
+
+    #[inline]
     pub fn iter_tables(&self) -> impl Iterator<Item = (&Tag, &EncodedTable)> {
         self.tables.iter()
             .map(|(tag, table)| (&tag.0, table))
