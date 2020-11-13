@@ -10,6 +10,9 @@ use crate::compile_model::*;
 
 #[derive(Debug, Error)]
 pub enum TTFLoadError {
+    #[error("unknown TTF version {0}")]
+    UnknownTTFVersion(u32),
+
     #[error("bad whole-file checksum")]
     BadWholeFileChecksum
 }
@@ -40,6 +43,10 @@ impl<'a> EncodedTables<'a> {
     fn load_ttf_data(&mut self, buf: &'a [u8]) -> TTFLoadResult<()> {
         let (offset_buf, rest) = buf.split_at(TTFOffsetTable::PACKED_LEN);
         let offset_table = TTFOffsetTable::decode_from_be_bytes(offset_buf);
+
+        if let TTFVersion::Unknown(v) = offset_table.version {
+            return Err(TTFLoadError::UnknownTTFVersion(v));
+        }
 
         let mut head_record = None;
         let mut running_checksum = 0u32;
