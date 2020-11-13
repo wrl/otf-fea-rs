@@ -26,3 +26,7 @@ hashbrown = "0.9"
 [dependencies.arrayvec]
 version = "0.5"
 features = ["array-sizes-33-128"]
+
+[[example]]
+name = "plex_compile"
+crate-type = ["staticlib"]
