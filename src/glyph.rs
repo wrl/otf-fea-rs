@@ -104,7 +104,7 @@ impl GlyphRef {
             .map_err(|_| GlyphError::GlyphNameTooLong)?;
 
         // FIXME: development names??
-        if !glyph_character_valid(astr[0].as_byte(), true, true) {
+        if !glyph_character_valid(astr[0].as_byte(), true, true) && astr != ".notdef" {
             return Err(GlyphError::InvalidStartingCharacter(GlyphName(n)));
         }
 
