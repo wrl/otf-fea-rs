@@ -14,6 +14,7 @@ use super::tables;
 
 pub type MarkClassGlyphClass = (GlyphClass, Anchor);
 pub type MarkClassData = Vec<MarkClassGlyphClass>;
+pub type NamedGlyphClassTable = HashMap<GlyphClassName, GlyphClass>;
 
 pub struct CompilerState {
     pub glyph_order: GlyphOrder,
@@ -29,7 +30,7 @@ pub struct CompilerState {
     pub mark_class_table: HashMap<pm::MarkClassName, MarkClassData>,
 
     pub anchor_table: HashMap<pm::AnchorName, Anchor>,
-    pub glyph_class_table: HashMap<GlyphClassName, GlyphClass>,
+    pub glyph_class_table: NamedGlyphClassTable,
 }
 
 pub struct CompilerOutput {
