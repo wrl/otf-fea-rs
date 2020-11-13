@@ -507,16 +507,14 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
  */
 
 impl CompilerOutput {
-    pub fn encode_tables(&mut self) -> EncodedTables {
-        let mut encoded = EncodedTables::new(self.head.clone());
-
+    pub fn merge_encoded_tables(&self, tables: &mut EncodedTables) -> EncodeResult<()> {
         macro_rules! encode_table {
             ($table:ident, $tag:expr) => {
                 if let Some(table) = self.$table.as_ref() {
                     let mut buf = EncodeBuf::new_with_glyph_order(&self.glyph_order);
-                    table.ttf_encode(&mut buf).unwrap();
+                    table.ttf_encode(&mut buf)?;
 
-                    encoded.add_table($tag, buf.bytes, buf.source_map);
+                    tables.add_table($tag, buf.bytes, buf.source_map);
                 }
             }
         }
@@ -524,7 +522,13 @@ impl CompilerOutput {
         encode_table!(gpos, tag!(G,P,O,S));
         encode_table!(gsub, tag!(G,S,U,B));
 
-        encoded
+        Ok(())
+    }
+
+    pub fn encode_tables(&self) -> EncodeResult<EncodedTables> {
+        let mut encoded = EncodedTables::new(self.head.clone());
+        self.merge_encoded_tables(&mut encoded)?;
+        Ok(encoded)
     }
 }
 
