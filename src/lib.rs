@@ -17,6 +17,9 @@ pub mod compile_model;
 pub mod glyph;
 pub mod glyph_class;
 
+#[cfg(feature = "ttf-loader")]
+pub mod ttf_loader;
+
 #[macro_use]
 mod tag;
 pub use tag::*;
