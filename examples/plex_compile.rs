@@ -3,14 +3,20 @@ use std::convert::*;
 use std::fs::File;
 use std::ptr;
 
-use std::os::raw::c_uint;
 use std::mem::transmute;
 use std::ffi;
+use std::os::raw::{
+    c_uint,
+    c_int
+};
 
 use otf_fea_rs::{
     GlyphOrder,
     IntoGlyphOrder,
     Tag,
+    tag,
+
+    SourcePosition,
 
     parser,
     compiler,
@@ -950,7 +956,7 @@ fn plex_glyph_order() -> GlyphOrder {
         (925, "nbspace"),
         (926, "fcclogo"),
         (927, "celogo"),
-        ];
+    ];
 
     glyphs
         .iter()
@@ -1031,6 +1037,48 @@ impl State {
             _ => Err(())
         }
     }
+
+    #[inline]
+    fn merge_features(&mut self, fea_path: &str) -> Result<(), ()> {
+        let glyph_order = plex_glyph_order();
+
+        println!();
+        println!("parsing `{}`...", &fea_path);
+        let fea = File::open(&fea_path)
+            .map_err(|e|
+                println!("File::open() failed: {}", e))?;
+
+        let parsed = parser::parse_file(fea)
+            .map_err(|_| println!("parse_file() failed"))?;
+
+        println!("    parsed successfully!");
+        println!();
+
+        println!("compiling...");
+        compiler::compile(glyph_order, &parsed)
+            .map_err(|e| println!("compile() failed: {}", e))?
+            .merge_encoded_tables(&mut self.tables)
+            .map_err(|e| println!("merge_encoded_tables() failed: {}", e))?;
+        println!("    compiled successfully!");
+        println!();
+
+        Ok(())
+    }
+
+    #[inline]
+    fn clobber_bits(&mut self, _delta: i16) {
+        let gpos = match self.tables.get_table(tag!(G,P,O,S)) {
+            Some(t) => t,
+            None => return
+        };
+
+        let pos = SourcePosition {
+            line: 468,
+            column: 12
+        };
+
+        println!("{:#?}", gpos.source_map.get(&pos));
+    }
 }
 
 #[no_mangle]
@@ -1086,4 +1134,34 @@ pub extern "C" fn frs_lookup_table(state: *const State, tag: u32, size: *mut c_u
     }
 
     ptr::null()
+}
+
+#[no_mangle]
+pub extern "C" fn frs_merge_features(state: *mut State, fea_path: *const i8) -> c_int {
+    let state = unsafe { match state.as_mut() {
+        Some(s) => s,
+        None => return -1
+    }};
+
+    let fea_path = match unsafe { ffi::CStr::from_ptr(fea_path) }.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            println!("`fea_path` isn't valid UTF-8: {}", e);
+            return -1;
+        }
+    };
+
+    state.merge_features(fea_path)
+        .map(|_| 0)
+        .unwrap_or(1)
+}
+
+#[no_mangle]
+pub extern "C" fn frs_clobber_bits(state: *mut State, delta: i16) {
+    let state = unsafe { match state.as_mut() {
+        Some(s) => s,
+        None => return
+    }};
+
+    state.clobber_bits(delta);
 }
