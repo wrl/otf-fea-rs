@@ -56,4 +56,7 @@ pub(crate) use compiler_state::CompilerState;
 pub use compiler_state::CompilerOutput;
 
 mod encoded_tables;
-pub use encoded_tables::EncodedTables;
+pub use encoded_tables::{
+    EncodedTables,
+    EncodedTable
+};

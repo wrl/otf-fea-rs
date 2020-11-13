@@ -102,6 +102,11 @@ impl<'a> EncodedTables<'a> {
     }
 
     #[inline]
+    pub fn get_table_mut(&mut self, tag: Tag) -> Option<&'a mut EncodedTable> {
+        self.tables.get_mut(&EncodedTableTag(tag))
+    }
+
+    #[inline]
     pub fn iter_tables(&self) -> impl Iterator<Item = (&Tag, &EncodedTable)> {
         self.tables.iter()
             .map(|(tag, table)| (&tag.0, table))
