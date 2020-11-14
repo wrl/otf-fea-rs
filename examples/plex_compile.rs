@@ -19,8 +19,6 @@ use otf_fea_rs::{
     Tag,
     tag,
 
-    SourcePosition,
-
     parser,
     compiler,
 
@@ -1081,15 +1079,15 @@ impl State {
         };
 
         let pos = match idx {
-            0 => SourcePosition { line: 468, column: 8 },
-            1 => SourcePosition { line: 469, column: 8 },
-            2 => SourcePosition { line: 470, column: 8 },
-            3 => SourcePosition { line: 471, column: 8 },
+            0 => (468, 0),
+            1 => (468, 1),
+            2 => (469, 0),
+            3 => (470, 0),
             _ => return
         };
 
-        let map = match gpos.source_map.get(&pos) {
-            Some(m) => match m.iter().next() {
+        let map = match gpos.source_map.get(&pos.0) {
+            Some(m) => match m.values().nth(pos.1) {
                 Some(CompiledEntry::I16(o)) => *o,
                 None => {
                     println!("what");
@@ -1120,9 +1118,8 @@ impl State {
             i16::from_be_bytes(a)
         };
 
-        print!("{} ->", cv);
         let cv = cv.saturating_add(delta);
-        println!(" {}", cv);
+        println!("{}", cv);
 
         cv.encode_as_be_bytes(slice);
     }
