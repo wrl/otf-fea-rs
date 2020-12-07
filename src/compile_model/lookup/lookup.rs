@@ -5,6 +5,9 @@ use crate::util::*;
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
+use crate::compile_model::util::*;
+
+use super::subtable::*;
 
 
 bitflags! {
@@ -161,7 +164,7 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
     }
 }
 
-impl<T: TTFEncode> Lookup<T> {
+impl<T: TTFSubtableEncode> Lookup<T> {
     pub fn ttf_encode_with_lookup_type(&self, buf: &mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
@@ -172,7 +175,8 @@ impl<T: TTFEncode> Lookup<T> {
         let header = LookupTableHeader {
             lookup_type: lookup_type,
             lookup_flags: self.lookup_flags.bits(),
-            subtable_count: self.subtables.len() as u16
+            subtable_count: self.subtables.len()
+                .checked_into("Lookup", "subtable count")?
         };
 
         buf.append(&header)?;
@@ -185,10 +189,14 @@ impl<T: TTFEncode> Lookup<T> {
         }
 
         for subtable in &self.subtables {
-            let offset = (buf.append(subtable)? - start) as u16;
-            buf.encode_at(&offset, subtable_offset_start)?;
+            for offset in subtable.ttf_subtable_encode(buf) {
+                let offset: u16 = (offset? - start)
+                    .checked_into("Lookup", "subtable offset")?;
 
-            subtable_offset_start += u16::PACKED_LEN;
+                buf.encode_at(&offset, subtable_offset_start)?;
+
+                subtable_offset_start += u16::PACKED_LEN;
+            }
         }
 
         Ok(start)

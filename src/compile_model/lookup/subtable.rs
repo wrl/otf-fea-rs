@@ -1,3 +1,6 @@
+use std::iter;
+
+use crate::compile_model::util::encode::*;
 use super::*;
 
 
@@ -35,4 +38,20 @@ macro_rules! impl_lookup_subtable_for {
             }
         }
     };
+}
+
+pub trait TTFSubtableEncode {
+    type Iter: Iterator<Item = EncodeResult<usize>>;
+
+    fn ttf_subtable_encode(&self, buf: &mut EncodeBuf) -> Self::Iter;
+}
+
+impl <T: TTFEncode> TTFSubtableEncode for T {
+    type Iter = iter::Once<EncodeResult<usize>>;
+
+    #[inline]
+    fn ttf_subtable_encode(&self, buf: &mut EncodeBuf) -> Self::Iter
+    {
+        iter::once(self.ttf_encode(buf))
+    }
 }
