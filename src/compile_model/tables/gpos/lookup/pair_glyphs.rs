@@ -155,7 +155,6 @@ impl TTFDecode for PairGlyphs {
     }
 }
 
-#[allow(dead_code)]
 struct PairGlyphsSplittingEncode<'a, 'buf> {
     pair_glyphs: &'a PairGlyphs,
     buf: &'buf mut EncodeBuf,
@@ -164,8 +163,6 @@ struct PairGlyphsSplittingEncode<'a, 'buf> {
 
     value_formats: (u16, u16),
     vr_sizes: (usize, usize),
-
-    have_encoded: bool
 }
 
 macro_rules! try_res {
@@ -211,7 +208,7 @@ impl<'a, 'buf> Iterator for PairGlyphsSplittingEncode<'a, 'buf> {
             let pair_set_count: u16 =
                 try_res!(set.len().checked_into("PairSet", "pair set count"));
 
-            pool.append(&pair_set_count).unwrap();
+            try_res!(pool.append(&pair_set_count));
             pool.reserve_bytes(pair_value_record_size * set.len());
 
             for pair in set {
@@ -293,9 +290,7 @@ impl<'a, 'buf> TTFSubtableEncode<'a, 'buf> for PairGlyphs {
             items: self.sets.iter().peekable(),
 
             value_formats,
-            vr_sizes,
-
-            have_encoded: false
+            vr_sizes
         }
     }
 }
