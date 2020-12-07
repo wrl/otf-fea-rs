@@ -17,6 +17,17 @@ fn tag_storage_from_bytes(v: &[u8]) -> Result<TagStorage, ::ascii::ToAsciiCharEr
     Ok(tag)
 }
 
+fn tag_storage_from_u32(v: u32) -> Result<TagStorage, ::ascii::ToAsciiCharError> {
+    let mut tag = [::ascii::AsciiChar::Space; 4];
+
+    tag[0] = ::ascii::AsciiChar::from_ascii((v >> 24) & 0xFF)?;
+    tag[1] = ::ascii::AsciiChar::from_ascii((v >> 16) & 0xFF)?;
+    tag[2] = ::ascii::AsciiChar::from_ascii((v >>  8) & 0xFF)?;
+    tag[3] = ::ascii::AsciiChar::from_ascii((v >>  0) & 0xFF)?;
+
+    Ok(tag)
+}
+
 #[macro_export]
 macro_rules! tag_storage {
     ($a:ident, $b:ident, $c:ident, $d:ident) => {
@@ -72,6 +83,15 @@ macro_rules! tag_type {
         impl $type {
             pub fn from_bytes(v: &[u8]) -> Result<Self, ::ascii::ToAsciiCharError> {
                 tag_storage_from_bytes(v)
+                    .map($type)
+            }
+        }
+
+        impl ::std::convert::TryFrom<u32> for $type {
+            type Error = ::ascii::ToAsciiCharError;
+
+            fn try_from(v: u32) -> Result<Self, Self::Error> {
+                tag_storage_from_u32(v)
                     .map($type)
             }
         }

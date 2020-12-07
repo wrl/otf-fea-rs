@@ -1,9 +1,7 @@
 use std::collections::{
     HashMap,
-    HashSet
+    BTreeMap,
 };
-
-use crate::SourceSpan;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11,4 +9,4 @@ pub enum CompiledEntry {
     I16(usize)
 }
 
-pub type SourceMap = HashMap<SourceSpan, HashSet<CompiledEntry>>;
+pub type SourceMap = HashMap<usize, BTreeMap<usize, CompiledEntry>>;

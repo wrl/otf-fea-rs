@@ -86,7 +86,7 @@ fn main() {
         head.font_direction_hint = 0;
     }
 
-    let mut tables = compiled.encode_tables();
+    let mut tables = compiled.encode_tables().unwrap();
 
     println!();
     println!("source maps:");

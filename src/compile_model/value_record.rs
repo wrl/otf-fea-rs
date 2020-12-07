@@ -131,7 +131,9 @@ impl ValueRecord {
 
         macro_rules! set_bit_if_nonzero {
             ($shift:expr, $var:ident) => {
-                ret |= ((self.$var.value != 0) as u16) << $shift;
+                if self.$var.value != 0 || self.$var.span.is_some() {
+                    ret |= 1 << $shift;
+                }
             }
         }
 

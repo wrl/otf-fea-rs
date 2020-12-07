@@ -9,6 +9,7 @@ use crate::compile_model::compiler_state::*;
 use crate::compile_model::tables::gpos::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::coverage::*;
+use crate::compile_model::error::*;
 
 use crate::parse_model::MarkClassName;
 
@@ -22,9 +23,11 @@ pub struct MarkToBase {
 }
 
 impl MarkToBase {
-    fn add_mark(&mut self, glyph_order: &GlyphOrder, mark_class: &[MarkClassGlyphClass], class_id: u16) -> Result<(), GlyphOrderError> {
+    fn add_mark(&mut self, glyph_order: &GlyphOrder, gc_table: &NamedGlyphClassTable,
+        mark_class: &[MarkClassGlyphClass], class_id: u16) -> CompileResult<()>
+    {
         for (glyph_class, anchor) in mark_class {
-            for glyph in glyph_class.iter_glyphs(glyph_order) {
+            for glyph in glyph_class.iter_glyphs(glyph_order, gc_table) {
                 let was_present = self.marks
                     .insert(glyph?, MarkRecord {
                         class_id,
@@ -40,20 +43,21 @@ impl MarkToBase {
         Ok(())
     }
 
-    pub fn add_mark_class(&mut self, glyph_order: &GlyphOrder, base_class: &GlyphClass,
-        anchor: &Anchor, name: &MarkClassName, mark_class: &[MarkClassGlyphClass]) -> Result<(), GlyphOrderError>
+    pub fn add_mark_class(&mut self, glyph_order: &GlyphOrder, gc_table: &NamedGlyphClassTable,
+        base_class: &GlyphClass, anchor: &Anchor, name: &MarkClassName,
+        mark_class: &[MarkClassGlyphClass]) -> CompileResult<()>
     {
         let class_id =
             if self.classes.contains_key(name) {
                 *self.classes.get(name).unwrap()
             } else {
                 let id = self.classes.len() as u16;
-                self.add_mark(glyph_order, mark_class, id)?;
+                self.add_mark(glyph_order, gc_table, mark_class, id)?;
                 self.classes.insert(name.clone(), id);
                 id
             };
 
-        for base_glyph in base_class.iter_glyphs(glyph_order) {
+        for base_glyph in base_class.iter_glyphs(glyph_order, gc_table) {
             self.bases.entry(base_glyph?)
                 .or_default()
                 .insert(class_id, anchor.clone());

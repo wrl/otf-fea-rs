@@ -6,7 +6,9 @@ use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 use crate::glyph_class::*;
 use crate::glyph_order::*;
 
+use crate::compile_model::compiler_state::*;
 use crate::compile_model::util::encode::*;
+use crate::compile_model::error::*;
 
 use crate::util::*;
 
@@ -56,10 +58,12 @@ struct ClassRangeRecord {
 }
 
 impl ClassDef {
-    pub fn from_glyph_class(glyph_class: &GlyphClass, glyph_order: &GlyphOrder) -> Result<Self, GlyphOrderError> {
-        let glyphs = glyph_class.iter_glyphs(glyph_order);
+    pub fn from_glyph_class(glyph_class: &GlyphClass, glyph_order: &GlyphOrder,
+        gc_table: &NamedGlyphClassTable) -> CompileResult<Self>
+    {
+        let glyphs = glyph_class.iter_glyphs(glyph_order, gc_table);
 
-        glyphs.collect::<Result<_, GlyphOrderError>>()
+        glyphs.collect::<Result<_, CompileError>>()
             .map(Self)
     }
 

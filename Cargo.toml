@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["William Light <wrl@lhiaudio.com>"]
 edition = "2018"
 
+[features]
+default = ["ttf-loader"]
+
+ttf-loader = []
+
 [dependencies]
 thiserror = "1.0"
 
@@ -21,3 +26,7 @@ hashbrown = "0.9"
 [dependencies.arrayvec]
 version = "0.5"
 features = ["array-sizes-33-128"]
+
+[[example]]
+name = "plex_compile"
+crate-type = ["staticlib"]

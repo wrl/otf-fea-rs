@@ -1,6 +1,11 @@
-use std::collections::BTreeMap;
+// FIXME: switch back to BTreeMap for table ordering
+use std::collections::HashMap;
 use std::cmp::Ordering;
 use std::borrow::Cow;
+use std::hash::{
+    Hash,
+    Hasher
+};
 
 use endian_codec::{PackedSize, EncodeBE};
 
@@ -13,7 +18,7 @@ use crate::compile_model::util::encode::*;
 use super::tables;
 
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Eq, Copy, Clone)]
 struct EncodedTableTag(Tag);
 
 impl PartialOrd for EncodedTableTag {
@@ -32,13 +37,25 @@ impl Ord for EncodedTableTag {
     }
 }
 
+impl PartialEq for EncodedTableTag {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Hash for EncodedTableTag {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 pub struct EncodedTable<'a> {
     pub bytes: Cow<'a, [u8]>,
     pub source_map: SourceMap
 }
 
 pub struct EncodedTables<'a> {
-    tables: BTreeMap<EncodedTableTag, EncodedTable<'a>>,
+    tables: HashMap<EncodedTableTag, EncodedTable<'a>>,
     pub(crate) head: Option<tables::Head>
 }
 
@@ -57,11 +74,12 @@ fn write_into<T: PackedSize + EncodeBE>(v: &mut Vec<u8>, p: &T) {
 impl<'a> EncodedTables<'a> {
     pub fn new(head: Option<tables::Head>) -> Self {
         Self {
-            tables: BTreeMap::new(),
+            tables: HashMap::new(),
             head
         }
     }
 
+    #[inline]
     pub fn add_table(&mut self, tag: Tag, mut encoded: Vec<u8>, source_map: SourceMap) {
         encoded.shrink_to_fit();
         self.tables.insert(EncodedTableTag(tag), EncodedTable {
@@ -70,6 +88,7 @@ impl<'a> EncodedTables<'a> {
         });
     }
 
+    #[inline]
     pub fn add_borrowed_table(&mut self, tag: Tag, encoded: &'a [u8]) {
         self.tables.insert(EncodedTableTag(tag), EncodedTable {
             bytes: encoded.into(),
@@ -77,6 +96,17 @@ impl<'a> EncodedTables<'a> {
         });
     }
 
+    #[inline]
+    pub fn get_table(&self, tag: Tag) -> Option<&EncodedTable> {
+        self.tables.get(&EncodedTableTag(tag))
+    }
+
+    #[inline]
+    pub fn get_table_mut(&mut self, tag: Tag) -> Option<&'a mut EncodedTable> {
+        self.tables.get_mut(&EncodedTableTag(tag))
+    }
+
+    #[inline]
     pub fn iter_tables(&self) -> impl Iterator<Item = (&Tag, &EncodedTable)> {
         self.tables.iter()
             .map(|(tag, table)| (&tag.0, table))

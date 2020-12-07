@@ -1,9 +1,9 @@
 use std::fmt;
 use std::iter;
-use std::collections::HashMap;
 
 use crate::glyph_order::*;
 use crate::compile_model::*;
+use crate::compile_model::compiler_state::*;
 use crate::glyph::*;
 use crate::util::*;
 
@@ -67,7 +67,7 @@ impl GlyphClass {
         self.as_single().is_some()
     }
 
-    pub fn iter_glyphs<'a>(&'a self, glyph_order: &'a GlyphOrder)
+    fn iter_glyphs_no_lookup<'a>(&'a self, glyph_order: &'a GlyphOrder)
             -> impl Iterator<Item = Result<u16, GlyphOrderError>> + 'a {
         use GlyphClassItem::*;
 
@@ -99,8 +99,7 @@ impl GlyphClass {
         )
     }
 
-    pub fn iter_glyphs_lookup<'a>(&'a self, glyph_order: &'a GlyphOrder,
-            gc_table: &'a HashMap<GlyphClassName, GlyphClass>)
+    pub fn iter_glyphs<'a>(&'a self, glyph_order: &'a GlyphOrder, gc_table: &'a NamedGlyphClassTable)
             -> impl Iterator<Item = Result<u16, CompileError>> + 'a {
         use GlyphClassItem::*;
 
@@ -131,7 +130,7 @@ impl GlyphClass {
                     ClassRef(name) => match gc_table.get(name) {
                         // FIXME: recursive glyph classes
                         Some(gc) => Either3::C(
-                            gc.iter_glyphs(glyph_order)
+                            gc.iter_glyphs_no_lookup(glyph_order)
                                 .map(|r| r.map_err(|e| e.into()))
                         ),
 

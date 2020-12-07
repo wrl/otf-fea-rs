@@ -124,7 +124,7 @@ fn handle_single_adjustment_position(ctx: &mut CompilerState, block: &Block,
             |_: &gpos::SingleClass| false,
             || gpos::SingleClass::new(vr).into());
 
-        for glyph in pos.glyph_class.iter_glyphs_lookup(&ctx.glyph_order, &ctx.glyph_class_table) {
+        for glyph in pos.glyph_class.iter_glyphs(&ctx.glyph_order, &ctx.glyph_class_table) {
             subtable.add_glyph(glyph?);
         }
     }
@@ -155,11 +155,11 @@ fn handle_pair_position_glyphs(ctx: &mut CompilerState, block: &Block, pair: &pm
         |pg: &gpos::PairGlyphs| pg.value_formats_match(&value_formats),
         || gpos::PairGlyphs::new_with_value_formats(value_formats));
 
-    for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order) {
+    for first_glyph in glyph_classes.0.iter_glyphs(&ctx.glyph_order, &ctx.glyph_class_table) {
         let pairs = subtable.entry(first_glyph?)
             .or_default();
 
-        for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order) {
+        for second_glyph in glyph_classes.1.iter_glyphs(&ctx.glyph_order, &ctx.glyph_class_table) {
             let second_glyph = second_glyph?;
 
             let pvr = gpos::PairValueRecord {
@@ -183,8 +183,8 @@ fn handle_pair_position_class(ctx: &mut CompilerState, block: &Block, pair: &pm:
     let vertical = block.is_vertical();
 
     let classes = (
-        ClassDef::from_glyph_class(&glyph_classes.0, &ctx.glyph_order)?,
-        ClassDef::from_glyph_class(&glyph_classes.1, &ctx.glyph_order)?
+        ClassDef::from_glyph_class(&glyph_classes.0, &ctx.glyph_order, &ctx.glyph_class_table)?,
+        ClassDef::from_glyph_class(&glyph_classes.1, &ctx.glyph_order, &ctx.glyph_class_table)?
     );
 
     let value_records = (
@@ -234,7 +234,7 @@ fn handle_cursive_position(ctx: &mut CompilerState, block: &Block, cursive: &pm:
     let lookup: &mut Lookup<gpos::Cursive> = block.find_or_insert_lookup(gpos);
     let subtable = lookup.get_subtable(block.subtable_breaks);
 
-    for glyph_id in glyph_class.iter_glyphs(&ctx.glyph_order) {
+    for glyph_id in glyph_class.iter_glyphs(&ctx.glyph_order, &ctx.glyph_class_table) {
         subtable.add_rule(glyph_id?, entry.clone(), exit.clone());
     }
 
@@ -252,8 +252,8 @@ fn handle_mark_to_base_position(ctx: &mut CompilerState, block: &Block, m2b: &pm
         let mark_class = ctx.mark_class_table.get(mark_class_name)
             .ok_or_else(|| CompileError::UnknownMarkClass(mark_class_name.into()))?;
 
-        subtable.add_mark_class(&ctx.glyph_order, &m2b.base, &anchor.try_into()?,
-            mark_class_name, mark_class)?;
+        subtable.add_mark_class(&ctx.glyph_order, &ctx.glyph_class_table, &m2b.base,
+            &anchor.try_into()?, mark_class_name, mark_class)?;
     }
 
     Ok(())
@@ -325,7 +325,7 @@ fn handle_alternate_substitution(ctx: &mut CompilerState, block: &Block, sub: &p
     let glyph = ctx.glyph_order.id_for_glyph(&sub.glyph)?;
 
     let replacement: Vec<_> =
-        sub.replacement.iter_glyphs(&ctx.glyph_order)
+        sub.replacement.iter_glyphs(&ctx.glyph_order, &ctx.glyph_class_table)
         .collect::<Result<_, _>>()?;
 
     let gsub = ctx.gsub.get_or_insert_with(|| tables::GSUB::new());
@@ -350,7 +350,7 @@ fn handle_substitute_statement(ctx: &mut CompilerState, block: &Block, s: &pm::S
         Multiple(m) => handle_multiple_substitution(ctx, block, m),
         Alternate(a) => handle_alternate_substitution(ctx, block, a),
 
-        s => panic!("{:#?}", s)
+        Single(_) => Ok(())
     }
 }
 
@@ -391,6 +391,12 @@ fn handle_block_statements(ctx: &mut CompilerState, block: &mut Block, statement
             Lookup(pm::Lookup(name)) => handle_lookup_reference(ctx, block, name)?,
 
             Subtable => block.add_subtable_break(),
+
+            LookupDefinition(ref ld) => handle_lookup_definition(ctx, ld)?,
+            NamedGlyphClass(ref gc) => handle_glyph_class_definition(ctx, gc)?,
+            MarkClass(ref mc) => handle_mark_class_statement(ctx, mc)?,
+
+            Script(_) | Language(_) | FeatureNames(_) => {},
 
             stmt => panic!("unimplemented block statement {:?}", stmt)
         }
@@ -501,16 +507,14 @@ fn handle_top_level(ctx: &mut CompilerState, statement: &pm::TopLevelStatement) 
  */
 
 impl CompilerOutput {
-    pub fn encode_tables(&mut self) -> EncodedTables {
-        let mut encoded = EncodedTables::new(self.head.clone());
-
+    pub fn merge_encoded_tables(&self, tables: &mut EncodedTables) -> EncodeResult<()> {
         macro_rules! encode_table {
             ($table:ident, $tag:expr) => {
                 if let Some(table) = self.$table.as_ref() {
                     let mut buf = EncodeBuf::new_with_glyph_order(&self.glyph_order);
-                    table.ttf_encode(&mut buf).unwrap();
+                    table.ttf_encode(&mut buf)?;
 
-                    encoded.add_table($tag, buf.bytes, buf.source_map);
+                    tables.add_table($tag, buf.bytes, buf.source_map);
                 }
             }
         }
@@ -518,7 +522,13 @@ impl CompilerOutput {
         encode_table!(gpos, tag!(G,P,O,S));
         encode_table!(gsub, tag!(G,S,U,B));
 
-        encoded
+        Ok(())
+    }
+
+    pub fn encode_tables(&self) -> EncodeResult<EncodedTables> {
+        let mut encoded = EncodedTables::new(self.head.clone());
+        self.merge_encoded_tables(&mut encoded)?;
+        Ok(encoded)
     }
 }
 
