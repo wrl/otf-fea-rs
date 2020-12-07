@@ -27,20 +27,27 @@ pub use crate::compile_model::error::{
 };
 
 
-pub struct EncodeBuf<'a> {
+pub struct EncodeBuf {
     pub(crate) bytes: Vec<u8>,
     pub(crate) source_map: SourceMap,
-    pub(crate) _glyph_order: &'a GlyphOrder,
 
-    should_optimize_filesize: bool
+    pub(crate) should_optimize_filesize: bool
 }
 
-impl<'a> EncodeBuf<'a> {
-    pub fn new_with_glyph_order(glyph_order: &'a GlyphOrder) -> Self {
+impl EncodeBuf {
+    pub fn new() -> Self {
         Self {
             bytes: Vec::new(),
             source_map: SourceMap::new(),
-            _glyph_order: glyph_order,
+
+            should_optimize_filesize: false
+        }
+    }
+
+    pub fn new_with_glyph_order(_glyph_order: &GlyphOrder) -> Self {
+        Self {
+            bytes: Vec::new(),
+            source_map: SourceMap::new(),
 
             should_optimize_filesize: false
         }
@@ -276,6 +283,31 @@ impl<T: EncodeBE> TTFEncode for T {
 
         buf.bytes.resize(end, 0u8);
         self.encode_as_be_bytes(&mut buf.bytes[start..end]);
+
+        Ok(start)
+    }
+}
+
+impl TTFEncode for EncodeBuf {
+    fn ttf_encode(&self, into_buf: &mut EncodeBuf) -> EncodeResult<usize> {
+        let start = into_buf.bytes.len();
+
+        into_buf.bytes.extend_from_slice(&self.bytes);
+
+        for (line, entries) in self.source_map.iter() {
+            let sm_entry = into_buf.source_map.entry(*line)
+                .or_default();
+
+            for (column, compiled_entry) in entries {
+                use CompiledEntry::*;
+
+                let compiled_entry = match compiled_entry {
+                    I16(x) => CompiledEntry::I16(x + start)
+                };
+
+                sm_entry.insert(*column, compiled_entry);
+            }
+        }
 
         Ok(start)
     }

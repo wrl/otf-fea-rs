@@ -40,13 +40,13 @@ macro_rules! impl_lookup_subtable_for {
     };
 }
 
-pub trait TTFSubtableEncode {
+pub trait TTFSubtableEncode<'a, 'buf:'a> {
     type Iter: Iterator<Item = EncodeResult<usize>>;
 
-    fn ttf_subtable_encode(&self, buf: &mut EncodeBuf) -> Self::Iter;
+    fn ttf_subtable_encode(&'a self, buf: &'buf mut EncodeBuf) -> Self::Iter;
 }
 
-impl <T: TTFEncode> TTFSubtableEncode for T {
+impl<'a, 'buf:'a, T: TTFEncode> TTFSubtableEncode<'a, 'buf> for T {
     type Iter = iter::Once<EncodeResult<usize>>;
 
     #[inline]

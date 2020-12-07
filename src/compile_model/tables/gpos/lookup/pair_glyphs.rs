@@ -1,4 +1,6 @@
 use std::ops;
+use std::iter;
+use std::collections::btree_map;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
@@ -6,6 +8,8 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::value_record::*;
 use crate::compile_model::coverage::*;
+use crate::compile_model::lookup::*;
+use crate::compile_model::util::*;
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -151,9 +155,115 @@ impl TTFDecode for PairGlyphs {
     }
 }
 
-impl TTFEncode for PairGlyphs {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        let start = buf.bytes.len();
+#[allow(dead_code)]
+struct PairGlyphsSplittingEncode<'a, 'buf> {
+    pair_glyphs: &'a PairGlyphs,
+    buf: &'buf mut EncodeBuf,
+
+    items: iter::Peekable<btree_map::Iter<'a, u16, Vec<PairValueRecord>>>,
+
+    value_formats: (u16, u16),
+    vr_sizes: (usize, usize),
+
+    have_encoded: bool
+}
+
+macro_rules! try_res {
+    ($e:expr) => {
+        match $e {
+            Ok(x) => x,
+            Err(e) => return Some(Err(e))
+        }
+    }
+}
+
+impl<'a, 'buf> Iterator for PairGlyphsSplittingEncode<'a, 'buf> {
+    type Item = EncodeResult<usize>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let value_formats = self.value_formats;
+        let vr_sizes = self.vr_sizes;
+
+        let start = self.buf.bytes.len();
+        self.buf.reserve_bytes(PairPosFormat1Header::PACKED_LEN);
+
+        let record_start = self.buf.bytes.len();
+
+        let mut pool = EncodeBuf::new();
+        pool.should_optimize_filesize = self.buf.should_optimize_filesize;
+
+        let pair_value_record_size = u16::PACKED_LEN + vr_sizes.0 + vr_sizes.1;
+
+        let mut items = self.items.clone();
+        let mut c = pool.bytes.len();
+
+        // using a loop {} instead of a for {} here because we need to peek at the end of the loop
+        // to see if we proceed to the next iteration. for {} holds the iterator borrow for the
+        // body of the loop.
+        loop {
+            let (_, set) = match items.next() {
+                Some(x) => x,
+                None => break
+            };
+
+            let pair_set_start = pool.bytes.len();
+
+            let pair_set_count: u16 =
+                try_res!(set.len().checked_into("PairSet", "pair set count"));
+
+            pool.append(&pair_set_count).unwrap();
+            pool.reserve_bytes(pair_value_record_size * set.len());
+
+            for pair in set {
+                try_res!(pool.encode_at(&pair.second_glyph, c));
+                c += u16::PACKED_LEN;
+
+                try_res!(pair.records.0.encode_to_format(&mut pool, value_formats.0, pair_set_start, c));
+                c += vr_sizes.0;
+
+                try_res!(pair.records.1.encode_to_format(&mut pool, value_formats.1, pair_set_start, c));
+                c += vr_sizes.1;
+            }
+
+            try_res!(self.buf.append(&try_res!(u16::checked_from(
+                    "PairGlyphs", "pair set pool offset", pair_set_start))));
+
+            if let Some((_, next_set)) = items.peek() {
+                let next_set_size = u16::PACKED_LEN + (pair_value_record_size * next_set.len());
+
+                // with space for the offset record
+                let next_fixed_size = self.buf.bytes.len() - start + u16::PACKED_LEN;
+                let next_pool_size = pool.bytes.len() + next_set_size;
+
+                if (next_fixed_size + next_pool_size) > 0xFFFE {
+                    break;
+                }
+            }
+        }
+
+        let pool_start = try_res!(self.buf.append(&pool));
+
+        // FIXME: update the offset records to take pool_start into account
+
+        self.items = items;
+
+        Some(Ok(start))
+    }
+}
+
+impl<'a, 'buf> TTFSubtableEncode<'a, 'buf> for PairGlyphs {
+    type Iter = PairGlyphsSplittingEncode<'a, 'buf>;
+
+    fn ttf_subtable_encode(&'a self, buf: &'buf mut EncodeBuf) -> Self::Iter {
+        // we're determining common value formats for the whole table, which *could* be suboptimal
+        // if the table has mixed value record formats and we have to split it – then, we should be
+        // calculating value formats for each split table for size savings. unfortunately, we don't
+        // know how many pair sets fit into each table until we encode, which requires us to have
+        // already determined value formats for encoding...
+        //
+        // could probably solve this iteratively (i.e. calculate formats, encode, reset, calculate
+        // formats, encode, etc, until the table size no longer changes), but it's almost certainly
+        // not worth it for the increase in code complexity.
 
         let value_formats = match self.common_value_formats {
             Some(vf) => vf,
@@ -176,36 +286,16 @@ impl TTFEncode for PairGlyphs {
             ValueRecord::size_for_format(value_formats.1),
         );
 
-        buf.encode_pool_with_header(
-            |buf| Ok(PairPosFormat1Header {
-                format: 1,
-                coverage_offset: (self.sets.ttf_encode(buf)? - start) as u16,
-                value_format_1: value_formats.0,
-                value_format_2: value_formats.1,
-                pair_set_count: self.len() as u16
-            }),
+        PairGlyphsSplittingEncode {
+            pair_glyphs: self,
+            buf,
 
-            self.values(),
-            |offset, _| offset,
-            |buf, &set| {
-                let pair_set_start = buf.bytes.len();
+            items: self.sets.iter().peekable(),
 
-                buf.append(&(set.len() as u16))?;
+            value_formats,
+            vr_sizes,
 
-                let mut c = buf.bytes.len();
-                buf.reserve_bytes((u16::PACKED_LEN + vr_sizes.0 + vr_sizes.1) * set.len());
-
-                for pair in set {
-                    buf.encode_at(&pair.second_glyph, c)?;
-                    c += u16::PACKED_LEN;
-
-                    pair.records.0.encode_to_format(buf, value_formats.0, pair_set_start, c)?;
-                    c += vr_sizes.0;
-                    pair.records.1.encode_to_format(buf, value_formats.1, pair_set_start, c)?;
-                    c += vr_sizes.1;
-                }
-
-                Ok(())
-            })
+            have_encoded: false
+        }
     }
 }

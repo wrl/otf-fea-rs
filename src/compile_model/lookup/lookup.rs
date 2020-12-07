@@ -164,8 +164,8 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
     }
 }
 
-impl<T: TTFSubtableEncode> Lookup<T> {
-    pub fn ttf_encode_with_lookup_type(&self, buf: &mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
+impl<'a, T: TTFSubtableEncode<'a, 'a>> Lookup<T> {
+    pub fn ttf_encode_with_lookup_type(&'a self, buf: &'a mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
 
@@ -193,7 +193,7 @@ impl<T: TTFSubtableEncode> Lookup<T> {
                 let offset: u16 = (offset? - start)
                     .checked_into("Lookup", "subtable offset")?;
 
-                buf.encode_at(&offset, subtable_offset_start)?;
+                // buf.encode_at(&offset, subtable_offset_start)?;
 
                 subtable_offset_start += u16::PACKED_LEN;
             }
