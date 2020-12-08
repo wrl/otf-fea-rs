@@ -7,6 +7,7 @@ use crate::util::*;
 
 use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
+use crate::compile_model::util::*;
 
 
 #[derive(Debug, PackedSize, EncodeBE, DecodeBE)]
@@ -85,34 +86,47 @@ impl<T> CoverageLookup<T> {
                 .collect()
         ))
     }
+}
 
-    fn format_1_size(&self) -> usize {
-        self.len() * u16::PACKED_LEN
+impl<Any> CoverageLookup<Any> {
+    #[inline]
+    fn format_1_size<'a, I>(iter: &'a I) -> usize
+        where I: ExactSizeIterator<Item = u16>
+    {
+        iter.len() * u16::PACKED_LEN
     }
 
-    fn format_2_size(&self) -> usize {
-        self.keys()
-            .map(|x| *x)
+    #[inline]
+    fn format_2_size<'a, I>(iter: &'a I) -> usize
+        where I: ExactSizeIterator<Item = u16> + Clone
+    {
+        iter.clone()
             .contiguous_ranges()
             .count() * GlyphRange::PACKED_LEN
     }
 
-    fn encode_format_1(&self, buf: &mut EncodeBuf) -> EncodeResult<CoverageHeader> {
-        for glyph_id in self.keys() {
-            buf.append(glyph_id)?;
+    fn encode_format_1<'a>(iter: impl ExactSizeIterator<Item = u16>, buf: &mut EncodeBuf)
+        -> EncodeResult<CoverageHeader>
+    {
+        let count = iter.len();
+
+        for glyph_id in iter {
+            buf.append(&glyph_id)?;
         }
 
         Ok(CoverageHeader {
             format: 1,
-            count: self.len() as u16
+            count: count.checked_into("Coverage Type 1", "count")?
         })
     }
 
-    fn encode_format_2(&self, buf: &mut EncodeBuf) -> EncodeResult<CoverageHeader> {
+    fn encode_format_2<'a>(iter: impl ExactSizeIterator<Item = u16>, buf: &mut EncodeBuf)
+        -> EncodeResult<CoverageHeader>
+    {
         let mut start_coverage_index = 0u16;
         let mut count = 0u16;
 
-        for range in self.keys().map(|x| *x).contiguous_ranges() {
+        for range in iter.contiguous_ranges() {
             let glyph_range = GlyphRange {
                 start: range.0,
                 end: range.1,
@@ -129,20 +143,28 @@ impl<T> CoverageLookup<T> {
             count
         })
     }
+
+    pub fn encode<'a, I>(iter: I, buf: &mut EncodeBuf) -> EncodeResult<usize>
+        where I: ExactSizeIterator<Item = u16> + Clone
+    {
+        let start = buf.bytes.len();
+
+        buf.bytes.resize(start + CoverageHeader::PACKED_LEN, 0u8);
+
+        if iter.len() < 4 || Self::format_1_size(&iter) < Self::format_2_size(&iter) {
+            Self::encode_format_1(iter, buf)
+        } else {
+            Self::encode_format_2(iter, buf)
+        }
+            .and_then(|header| buf.encode_at(&header, start))
+    }
 }
 
 impl<T> TTFEncode for CoverageLookup<T> {
     #[inline]
     fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
-        let start = buf.bytes.len();
-
-        buf.bytes.resize(start + CoverageHeader::PACKED_LEN, 0u8);
-
-        if self.len() < 4 || self.format_1_size() < self.format_2_size() {
-            self.encode_format_1(buf)
-        } else {
-            self.encode_format_2(buf)
-        }
-            .and_then(|header| buf.encode_at(&header, start))
+        Self::encode(
+            self.keys().map(|x| *x),
+            buf)
     }
 }

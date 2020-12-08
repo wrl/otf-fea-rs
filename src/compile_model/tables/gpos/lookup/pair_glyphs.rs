@@ -1,4 +1,6 @@
 use std::ops;
+use std::iter;
+use std::collections::btree_map;
 
 use endian_codec::{PackedSize, EncodeBE, DecodeBE};
 
@@ -6,6 +8,8 @@ use crate::compile_model::util::decode::*;
 use crate::compile_model::util::encode::*;
 use crate::compile_model::value_record::*;
 use crate::compile_model::coverage::*;
+use crate::compile_model::lookup::*;
+use crate::compile_model::util::*;
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -151,9 +155,129 @@ impl TTFDecode for PairGlyphs {
     }
 }
 
-impl TTFEncode for PairGlyphs {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+pub struct PairGlyphsSplittingEncoder<'a> {
+    items: iter::Peekable<btree_map::Iter<'a, u16, Vec<PairValueRecord>>>,
+
+    value_formats: (u16, u16),
+    vr_sizes: (usize, usize),
+}
+
+macro_rules! try_res {
+    ($e:expr) => {
+        match $e {
+            Ok(x) => x,
+            Err(e) => return Some(Err(e))
+        }
+    }
+}
+
+impl<'a> TTFSubtableEncoder<'a> for PairGlyphsSplittingEncoder<'a> {
+    fn encode_next_subtable(&mut self, buf: &mut EncodeBuf) -> Option<EncodeResult<usize>> {
+        if self.items.len() == 0 {
+            return None
+        }
+
+        let value_formats = self.value_formats;
+        let vr_sizes = self.vr_sizes;
+
         let start = buf.bytes.len();
+        buf.reserve_bytes(PairPosFormat1Header::PACKED_LEN);
+
+        let record_start = buf.bytes.len();
+
+        let mut pool = EncodeBuf::new();
+        pool.should_optimize_filesize = buf.should_optimize_filesize;
+
+        let pair_value_record_size = u16::PACKED_LEN + vr_sizes.0 + vr_sizes.1;
+
+        let mut offsets: Vec<usize> = Vec::with_capacity(64);
+        let mut set_count = 0usize;
+        let mut c = pool.bytes.len();
+
+        let items_clone_for_coverage = self.items.clone()
+            .map(|(glyph_id, _)| *glyph_id);
+
+        // using a loop {} instead of a for {} here because we need to peek at the end of the loop
+        // to see if we proceed to the next iteration. for {} holds the iterator borrow for the
+        // body of the loop.
+        while let Some((_, set)) = self.items.next() {
+            let pair_set_start = pool.bytes.len();
+
+            let pair_set_count: u16 =
+                try_res!(set.len().checked_into("PairSet", "pair set count"));
+
+            try_res!(pool.append(&pair_set_count));
+            pool.reserve_bytes(pair_value_record_size * set.len());
+
+            for pair in set {
+                try_res!(pool.encode_at(&pair.second_glyph, c));
+                c += u16::PACKED_LEN;
+
+                try_res!(pair.records.0.encode_to_format(&mut pool, value_formats.0, pair_set_start, c));
+                c += vr_sizes.0;
+
+                try_res!(pair.records.1.encode_to_format(&mut pool, value_formats.1, pair_set_start, c));
+                c += vr_sizes.1;
+            }
+
+            offsets.push(pair_set_start);
+            try_res!(buf.append(&0u16));
+
+            set_count += 1;
+
+            if let Some((_, next_set)) = self.items.peek() {
+                let next_set_size = u16::PACKED_LEN + (pair_value_record_size * next_set.len());
+
+                // with space for the offset record
+                let next_fixed_size = buf.bytes.len() - start + u16::PACKED_LEN;
+                let next_pool_size = pool.bytes.len() + next_set_size;
+
+                if (next_fixed_size + next_pool_size) > 0xFFFE {
+                    break;
+                }
+            }
+        }
+
+        let pool_start = try_res!(buf.append(&pool));
+
+        for (i, offset) in offsets.into_iter().enumerate() {
+            let offset = try_res!(
+                u16::checked_from("PairGlyphs", "pair set pool offset", offset + pool_start));
+
+            try_res!(buf.encode_at(&offset, record_start + (i * u16::PACKED_LEN)));
+        }
+
+        let coverage_offset: usize =
+            try_res!(CoverageLookup::<()>::encode(items_clone_for_coverage.take(set_count), buf))
+            - start;
+
+        let header = PairPosFormat1Header {
+            format: 1,
+            coverage_offset: try_res!(coverage_offset.checked_into("PairGlyphs", "coverage_offset")),
+            value_format_1: self.value_formats.0,
+            value_format_2: self.value_formats.1,
+            pair_set_count: try_res!(set_count.checked_into("PairGlyphs", "pair_set_count"))
+        };
+
+        try_res!(buf.encode_at(&header, start));
+
+        Some(Ok(start))
+    }
+}
+
+impl<'a> TTFSubtableEncode<'a> for PairGlyphs {
+    type Encoder = PairGlyphsSplittingEncoder<'a>;
+
+    fn ttf_subtable_encoder(&'a self) -> Self::Encoder {
+        // we're determining common value formats for the whole table, which *could* be suboptimal
+        // if the table has mixed value record formats and we have to split it - then, we should be
+        // calculating value formats for each split table for size savings. unfortunately, we don't
+        // know how many pair sets fit into each table until we encode, which requires us to have
+        // already determined value formats for encoding...
+        //
+        // could probably solve this iteratively (i.e. calculate formats, encode, reset, calculate
+        // formats, encode, etc, until the table size no longer changes), but it's almost certainly
+        // not worth it for the increase in code complexity.
 
         let value_formats = match self.common_value_formats {
             Some(vf) => vf,
@@ -176,36 +300,11 @@ impl TTFEncode for PairGlyphs {
             ValueRecord::size_for_format(value_formats.1),
         );
 
-        buf.encode_pool_with_header(
-            |buf| Ok(PairPosFormat1Header {
-                format: 1,
-                coverage_offset: (self.sets.ttf_encode(buf)? - start) as u16,
-                value_format_1: value_formats.0,
-                value_format_2: value_formats.1,
-                pair_set_count: self.len() as u16
-            }),
+        PairGlyphsSplittingEncoder {
+            items: self.sets.iter().peekable(),
 
-            self.values(),
-            |offset, _| offset,
-            |buf, &set| {
-                let pair_set_start = buf.bytes.len();
-
-                buf.append(&(set.len() as u16))?;
-
-                let mut c = buf.bytes.len();
-                buf.reserve_bytes((u16::PACKED_LEN + vr_sizes.0 + vr_sizes.1) * set.len());
-
-                for pair in set {
-                    buf.encode_at(&pair.second_glyph, c)?;
-                    c += u16::PACKED_LEN;
-
-                    pair.records.0.encode_to_format(buf, value_formats.0, pair_set_start, c)?;
-                    c += vr_sizes.0;
-                    pair.records.1.encode_to_format(buf, value_formats.1, pair_set_start, c)?;
-                    c += vr_sizes.1;
-                }
-
-                Ok(())
-            })
+            value_formats,
+            vr_sizes,
+        }
     }
 }

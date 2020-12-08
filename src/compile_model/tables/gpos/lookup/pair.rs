@@ -1,7 +1,8 @@
-use crate::compile_model::util::decode::*;
-use crate::compile_model::util::encode::*;
 use crate::util::variant::*;
 
+use crate::compile_model::util::decode::*;
+use crate::compile_model::util::encode::*;
+use crate::compile_model::lookup::*;
 
 use super::pair_glyphs::*;
 use super::pair_class::*;
@@ -27,11 +28,31 @@ impl TTFDecode for Pair {
     }
 }
 
-impl TTFEncode for Pair {
-    fn ttf_encode(&self, buf: &mut EncodeBuf) -> EncodeResult<usize> {
+pub enum PairSubtableEncoder<'a> {
+    Glyphs(PairGlyphsSplittingEncoder<'a>),
+    Class(SingularSubtableEncoder<'a, PairClass>)
+}
+
+impl<'a> TTFSubtableEncoder<'a> for PairSubtableEncoder<'a> {
+    #[inline]
+    fn encode_next_subtable(&mut self, buf: &mut EncodeBuf) -> Option<EncodeResult<usize>> {
+        use PairSubtableEncoder::*;
+
         match self {
-            Pair::Glyphs(pg) => pg.ttf_encode(buf),
-            Pair::Class(pc) => pc.ttf_encode(buf)
+            Glyphs(e) => e.encode_next_subtable(buf),
+            Class(e) => e.encode_next_subtable(buf)
+        }
+    }
+}
+
+impl<'a> TTFSubtableEncode<'a> for Pair {
+    type Encoder = PairSubtableEncoder<'a>;
+
+    #[inline]
+    fn ttf_subtable_encoder(&'a self) -> Self::Encoder {
+        match self {
+            Pair::Glyphs(pg) => PairSubtableEncoder::Glyphs(pg.ttf_subtable_encoder()),
+            Pair::Class(pg) => PairSubtableEncoder::Class(pg.ttf_subtable_encoder())
         }
     }
 }

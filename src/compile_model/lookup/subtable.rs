@@ -1,5 +1,3 @@
-use std::iter;
-
 use crate::compile_model::util::encode::*;
 use super::*;
 
@@ -40,18 +38,36 @@ macro_rules! impl_lookup_subtable_for {
     };
 }
 
-pub trait TTFSubtableEncode {
-    type Iter: Iterator<Item = EncodeResult<usize>>;
+pub trait TTFSubtableEncode<'a> {
+    type Encoder: TTFSubtableEncoder<'a>;
 
-    fn ttf_subtable_encode(&self, buf: &mut EncodeBuf) -> Self::Iter;
+    fn ttf_subtable_encoder(&'a self) -> Self::Encoder;
 }
 
-impl <T: TTFEncode> TTFSubtableEncode for T {
-    type Iter = iter::Once<EncodeResult<usize>>;
+pub trait TTFSubtableEncoder<'a> {
+    fn encode_next_subtable(&mut self, buf: &mut EncodeBuf) -> Option<EncodeResult<usize>>;
+}
+
+// blanket impl for subtables which don't support splitting
+pub struct SingularSubtableEncoder<'a, T: TTFEncode> {
+    subtable: Option<&'a T>
+}
+
+impl<'a, T: TTFEncode + 'a> TTFSubtableEncode<'a> for T {
+    type Encoder = SingularSubtableEncoder<'a, T>;
 
     #[inline]
-    fn ttf_subtable_encode(&self, buf: &mut EncodeBuf) -> Self::Iter
-    {
-        iter::once(self.ttf_encode(buf))
+    fn ttf_subtable_encoder(&'a self) -> Self::Encoder {
+        SingularSubtableEncoder {
+            subtable: Some(self)
+        }
+    }
+}
+
+impl<'a, T: TTFEncode> TTFSubtableEncoder<'a> for SingularSubtableEncoder<'a, T> {
+    #[inline]
+    fn encode_next_subtable(&mut self, buf: &mut EncodeBuf) -> Option<EncodeResult<usize>> {
+        self.subtable.take()
+            .map(|st| st.ttf_encode(buf))
     }
 }
