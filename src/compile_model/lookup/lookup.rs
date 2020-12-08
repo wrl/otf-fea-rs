@@ -164,22 +164,15 @@ impl<T: TTFDecode> TTFDecode for Lookup<T> {
     }
 }
 
-impl<'a, 'buf, T: TTFSubtableEncode<'a, 'buf>> Lookup<T> {
-    pub fn ttf_encode_with_lookup_type(&'a self, buf: &'buf mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
+impl<'a, T: TTFSubtableEncode<'a>> Lookup<T> {
+    pub fn ttf_encode_with_lookup_type(&'a self, buf: &mut EncodeBuf, lookup_type: u16) -> EncodeResult<usize> {
         let start = buf.bytes.len();
         let mut flags = self.lookup_flags;
 
         flags.set(LookupFlags::USE_MARK_FILTERING_SET,
             self.mark_filtering_set.is_some());
 
-        let header = LookupTableHeader {
-            lookup_type: lookup_type,
-            lookup_flags: self.lookup_flags.bits(),
-            subtable_count: self.subtables.len()
-                .checked_into("Lookup", "subtable count")?
-        };
-
-        buf.append(&header)?;
+        buf.reserve_bytes(LookupTableHeader::PACKED_LEN);
 
         let mut subtable_offset_start = buf.bytes.len();
         buf.bytes.resize(subtable_offset_start + (u16::PACKED_LEN * self.subtables.len()), 0u8);
@@ -188,16 +181,30 @@ impl<'a, 'buf, T: TTFSubtableEncode<'a, 'buf>> Lookup<T> {
             buf.append(&mfs)?;
         }
 
+        let mut subtable_count = 0usize;
+
         for subtable in &self.subtables {
-            for offset in subtable.ttf_subtable_encode(buf) {
+            let mut encoder = subtable.ttf_subtable_encoder();
+
+            while let Some(offset) = encoder.encode_next_subtable(buf) {
                 let offset: u16 = (offset? - start)
                     .checked_into("Lookup", "subtable offset")?;
 
                 buf.encode_at(&offset, subtable_offset_start)?;
 
+                subtable_count += 1;
                 subtable_offset_start += u16::PACKED_LEN;
             }
         }
+
+        let header = LookupTableHeader {
+            lookup_type: lookup_type,
+            lookup_flags: self.lookup_flags.bits(),
+            subtable_count: subtable_count
+                .checked_into("Lookup", "subtable count")?
+        };
+
+        buf.encode_at(&header, start)?;
 
         Ok(start)
     }

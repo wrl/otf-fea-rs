@@ -155,10 +155,7 @@ impl TTFDecode for PairGlyphs {
     }
 }
 
-struct PairGlyphsSplittingEncode<'a, 'buf> {
-    pair_glyphs: &'a PairGlyphs,
-    buf: &'buf mut EncodeBuf,
-
+pub struct PairGlyphsSplittingEncoder<'a> {
     items: iter::Peekable<btree_map::Iter<'a, u16, Vec<PairValueRecord>>>,
 
     value_formats: (u16, u16),
@@ -174,20 +171,18 @@ macro_rules! try_res {
     }
 }
 
-impl<'a, 'buf> Iterator for PairGlyphsSplittingEncode<'a, 'buf> {
-    type Item = EncodeResult<usize>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl<'a> TTFSubtableEncoder<'a> for PairGlyphsSplittingEncoder<'a> {
+    fn encode_next_subtable(&mut self, buf: &mut EncodeBuf) -> Option<EncodeResult<usize>> {
         let value_formats = self.value_formats;
         let vr_sizes = self.vr_sizes;
 
-        let start = self.buf.bytes.len();
-        self.buf.reserve_bytes(PairPosFormat1Header::PACKED_LEN);
+        let start = buf.bytes.len();
+        buf.reserve_bytes(PairPosFormat1Header::PACKED_LEN);
 
-        let record_start = self.buf.bytes.len();
+        let _record_start = buf.bytes.len();
 
         let mut pool = EncodeBuf::new();
-        pool.should_optimize_filesize = self.buf.should_optimize_filesize;
+        pool.should_optimize_filesize = buf.should_optimize_filesize;
 
         let pair_value_record_size = u16::PACKED_LEN + vr_sizes.0 + vr_sizes.1;
 
@@ -222,14 +217,14 @@ impl<'a, 'buf> Iterator for PairGlyphsSplittingEncode<'a, 'buf> {
                 c += vr_sizes.1;
             }
 
-            try_res!(self.buf.append(&try_res!(u16::checked_from(
+            try_res!(buf.append(&try_res!(u16::checked_from(
                     "PairGlyphs", "pair set pool offset", pair_set_start))));
 
             if let Some((_, next_set)) = items.peek() {
                 let next_set_size = u16::PACKED_LEN + (pair_value_record_size * next_set.len());
 
                 // with space for the offset record
-                let next_fixed_size = self.buf.bytes.len() - start + u16::PACKED_LEN;
+                let next_fixed_size = buf.bytes.len() - start + u16::PACKED_LEN;
                 let next_pool_size = pool.bytes.len() + next_set_size;
 
                 if (next_fixed_size + next_pool_size) > 0xFFFE {
@@ -238,7 +233,7 @@ impl<'a, 'buf> Iterator for PairGlyphsSplittingEncode<'a, 'buf> {
             }
         }
 
-        let pool_start = try_res!(self.buf.append(&pool));
+        let _pool_start = try_res!(buf.append(&pool));
 
         // FIXME: update the offset records to take pool_start into account
 
@@ -248,12 +243,12 @@ impl<'a, 'buf> Iterator for PairGlyphsSplittingEncode<'a, 'buf> {
     }
 }
 
-impl<'a, 'buf> TTFSubtableEncode<'a, 'buf> for PairGlyphs {
-    type Iter = PairGlyphsSplittingEncode<'a, 'buf>;
+impl<'a> TTFSubtableEncode<'a> for PairGlyphs {
+    type Encoder = PairGlyphsSplittingEncoder<'a>;
 
-    fn ttf_subtable_encode(&'a self, buf: &'buf mut EncodeBuf) -> Self::Iter {
+    fn ttf_subtable_encoder(&'a self) -> Self::Encoder {
         // we're determining common value formats for the whole table, which *could* be suboptimal
-        // if the table has mixed value record formats and we have to split it – then, we should be
+        // if the table has mixed value record formats and we have to split it - then, we should be
         // calculating value formats for each split table for size savings. unfortunately, we don't
         // know how many pair sets fit into each table until we encode, which requires us to have
         // already determined value formats for encoding...
@@ -283,14 +278,11 @@ impl<'a, 'buf> TTFSubtableEncode<'a, 'buf> for PairGlyphs {
             ValueRecord::size_for_format(value_formats.1),
         );
 
-        PairGlyphsSplittingEncode {
-            pair_glyphs: self,
-            buf,
-
+        PairGlyphsSplittingEncoder {
             items: self.sets.iter().peekable(),
 
             value_formats,
-            vr_sizes
+            vr_sizes,
         }
     }
 }
